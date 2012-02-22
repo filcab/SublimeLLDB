@@ -10,13 +10,25 @@ import atexit
 import datetime
 import threading
 
-import lldb
+from lldb_wrappers import LldbWrapper
+import lldb_wrappers
+
 
 def debug(str):
     print str
 
 
-debug('LLDB Sublime Text 2 plugin')
+def debugif(b, str):
+    if b:
+        debug(str)
+
+
+def debug_prologue():
+    lldb_instance.interpret_command('target create ~/dev/softek/sublime-lldb-plugin/tests')
+    lldb_instance.interpret_command('b main')
+
+
+debug('Loading LLDB Sublime Text 2 plugin')
 debug('python version: %s' % (sys.version_info,))
 debug('cwd: %s' % os.getcwd())
 
@@ -27,7 +39,7 @@ def lldb_greeting():
 
 
  # # Create a new debugger instance
-lldb_instance = None   # SBDebugger.Create()
+lldb_instance = None
 lldb_view_name = 'lldb i/o'
 lldb_prog_view_name = 'program i/o'
 lldb_out_view = None
@@ -99,8 +111,8 @@ def lldb_toggle_output_view(window, show=False, hide=False):
 def lldb_i_o_monitor():
     debug('monitor: started')
     while lldb_instance != None:
-        lldberr = lldb_instance.GetErrorFileHandle()
-        lldbout = lldb_instance.GetOutputFileHandle()
+        lldberr = None  # lldb_instance.GetErrorFileHandle()
+        lldbout = None  # lldb_instance.GetOutputFileHandle()
 
         debug('lldberr: ' + lldberr.__str__())
         debug('lldbout: ' + lldbout.__str__())
@@ -138,13 +150,12 @@ def lldb_in_panel_on_done(cmd):
 
     lldb_view_write(lldb_prompt + cmd + '\n')
     if cmd == 'q' or cmd == 'quit':
-        lldb.SBDebugger.Terminate()
-        lldb_instance = None
+        cleanup()
         return
 
     result = lldb_instance.interpret_command(cmd)
-    err_str = result.GetError()
-    out_str = result.GetOutput()
+    err_str = result.error()
+    out_str = result.output()
 
     lldb_view_write(out_str)
 
@@ -157,7 +168,7 @@ def lldb_in_panel_on_done(cmd):
     lldb_toggle_output_view(window_ref, show=True)
     lldb_out_view.show(lldb_out_view.size(), True)
 
-    update_code_view(window_ref)
+    update_markers(window_ref)
     window_ref.show_input_panel('lldb', '',
                                 lldb_in_panel_on_done, None, None)
 
@@ -171,19 +182,40 @@ def lldb_view_write(string):
     lldb_out_view.show(lldb_out_view.size())
 
 
+def update_markers(window):
+    update_code_view(window)
+    update_breakpoints(window)
+
+
+def update_breakpoints(window):
+    def bp_files(bp):
+        return bp.map(lambda loc: loc[0] + '/' + loc[1])
+
+    breakpoints = lldb_instance.breakpoints()
+    debug('bps: ' + breakpoints.__str__())
+
+    for w in sublime.windows():
+        for v in w.views():
+            v.erase_regions("lldb-breakpoint")
+            for bp in breakpoints:
+                for bp_loc in bp.line_entries():
+                    if bp_loc and v.file_name() == bp_loc[0] + '/' + bp_loc[1]:
+                        debug('marking: ' + str(bp_loc) + ' at: ' + v.file_name() + ' (' + v.name() + ')')
+                        v.add_regions("lldb-breakpoint", \
+                            [v.full_line(
+                                v.text_point(bp_loc[2] - 1, bp_loc[3] - 1))], \
+                            "string", "circle", \
+                            sublime.HIDDEN)
+
+
 def update_code_view(window):
-    line_entry = lldb_instance.current_line_entry()
+    entry = lldb_instance.current_line_entry()
 
-    if line_entry:
-        filespec = line_entry.GetFileSpec()
-        if filespec:
-            filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
-
-            line = line_entry.GetLine()
-            column = line_entry.GetColumn()
+    if entry:
+            (directory, file, line, column) = entry
+            filename = directory + '/' + file
 
             loc = filename + ':' + str(line) + ':' + str(column)
-            debug("Location: " + loc)
 
             window.focus_group(0)
             view = window.open_file(loc, sublime.ENCODED_POSITION)
@@ -191,9 +223,10 @@ def update_code_view(window):
 
             global lldb_last_location_view
             if lldb_last_location_view:
-                lldb_last_location_view.erase_regions("lldb.location")
+                lldb_last_location_view.erase_regions("lldb-location")
             lldb_last_location_view = view
-            view.add_regions("lldb.location", \
+            debug('marking loc at: ' + str(view))
+            view.add_regions("lldb-location", \
                              [view.full_line(view.text_point(line - 1, column - 1))], \
                              "entity.name.class", "bookmark", \
                              sublime.HIDDEN)
@@ -218,68 +251,17 @@ def cleanup():
     debug('cleaning up the lldb plugin')
 
     if lldb_last_location_view:
-        lldb_last_location_view.erase_regions("lldb.location")
-    lldb.SBDebugger.Terminate()
+        lldb_last_location_view.erase_regions("lldb-location")
+    lldb_wrappers.terminate()
     lldb_instance = None
 
 
 def initialize_lldb():
     lldb = LldbWrapper()
     # For now, we'll use sync mode
-    lldb.SetAsync(False)
+    lldb.set_async(False)
 
     return lldb
-
-
-class LldbWrapper(object):
-    last_cmd = None
-    lldb = None
-
-    def __init__(self):
-        self.lldb = lldb.SBDebugger.Create()
-
-    def current_frame(self):
-        return self.lldb.GetSelectedTarget().GetProcess() \
-                        .GetSelectedThread().GetSelectedFrame()
-
-    def current_line_entry(self):
-        return self.current_frame().GetLineEntry()
-
-    def current_sc(self):
-        return self.current_frame().GetSymbolContext(0xffffffff)
-
-    def interpret_command(self, cmd):
-        if cmd == '':
-            cmd = last_cmd
-        last_cmd = cmd
-
-        valid_returns = [lldb.eReturnStatusSuccessFinishNoResult,     \
-                         lldb.eReturnStatusSuccessFinishResult,       \
-                         lldb.eReturnStatusSuccessContinuingNoResult, \
-                         lldb.eReturnStatusSuccessContinuingResult,   \
-                         lldb.eReturnStatusStarted]
-
-        result = lldb.SBCommandReturnObject()
-        ci = self.lldb.GetCommandInterpreter()
-
-        r = ci.HandleCommand(cmd.__str__(), result)
-        if r in valid_returns:
-            last_cmd = cmd
-
-        return result
-
-    # CamelCase methods are simple bridges to the SBDebugger object
-    # def GetCommandInterpreter(self):
-    #     return self.lldb.GetCommandInterpreter()
-
-    def GetErrorFileHandle(self):
-        return self.lldb.GetErrorFileHandle()
-
-    def GetOutputFileHandle(self):
-        return self.lldb.GetOutputFileHandle()
-
-    def SetAsync(self, arg):
-        return self.lldb.SetAsync(arg)
 
 
 class LldbCommand(sublime_plugin.WindowCommand):
@@ -327,12 +309,14 @@ class LldbCommand(sublime_plugin.WindowCommand):
                                  name='lldb i/o monitor')
             t.start()
 
+            debug_prologue()
+
         # last args: on_done, on_change, on_cancel.
         # On change we could try to complete the input using a quick_panel.
         self.window.show_input_panel('lldb', '',
                                      lldb_in_panel_on_done, None, None)
 
-        update_code_view(self.window)
+        update_markers(self.window)
 
     def get_lldb_output_view(self, name):
             # Search for the lldb_view view first.
@@ -357,7 +341,6 @@ class LldbCommand(sublime_plugin.WindowCommand):
 
 class LldbToggleOutputView(sublime_plugin.WindowCommand):
     def run(self):
-        debug(lldb_out_view.layout_extent())
         if good_lldb_layout(window=self.window) and basic_layout != None:
             # restore backup_layout (groups and views)
             lldb_toggle_output_view(self.window, hide=True)
