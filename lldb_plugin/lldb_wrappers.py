@@ -26,17 +26,18 @@ class LldbWrapper(object):
         debug('Initting LldbWrapper')
         self.__lldb = lldb.SBDebugger.Create()
         self.__last_cmd = ''
-        self.__breakpoints = []
 
     def breakpoints(self):
         #         uint32_t    GetNumBreakpoints () const
         # lldb::SBBreakpoint  GetBreakpointAtIndex (uint32_t idx) const
         bps = []
-        n = self.__lldb.GetSelectedTarget().GetNumBreakpoints()
-        for i in xrange(n):
-            bps.insert(i, BreakpointWrapper(self.__lldb                 \
-                                                .GetSelectedTarget()    \
-                                                .GetBreakpointAtIndex(i)))
+        target = self.__lldb.GetSelectedTarget()
+        if target:
+            n = target.GetNumBreakpoints()
+            for i in xrange(n):
+                bps.insert(i, BreakpointWrapper(self.__lldb                  \
+                                                    .GetSelectedTarget()     \
+                                                    .GetBreakpointAtIndex(i)))
 
         return bps
 
@@ -58,19 +59,20 @@ class LldbWrapper(object):
     #     return self.current_frame().GetSymbolContext(0xffffffff)
 
     def interpret_command(self, cmd):
-        if cmd == '':
-            cmd = self.__last_cmd
+        # if cmd == '':
+        #     cmd = self.__last_cmd
 
         result = LldbCommandReturnWrapper()
         ci = self.__lldb.GetCommandInterpreter()
 
-        r = ci.HandleCommand(cmd.__str__(), result.ReturnObject(), True)
+        r = LldbResultStatusWrapper(ci.HandleCommand(cmd.__str__(),
+                                                     result.ReturnObject(),
+                                                     True))
 
-        global success_returns
-        if r in success_returns:
-            self.__last_cmd = cmd
+        # if r.is_success():
+        #     self.__last_cmd = cmd
 
-        return result
+        return (result, r)
 
     # bridges to SBDebugger methods
     def set_async(self, async):
@@ -117,8 +119,50 @@ class BreakpointWrapper(object):
             else:
                 entries.insert(i, None)
 
-        debug('bp entries: ' + entries.__str__())
         return entries
+
+
+class LldbResultStatusWrapper(object):
+    _success_returns = [lldb.eReturnStatusSuccessFinishNoResult,        \
+                        lldb.eReturnStatusSuccessFinishResult,          \
+                        lldb.eReturnStatusSuccessContinuingNoResult,    \
+                        lldb.eReturnStatusSuccessContinuingResult]
+                        # lldb.eReturnStatusStarted]
+    _finished_returns = [lldb.eReturnStatusSuccessFinishNoResult,       \
+                         lldb.eReturnStatusSuccessFinishResult]
+
+    _continuing_returns = [lldb.eReturnStatusSuccessContinuingNoResult, \
+                           lldb.eReturnStatusSuccessContinuingResult]
+
+    def __init__(self, r):
+        self.__r = r
+
+    def is_success(self):
+        return self.__r in self._success_returns
+
+    def is_finished(self):
+        return self.__r in self._finished_returns
+
+    def is_started(self):
+        return self.__r == lldb.eReturnStatusStarted
+
+    def is_quit(self):
+        return self.__r == lldb.eReturnStatusQuit
+
+    def is_failed(self):
+        return self.__r == lldb.eReturnStatusFailed
+
+    def is_invalid(self):
+        return self.__r == lldb.eReturnStatusInvalid
+
+# eReturnStatusInvalid = _lldb.eReturnStatusInvalid
+# eReturnStatusSuccessFinishNoResult = _lldb.eReturnStatusSuccessFinishNoResult
+# eReturnStatusSuccessFinishResult = _lldb.eReturnStatusSuccessFinishResult
+# eReturnStatusSuccessContinuingNoResult = _lldb.eReturnStatusSuccessContinuingNoResult
+# eReturnStatusSuccessContinuingResult = _lldb.eReturnStatusSuccessContinuingResult
+# eReturnStatusStarted = _lldb.eReturnStatusStarted
+# eReturnStatusFailed = _lldb.eReturnStatusFailed
+# eReturnStatusQuit = _lldb.eReturnStatusQuit
 
 
 class LldbCommandReturnWrapper(object):
