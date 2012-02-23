@@ -14,13 +14,6 @@ def terminate():
     lldb.SBDebugger.Terminate()
 
 
-success_returns = [lldb.eReturnStatusSuccessFinishNoResult,     \
-                   lldb.eReturnStatusSuccessFinishResult,       \
-                   lldb.eReturnStatusSuccessContinuingNoResult, \
-                   lldb.eReturnStatusSuccessContinuingResult]
-                   # lldb.eReturnStatusStarted]
-
-
 class LldbWrapper(object):
     def __init__(self):
         debug('Initting LldbWrapper')
