@@ -64,7 +64,7 @@ class LldbWrapper(object):
         result = LldbCommandReturnWrapper()
         ci = self.__lldb.GetCommandInterpreter()
 
-        r = ci.HandleCommand(cmd.__str__(), result.ReturnObject())
+        r = ci.HandleCommand(cmd.__str__(), result.ReturnObject(), True)
 
         global success_returns
         if r in success_returns:

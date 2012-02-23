@@ -273,6 +273,7 @@ class LldbCommand(sublime_plugin.WindowCommand):
         global lldb_debugger_pipe_in
         global lldb_debugger_pipe_out
         global lldb_debugger_pipe_err
+        debug('hello lldb!')
 
         if not lldb_instance:
             debug('Creating an SBDebugger instance.')
