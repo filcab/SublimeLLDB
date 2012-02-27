@@ -24,6 +24,7 @@ import lldb_wrappers
 
 # import traceback
 def debug_thr():
+    threading.current_thread()
     1 + 1
     # print ('thread id: ' + threading.current_thread().name)
     # traceback.print_stack()
@@ -180,7 +181,7 @@ def lldb_in_panel_on_done(cmd):
 
 
 def update_markers(window, after=None):
-    lldb_file_markers_queue.put({ 'marks': 'all', 'window': window, 'after': after })
+    lldb_file_markers_queue.put({'marks': 'all', 'window': window, 'after': after})
 
 
 @atexit.register
