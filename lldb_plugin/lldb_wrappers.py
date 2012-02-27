@@ -25,8 +25,6 @@ class LldbWrapper(object):
         self.__last_cmd = ''
 
     def breakpoints(self):
-        #         uint32_t    GetNumBreakpoints () const
-        # lldb::SBBreakpoint  GetBreakpointAtIndex (uint32_t idx) const
         bps = []
         target = self.__lldb.GetSelectedTarget()
         if target:
