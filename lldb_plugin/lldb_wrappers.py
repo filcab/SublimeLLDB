@@ -57,9 +57,6 @@ class LldbWrapper(object):
         lldb.SBDebugger.Destroy(self.__lldb)
 
     def interpret_command(self, cmd):
-        # if cmd == '':
-        #     cmd = self.__last_cmd
-
         result = LldbCommandReturnWrapper()
         ci = self.__lldb.GetCommandInterpreter()
 
@@ -67,12 +64,9 @@ class LldbWrapper(object):
                                                      result.ReturnObject(),
                                                      True))
 
-        # if r.is_success():
-        #     self.__last_cmd = cmd
-
         return (result, r)
 
-    # bridges to SBDebugger methods
+    # bridges to SBDebugger methods:
     def set_async(self, async):
         self.__lldb.SetAsync(async)
 
@@ -164,15 +158,6 @@ class LldbResultStatusWrapper(object):
 
     def is_invalid(self):
         return self.__r == lldb.eReturnStatusInvalid
-
-# eReturnStatusInvalid = _lldb.eReturnStatusInvalid
-# eReturnStatusSuccessFinishNoResult = _lldb.eReturnStatusSuccessFinishNoResult
-# eReturnStatusSuccessFinishResult = _lldb.eReturnStatusSuccessFinishResult
-# eReturnStatusSuccessContinuingNoResult = _lldb.eReturnStatusSuccessContinuingNoResult
-# eReturnStatusSuccessContinuingResult = _lldb.eReturnStatusSuccessContinuingResult
-# eReturnStatusStarted = _lldb.eReturnStatusStarted
-# eReturnStatusFailed = _lldb.eReturnStatusFailed
-# eReturnStatusQuit = _lldb.eReturnStatusQuit
 
 
 class LldbCommandReturnWrapper(object):
