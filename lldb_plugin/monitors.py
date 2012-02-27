@@ -120,9 +120,10 @@ def lldb_markers_monitor():
         elif 'bp' == m:
             update_breakpoints(w)
         elif 'all' == m:
-            update_code_view(w)
             update_breakpoints(w)
+            update_code_view(w)
         elif 'quit' == m:
+            update_breakpoints(w)
             update_code_view(w)
             if f is not None:
                 sublime.set_timeout(f, 0)
@@ -178,7 +179,7 @@ def update_breakpoints(window):
     if lldb_instance():
         breakpoints = lldb_instance().breakpoints()
     else:
-        # Just erase the current markers
+        # Just erase the current bp markers
         breakpoints = []
 
     def bulk_update():
@@ -191,8 +192,8 @@ def update_breakpoints(window):
                 else:
                     seen.append(v)
 
-                regions = []
                 v.erase_regions("lldb-breakpoint")
+                regions = []
                 for bp in breakpoints:
                     for bp_loc in bp.line_entries():
                         debug('bp entries: ' + str(bp.line_entries()))
