@@ -113,7 +113,6 @@ def lldb_markers_monitor():
         m = v['marks']
         w = v['window']
         f = v['after']
-        debug('markers mon: ' + str(lldb_file_markers_queue.qsize()))
 
         debug('markers monitor, got: ' + str(v))
         if 'pc' == m:
