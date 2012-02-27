@@ -62,8 +62,8 @@ def lldb_i_o_monitor():
         lldberr = lldb_output_fh()
         lldbout = lldb_error_fh()
 
-        debug('i/o monitor: lldberr: ' + lldberr.__str__())
-        debug('i/o monitor: lldbout: ' + lldbout.__str__())
+        debug('i/o monitor: lldberr: ' + str(lldberr))
+        debug('i/o monitor: lldbout: ' + str(lldbout))
 
         input = []
         if lldbout:
@@ -77,7 +77,7 @@ def lldb_i_o_monitor():
         else:
             debug('i/o monitor: waiting for select (timeout)')
             # We're not waiting for input, set a timeout
-            input, output, x = select.select(input, [], [], 1000)
+            input, output, x = select.select(input, [], [], 3.14)
 
         for h in input:
             debug('for h in input')
@@ -88,9 +88,9 @@ def lldb_i_o_monitor():
             elif h == lldberr.fileno():
                 fh = lldberr
 
-            debug('i/o: ' + fh.closed)
+            debug('i/o: ' + str(fh.closed))
             if not fh.closed:
-                string = fh.read(40)
+                string = fh.read()
                 debug(string)
                 # if fh == lldbout:
                 #     sublime.set_timeout(lambda: lldb_view_write(string), 0)
