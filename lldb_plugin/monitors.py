@@ -6,7 +6,8 @@ import Queue
 import select
 import threading
 
-from root_objects import lldb_instance, lldb_view_write
+from root_objects import lldb_instance, lldb_view_write, \
+                         lldb_output_fh, lldb_error_fh
 
 
 def debug_thr():
@@ -58,35 +59,47 @@ def lldb_i_o_monitor():
     debug('i/o monitor: started')
 
     while lldb_instance() != None:
-        lldberr = None  # lldb_instance.GetErrorFileHandle()
-        lldbout = None  # lldb_instance.GetOutputFileHandle()
+        lldberr = lldb_output_fh()
+        lldbout = lldb_error_fh()
 
         debug('i/o monitor: lldberr: ' + lldberr.__str__())
         debug('i/o monitor: lldbout: ' + lldbout.__str__())
 
-        debug('i/o monitor: waiting for select')
-
         input = []
         if lldbout:
-            input.append(lldbout)
+            input.append(lldbout.fileno())
         if lldberr:
-            input.append(lldberr)
+            input.append(lldberr.fileno())
 
         if len(input) > 0:
+            debug('i/o monitor: waiting for select')
             input, output, x = select.select(input, [], [])
         else:
+            debug('i/o monitor: waiting for select (timeout)')
             # We're not waiting for input, set a timeout
             input, output, x = select.select(input, [], [], 1000)
 
         for h in input:
-            str = h.read()
-            if h == lldbout:
-                sublime.set_timeout(lambda: lldb_view_write(str), 0.01)
-            if h == lldberr:
-                # We're sure we read something
-                str.replace('\n', '\nerr> ')
-                str = 'err> ' + str
-                sublime.set_timeout(lambda: lldb_view_write(str), 0.01)
+            debug('for h in input')
+            debug('i/o: ' + str(h))
+            fh = None
+            if h == lldbout.fileno():
+                fh = lldbout
+            elif h == lldberr.fileno():
+                fh = lldberr
+
+            debug('i/o: ' + fh.closed)
+            if not fh.closed:
+                string = fh.read(40)
+                debug(string)
+                # if fh == lldbout:
+                #     sublime.set_timeout(lambda: lldb_view_write(string), 0)
+                if fh == lldberr:
+                    # We're sure we read something
+                    string.replace('\n', '\nerr> ')
+                    string = 'err> ' + string
+
+                sublime.set_timeout(lambda: lldb_view_write(string), 0)
 
     debug('i/o monitor: stopped')
 
