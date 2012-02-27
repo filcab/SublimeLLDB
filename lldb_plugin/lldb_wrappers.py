@@ -10,6 +10,10 @@ def debug(str):
 debug('Loading LLDB wrappers for Sublime Text 2 plugin')
 
 
+def initialize():
+    lldb.SBDebugger.Initialize()
+
+
 def terminate():
     lldb.SBDebugger.Terminate()
 
@@ -50,6 +54,9 @@ class LldbWrapper(object):
 
     # def current_sc(self):
     #     return self.current_frame().GetSymbolContext(0xffffffff)
+
+    def destroy(self):
+        lldb.SBDebugger.Destroy(self.__lldb)
 
     def interpret_command(self, cmd):
         # if cmd == '':
