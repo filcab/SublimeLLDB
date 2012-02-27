@@ -82,13 +82,25 @@ class LldbWrapper(object):
     # def GetCommandInterpreter(self):
     #     return self.lldb.GetCommandInterpreter()
 
-    def __GetErrorFileHandle(self):
-        return self.__lldb.GetErrorFileHandle()
+    def SetInputFileHandle(self, fh, transfer_ownership):
+        self.__lldb.SetInputFileHandle(fh, transfer_ownership)
 
-    def __GetOutputFileHandle(self):
+    def SetOutputFileHandle(self, fh, transfer_ownership):
+        self.__lldb.SetOutputFileHandle(fh, transfer_ownership)
+
+    def SetErrorFileHandle(self, fh, transfer_ownership):
+        self.__lldb.SetErrorFileHandle(fh, transfer_ownership)
+
+    def GetInputFileHandle(self):
+        return self.__lldb.GetInputFileHandle()
+
+    def GetOutputFileHandle(self):
         return self.__lldb.GetOutputFileHandle()
 
-    def __SetAsync(self, arg):
+    def GetErrorFileHandle(self):
+        return self.__lldb.GetErrorFileHandle()
+
+    def SetAsync(self, arg):
         return self.__lldb.SetAsync(arg)
 
 
