@@ -3,6 +3,37 @@
 lldb_ = None
 lldb_view = None
 
+pipe_in = None
+pipe_out = None
+pipe_err = None
+
+
+def lldb_input_fh():
+    return pipe_in
+
+
+def lldb_output_fh():
+    return pipe_out
+
+
+def lldb_error_fh():
+    return pipe_err
+
+
+def set_lldb_input_fh(input):
+    global pipe_in
+    pipe_in = input
+
+
+def set_lldb_output_fh(output):
+    global pipe_out
+    pipe_out = output
+
+
+def set_lldb_error_fh(error):
+    global pipe_err
+    pipe_err = error
+
 
 def lldb_instance():
     return lldb_

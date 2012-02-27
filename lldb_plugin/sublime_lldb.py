@@ -9,9 +9,12 @@ import atexit
 import datetime
 import threading
 
-from root_objects import lldb_instance, set_lldb_instance, \
-                         lldb_out_view, set_lldb_out_view, \
-                         lldb_view_write
+from root_objects import lldb_instance, set_lldb_instance,   \
+                         lldb_out_view, set_lldb_out_view,   \
+                         lldb_view_write,                    \
+                         lldb_input_fh,  set_lldb_input_fh,  \
+                         lldb_output_fh, set_lldb_output_fh, \
+                         lldb_error_fh,  set_lldb_error_fh
 from monitors import launch_i_o_monitor, \
                      launch_markers_monitor, lldb_file_markers_queue
 # import this specific name without the prefix
@@ -69,9 +72,6 @@ lldb_prog_view = None
 lldb_prog_input = None
 lldb_prog_output = None
 lldb_prog_error = None
-lldb_debugger_pipe_in = None
-lldb_debugger_pipe_out = None
-lldb_debugger_pipe_err = None
 window_ref = None  # For the 'on_done' panel helper
 lldb_window_layout = {
                         "cols": [0.0, 1.0],  # start, end
@@ -198,11 +198,22 @@ def cleanup(window):
     debug('cleaning up the lldb plugin')
 
     update_markers(window)  # markers will be removed
+    if lldb_instance() is not None:
+        lldb_instance().destroy()
+
+    lldb_input_fh().close()
+    set_lldb_input_fh(None)
+    lldb_output_fh().close()
+    set_lldb_output_fh(None)
+    lldb_error_fh().close()
+    set_lldb_error_fh(None)
+
     lldb_wrappers.terminate()
     set_lldb_instance(None)
 
 
 def initialize_lldb():
+    lldb_wrappers.initialize()
     lldb = LldbWrapper()
     # For now, we'll use sync mode
     lldb.set_async(False)
@@ -225,9 +236,6 @@ class LldbCommand(WindowCommand):
 
         global lldb_view_name
         global window_ref
-        global lldb_debugger_pipe_in
-        global lldb_debugger_pipe_out
-        global lldb_debugger_pipe_err
 
         if lldb_instance() is None:
             debug('Creating an SBDebugger instance.')
@@ -240,22 +248,31 @@ class LldbCommand(WindowCommand):
             lldb_view_write(g)
             lldb_view_write('cwd: ' + os.getcwd() + '\n')
 
-            # We also need to change the width upon window resize
+            # We may also need to change the width upon window resize
             # debugger.SetTerminalWidth()
 
             # Setup the input, output, and error file descriptors
             # for the debugger
-            # pipe_in, lldb_debugger_pipe_in = os.pipe()
-            # lldb_debugger_pipe_out, pipe_out = os.pipe()
-            # lldb_debugger_pipe_err, pipe_err = os.pipe()
-            # print 'lldb: ended pipes'
-            # lldb_debugger_pipe_in = os.fdopen(lldb_debugger_pipe_in, 'w')
-            # lldb_debugger_pipe_out = os.fdopen(lldb_debugger_pipe_out, 'r')
-            # lldb_debugger_pipe_err = os.fdopen(lldb_debugger_pipe_err, 'r')
-            # print 'lldb: setting file handles'
-            # lldb_instance.SetInputFileHandle(os.fdopen(pipe_in, 'r'), False)
-            # lldb_instance.SetOutputFileHandle(os.fdopen(pipe_out, 'w'), False)
-            # lldb_instance.SetErrorFileHandle(os.fdopen(pipe_err, 'w'), False)
+            pipe_in, lldb_debugger_pipe_in = os.pipe()
+            lldb_debugger_pipe_out, pipe_out = os.pipe()
+            lldb_debugger_pipe_err, pipe_err = os.pipe()
+            debug('in: %d, %d' % (pipe_in, lldb_debugger_pipe_in))
+            debug('out: %d, %d' % (lldb_debugger_pipe_out, pipe_out))
+            debug('err: %d, %d' % (lldb_debugger_pipe_err, pipe_err))
+
+            pipe_in = os.fdopen(pipe_in, 'r', 0)
+            set_lldb_input_fh(os.fdopen(lldb_debugger_pipe_in, 'w', 0))
+            set_lldb_output_fh(os.fdopen(lldb_debugger_pipe_out, 'r', 0))
+            pipe_out = os.fdopen(pipe_out, 'w', 0)
+            set_lldb_error_fh(os.fdopen(lldb_debugger_pipe_err, 'r', 0))
+            pipe_err = os.fdopen(pipe_err, 'w', 0)
+            debug('in: %s, %s' % (str(pipe_in), str(lldb_debugger_pipe_in)))
+            debug('out: %s, %s' % (str(lldb_debugger_pipe_out), str(pipe_out)))
+            debug('err: %s, %s' % (str(lldb_debugger_pipe_err), str(pipe_err)))
+
+            lldb_instance().SetInputFileHandle(pipe_in, True)
+            lldb_instance().SetOutputFileHandle(pipe_out, True)
+            lldb_instance().SetErrorFileHandle(pipe_err, True)
 
             launch_i_o_monitor()
             launch_markers_monitor()
