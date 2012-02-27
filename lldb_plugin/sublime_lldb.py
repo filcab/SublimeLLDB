@@ -69,6 +69,12 @@ lldb_prompt = '(lldb) '
 
 # lldb_instance = None
 # lldb_out_view = None
+
+# To hold on to the pipes. Otherwise GC takes them
+pipe_in = None
+pipe_out = None
+pipe_err = None
+
 lldb_prog_view = None
 lldb_prog_input = None
 lldb_prog_output = None
@@ -202,10 +208,16 @@ def cleanup(window):
     if lldb_instance() is not None:
         lldb_instance().destroy()
 
+    if not pipe_in.closed:
+        pipe_in.close()
     lldb_input_fh().close()
     set_lldb_input_fh(None)
+    if not pipe_out.closed:
+        pipe_out.close()
     lldb_output_fh().close()
     set_lldb_output_fh(None)
+    if not pipe_err.closed:
+        pipe_err.close()
     lldb_error_fh().close()
     set_lldb_error_fh(None)
 
@@ -254,6 +266,8 @@ class LldbCommand(WindowCommand):
 
             # Setup the input, output, and error file descriptors
             # for the debugger
+            global pipe_in, pipe_out, pipe_err
+
             pipe_in, lldb_debugger_pipe_in = os.pipe()
             lldb_debugger_pipe_out, pipe_out = os.pipe()
             lldb_debugger_pipe_err, pipe_err = os.pipe()
