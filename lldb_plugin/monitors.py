@@ -176,24 +176,40 @@ def update_code_view(window):
 def update_breakpoints(window):
     debug_thr()
 
-    def bulk_update():
-        for w in sublime.windows():
-            for v in w.views():
-                v.erase_regions("lldb-breakpoint")
-                for bp in breakpoints:
-                    for bp_loc in bp.line_entries():
-                        if bp_loc and v.file_name() == bp_loc[0] + '/' + bp_loc[1]:
-                            debug('marking: ' + str(bp_loc) + ' at: ' + v.file_name() + ' (' + v.name() + ')')
-                            v.add_regions("lldb-breakpoint", \
-                                [v.full_line(
-                                    v.text_point(bp_loc[2] - 1, bp_loc[3] - 1))], \
-                                "string", "circle", \
-                                sublime.HIDDEN)
-
     if lldb_instance():
         breakpoints = lldb_instance().breakpoints()
     else:
         # Just erase the current markers
         breakpoints = []
+
+    def bulk_update():
+        seen = []
+        for w in sublime.windows():
+            for v in w.views():
+                debug('marking view: ' + str(v.file_name()) + ' (' + str(v.name()) + ')')
+                if v in seen:
+                    continue
+                else:
+                    seen.append(v)
+
+                regions = []
+                v.erase_regions("lldb-breakpoint")
+                for bp in breakpoints:
+                    for bp_loc in bp.line_entries():
+                        debug('bp entries: ' + str(bp.line_entries()))
+                        if bp_loc and v.file_name() == bp_loc[0] + '/' + bp_loc[1]:
+                            debug('marking: ' + str(bp_loc) + ' at: ' + v.file_name() + ' (' + v.name() + ')')
+                            debug('regions: ' + str(regions))
+                            regions.append(  \
+                                v.full_line( \
+                                  v.text_point(bp_loc[2] - 1, bp_loc[3] - 1)))
+                            debug('regions (after): ' + str(regions))
+
+                if len(regions) > 0:
+                    debug('marking regions:')
+                    debug(regions)
+                    v.add_regions("lldb-breakpoint", regions, \
+                                 "string", "circle",          \
+                                 sublime.HIDDEN)
 
     sublime.set_timeout(bulk_update, 0)
