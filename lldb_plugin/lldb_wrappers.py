@@ -205,11 +205,15 @@ class LldbListener(object):
         self.__debugger = debugger
 
     @property
+    def debugger(self):
+        return self.__debugger
+
+    @property
     def valid(self):
         return self.__listener.IsValid()
 
-    def start_listening_for_events(self, timeout, events):
-        self.__listener.StartListeningForEvents(timeout, events)
+    def start_listening_for_events(self, broadcaster, events):
+        self.__listener.StartListeningForEvents(broadcaster, events)
 
     def start_listening_for_breakpoint_changes(self):
         self.__listener.StartListeningForEventClass(        \
@@ -341,13 +345,16 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
                 if event.broadcaster_matches_ref(interpreter_broadcaster):
                     if event.type & lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit \
                         or event.type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
+                        debug('exiting from broadcaster due to interpreter')
                         done = True
                         continue
                 elif event.broadcaster_matches_ref(self):
                     if event.type & SublimeBroadcaster.eBroadcastBitShouldExit:
+                        debug('exiting from broadcaster due to self')
                         done = True
                         continue
                     if event.type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
+                        debug('executing command: ' + event.string)
                         result, r = self.__debugger.interpret_command(event.string, True)
                         err_str = result.error()
                         out_str = result.output()
@@ -361,7 +368,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
                         continue
                 else:  # event.broadcaster_matches_ref(driver):
                     # if event.type & driver.…readyForInput:
-                    None
+                    debug('some weird event was received…')
 
         self.BroadcastEventByType(SublimeBroadcaster.eBroadcastBitShouldExit)
         del self.__debugger
