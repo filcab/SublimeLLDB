@@ -1,5 +1,10 @@
 # -*- mode: python; coding: utf-8 -*-
 
+import lldb_wrappers
+import sublime
+
+thread_created = lldb_wrappers.thread_created
+
 lldb_ = None
 lldb_view = None
 
@@ -51,6 +56,10 @@ def lldb_out_view():
 def set_lldb_out_view(v):
     global lldb_view
     lldb_view = v
+
+
+def lldb_view_send(string):
+    sublime.set_timeout(lambda: lldb_view_write(string), 0)
 
 
 def lldb_view_write(string):
