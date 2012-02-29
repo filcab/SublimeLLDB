@@ -9,14 +9,16 @@ import atexit
 import datetime
 import threading
 
-from root_objects import lldb_instance, set_lldb_instance,   \
-                         lldb_out_view, set_lldb_out_view,   \
-                         lldb_view_write,                    \
-                         lldb_input_fh,  set_lldb_input_fh,  \
-                         lldb_output_fh, set_lldb_output_fh, \
+from root_objects import lldb_instance, set_lldb_instance,      \
+                         lldb_out_view, set_lldb_out_view,      \
+                         lldb_view_write, lldb_view_send,       \
+                         lldb_input_fh,  set_lldb_input_fh,     \
+                         lldb_output_fh, set_lldb_output_fh,    \
                          lldb_error_fh,  set_lldb_error_fh
-from monitors import launch_i_o_monitor, \
+
+from monitors import launch_i_o_monitor, launch_event_monitor,  \
                      launch_markers_monitor, lldb_file_markers_queue
+
 # import this specific name without the prefix
 from lldb_wrappers import LldbWrapper
 import lldb_wrappers
@@ -52,9 +54,9 @@ def debug_prologue(lldb):
     """
     debug('lldb prologue')
     lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
-    lldb.interpret_command('target create ~/dev/softek/lldb-plugin/tests')
+    lldb_instance().interpret_command('target create ~/dev/softek/lldb-plugin/tests')
     lldb_view_write('(lldb) b main\n')
-    lldb.interpret_command('b main')
+    lldb_instance().interpret_command('b main')
     debug('ended lldb prologue')
 
 
@@ -71,9 +73,11 @@ lldb_prompt = '(lldb) '
 # lldb_out_view = None
 
 # To hold on to the pipes. Otherwise GC takes them
-pipe_in = None
-pipe_out = None
-pipe_err = None
+# pipe_in = None
+# pipe_out = None
+# pipe_err = None
+
+broadcaster = None
 
 lldb_prog_view = None
 lldb_prog_input = None
@@ -139,18 +143,14 @@ def lldb_toggle_output_view(window, show=False, hide=False):
     v = lldb_out_view()
     if v:
         if show:
-            debug('showing lldb i/o, show=true')
             set_lldb_window_layout(window=window)
             window.set_view_index(v, 1, 0)
         elif hide:
-            debug('hiding lldb i/o, hide=true')
             set_regular_window_layout(window=window)
         elif not good_lldb_layout(window=window):
-            debug('showing lldb i/o, not good layout')
             set_lldb_window_layout(window=window)
             window.set_view_index(v, 1, 0)
         else:
-            debug('hiding lldb i/o, good layout')
             set_regular_window_layout(window=window)
 
 
@@ -161,16 +161,16 @@ def lldb_in_panel_on_done(cmd):
 
     lldb_view_write(lldb_prompt + cmd + '\n')
 
-    result, r = lldb_instance().interpret_command(cmd)
-    err_str = result.error()
-    out_str = result.output()
+    r = broadcaster.send_command(cmd)
+    # err_str = result.error()
+    # out_str = result.output()
 
-    lldb_view_write(out_str)
+    # lldb_view_write(out_str)
 
-    if len(err_str) != 0:
-        err_str.replace('\n', '\nerr> ')
-        err_str = 'err> ' + err_str
-        lldb_view_write(err_str)
+    # if len(err_str) != 0:
+    #     err_str.replace('\n', '\nerr> ')
+    #     err_str = 'err> ' + err_str
+    #     lldb_view_write(err_str)
 
     # We don't have a window, so let's re-use the one active on lldb launch
     lldb_toggle_output_view(window_ref, show=True)
@@ -178,12 +178,14 @@ def lldb_in_panel_on_done(cmd):
     v = lldb_out_view()
     v.show_at_center(v.size() + 1)
 
-    if r.is_quit():
-        cleanup(window_ref)
-    else:
-        update_markers(window_ref, after=lambda:
-            window_ref.show_input_panel('lldb', '',
-                                        lldb_in_panel_on_done, None, None))
+    # if r.is_quit():
+    #     cleanup(window_ref)
+    # else:
+    #     update_markers(window_ref, after=lambda:
+    #         window_ref.show_input_panel('lldb', '',
+    #                                     lldb_in_panel_on_done, None, None))
+    window_ref.show_input_panel('lldb', '',
+                                lldb_in_panel_on_done, None, None)
 
 
 def update_markers(window, after=None):
@@ -205,31 +207,22 @@ def cleanup(window):
     debug('cleaning up the lldb plugin')
 
     update_markers(window)  # markers will be removed
+
+    kill_monitors()
     if lldb_instance() is not None:
         lldb_instance().destroy()
+    set_lldb_instance(None)
 
-    if not pipe_in.closed:
-        pipe_in.close()
-    lldb_input_fh().close()
-    set_lldb_input_fh(None)
-    if not pipe_out.closed:
-        pipe_out.close()
-    lldb_output_fh().close()
-    set_lldb_output_fh(None)
-    if not pipe_err.closed:
-        pipe_err.close()
-    lldb_error_fh().close()
-    set_lldb_error_fh(None)
+    # close the pipes
+    broadcaster.end()
+    broadcaster = None
 
     lldb_wrappers.terminate()
-    set_lldb_instance(None)
 
 
 def initialize_lldb():
     lldb_wrappers.initialize()
     lldb = LldbWrapper()
-    # For now, we'll use sync mode
-    lldb.set_async(False)
 
     return lldb
 
@@ -251,8 +244,10 @@ class LldbCommand(WindowCommand):
         global window_ref
 
         if lldb_instance() is None:
+            # if should_clear_lldb_view:
+            clear_lldb_out_view()
+
             debug('Creating an SBDebugger instance.')
-            set_lldb_instance(initialize_lldb())
             window_ref = self.window
 
             g = lldb_greeting()
@@ -261,36 +256,59 @@ class LldbCommand(WindowCommand):
             lldb_view_write(g)
             lldb_view_write('cwd: ' + os.getcwd() + '\n')
 
+            # Really start the debugger
+            set_lldb_instance(initialize_lldb())
+            lldb = lldb_instance()
+            debug('setting file handles')
+            # lldb.SetErrorFileHandle(sys.__stderr__, False)
+            # lldb.SetOutputFileHandle(sys.__stdout__, False)
+
+            listener = lldb.listener
+            listener.start_listening_for_breakpoint_changes()
+
+            launch_event_monitor(listener)
+
+            global broadcaster
+            if broadcaster is not None:
+                broadcaster.end()
+
+            broadcaster = lldb_wrappers.SublimeBroadcaster(lldb_instance())
+            broadcaster.set_output_fun(lldb_view_send)
+            broadcaster.start()
+
+            launch_i_o_monitor(broadcaster)
+
             # We may also need to change the width upon window resize
             # debugger.SetTerminalWidth()
 
             # Setup the input, output, and error file descriptors
             # for the debugger
-            global pipe_in, pipe_out, pipe_err
+            # global pipe_in, pipe_out, pipe_err
 
-            pipe_in, lldb_debugger_pipe_in = os.pipe()
-            lldb_debugger_pipe_out, pipe_out = os.pipe()
-            lldb_debugger_pipe_err, pipe_err = os.pipe()
-            debug('in: %d, %d' % (pipe_in, lldb_debugger_pipe_in))
-            debug('out: %d, %d' % (lldb_debugger_pipe_out, pipe_out))
-            debug('err: %d, %d' % (lldb_debugger_pipe_err, pipe_err))
+            # pipe_in, lldb_debugger_pipe_in = os.pipe()
+            # lldb_debugger_pipe_out, pipe_out = os.pipe()
+            # lldb_debugger_pipe_err, pipe_err = os.pipe()
+            # debug('in: %d, %d' % (pipe_in, lldb_debugger_pipe_in))
+            # debug('out: %d, %d' % (lldb_debugger_pipe_out, pipe_out))
+            # debug('err: %d, %d' % (lldb_debugger_pipe_err, pipe_err))
 
-            pipe_in = os.fdopen(pipe_in, 'r', 0)
-            set_lldb_input_fh(os.fdopen(lldb_debugger_pipe_in, 'w', 0))
-            set_lldb_output_fh(os.fdopen(lldb_debugger_pipe_out, 'r', 0))
-            pipe_out = os.fdopen(pipe_out, 'w', 0)
-            set_lldb_error_fh(os.fdopen(lldb_debugger_pipe_err, 'r', 0))
-            pipe_err = os.fdopen(pipe_err, 'w', 0)
-            debug('in: %s, %s' % (str(pipe_in), str(lldb_debugger_pipe_in)))
-            debug('out: %s, %s' % (str(lldb_debugger_pipe_out), str(pipe_out)))
-            debug('err: %s, %s' % (str(lldb_debugger_pipe_err), str(pipe_err)))
+            # pipe_in = os.fdopen(pipe_in, 'r', 0)
+            # set_lldb_input_fh(os.fdopen(lldb_debugger_pipe_in, 'w', 0))
+            # set_lldb_output_fh(os.fdopen(lldb_debugger_pipe_out, 'r', 0))
+            # pipe_out = os.fdopen(pipe_out, 'w', 0)
+            # set_lldb_error_fh(os.fdopen(lldb_debugger_pipe_err, 'r', 0))
+            # pipe_err = os.fdopen(pipe_err, 'w', 0)
 
-            lldb_instance().SetInputFileHandle(pipe_in, True)
-            lldb_instance().SetOutputFileHandle(pipe_out, True)
-            lldb_instance().SetErrorFileHandle(pipe_err, True)
+            # debug('in: %s, %s' % (str(pipe_in), str(lldb_debugger_pipe_in)))
+            # debug('out: %s, %s' % (str(lldb_debugger_pipe_out), str(pipe_out)))
+            # debug('err: %s, %s' % (str(lldb_debugger_pipe_err), str(pipe_err)))
 
-            launch_i_o_monitor()
-            launch_markers_monitor()
+            # lldb_instance().SetInputFileHandle(pipe_in, True)
+            # lldb_instance().SetOutputFileHandle(pipe_out, True)
+            # lldb_instance().SetErrorFileHandle(pipe_err, True)
+
+            # launch_i_o_monitor()
+            # launch_markers_monitor()
 
             if lldb_out_view() is None:
                 debug('uh oh, starting lldb and the i/o view is not ready!')
@@ -308,6 +326,7 @@ class LldbToggleOutputView(WindowCommand):
     def run(self):
         self.setup()
 
+        debug('layout: ' + str(good_lldb_layout(window=self.window)))
         if good_lldb_layout(window=self.window) and basic_layout != None:
             # restore backup_layout (groups and views)
             lldb_toggle_output_view(self.window, hide=True)
@@ -315,18 +334,22 @@ class LldbToggleOutputView(WindowCommand):
             lldb_toggle_output_view(self.window, show=True)
 
 
+def clear_lldb_out_view():
+    v = lldb_out_view()
+    v.set_read_only(False)
+    edit = v.begin_edit('lldb-view-clear')
+    v.erase(edit, sublime.Region(0, v.size()))
+    v.end_edit(edit)
+    v.set_read_only(True)
+    v.show(v.size())
+
+
 class LldbClearOutputView(WindowCommand):
     def run(self):
         self.setup()
+        debug('clearing lldb view')
 
-        v = lldb_out_view()
-        v.set_read_only(False)
-        edit = v.begin_edit('lldb-view-clear')
-        v.erase(edit, sublime.Region(0, v.size()))
-        v.end_edit(edit)
-        v.set_read_only(True)
-        v.show(v.size())
-
+        clear_lldb_out_view()
 
 # class LldbNext(sublime_plugin.WindowCommand):
 #     def run(self):
