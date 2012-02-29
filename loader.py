@@ -15,3 +15,5 @@ LldbClearOutputView = LldbClearOutputView
 # lldb_toggle_output_view
 # This command shows/hides the 'lldb i/o' view.
 LldbToggleOutputView = LldbToggleOutputView
+
+unload_handler = unload_handler
