@@ -108,11 +108,14 @@ def lldb_i_o_monitor(broadcaster):
                 if ev.broadcaster.valid:
                     if ev.type & SublimeBroadcaster.eBroadcastBitShouldExit \
                         or ev.type & SublimeBroadcaster.eBroadcastBitDidExit:
+                        debug('leaving due to SublimeBroadcaster')
                         done = True
                         continue
                     elif ev.type & SublimeBroadcaster.eBroadcastBitsSTDOUT:
+                        debug('stdout bits')
                         lldb_view_send(ev.string)
                     elif ev.type & SublimeBroadcaster.eBroadcastBitsSTDERR:
+                        debug('stderr bits')
                         string = 'err> ' + ev.string
                         string.replace('\n', '\nerr> ')
                         lldb_view_send(string)
@@ -291,6 +294,8 @@ def lldb_event_monitor(listener):
     debug_thr()
     debug('started')
 
+    interpreter_broadcaster = listener.debugger.GetCommandInterpreter().GetBroadcaster()
+
     if listener.valid:
         done = False
         while not done:
@@ -302,7 +307,7 @@ def lldb_event_monitor(listener):
                         handle_process_event(ev)
                     elif ev.is_breakpoint_event():
                         handle_breakpoint_event(ev)
-                    elif True:  # (just assume, for now) ev.broadcaster_matches_ref(interpreter.broadcaster):
+                    elif ev.broadcaster_matches_ref(interpreter_broadcaster):
                         if ev.type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
                             done = True
                             debug('quit received')
