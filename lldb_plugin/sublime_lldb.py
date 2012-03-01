@@ -19,6 +19,8 @@ from root_objects import lldb_instance, set_lldb_instance,      \
 from monitors import launch_i_o_monitor, launch_event_monitor,  \
                      launch_markers_monitor, lldb_file_markers_queue
 
+import lldb
+
 # import this specific name without the prefix
 from lldb_wrappers import LldbWrapper
 import lldb_wrappers
@@ -154,6 +156,17 @@ def lldb_toggle_output_view(window, show=False, hide=False):
             set_regular_window_layout(window=window)
 
 
+def clear_lldb_out_view():
+    v = lldb_out_view()
+    debug('clearing view: ' + repr(v))
+    v.set_read_only(False)
+    edit = v.begin_edit('lldb-view-clear')
+    v.erase(edit, sublime.Region(0, v.size()))
+    v.end_edit(edit)
+    v.set_read_only(True)
+    v.show(v.size())
+
+
 def lldb_in_panel_on_done(cmd):
     debug_thr()
 
@@ -258,13 +271,21 @@ class LldbCommand(WindowCommand):
 
             # Really start the debugger
             set_lldb_instance(initialize_lldb())
-            lldb = lldb_instance()
+            lldb_ = lldb_instance()
             debug('setting file handles')
-            # lldb.SetErrorFileHandle(sys.__stderr__, False)
-            # lldb.SetOutputFileHandle(sys.__stdout__, False)
+            debug(str(sys.__stderr__.fileno()) + ' ' + str(sys.__stderr__))
+            debug(str(sys.__stdout__.fileno()) + ' ' + str(sys.__stdout__))
+            lldb_.SetErrorFileHandle(sys.__stderr__, False)
+            debug('error done!')
+            lldb_.SetOutputFileHandle(sys.__stdout__, False)
 
-            listener = lldb.listener
+            listener = lldb_.listener
             listener.start_listening_for_breakpoint_changes()
+            listener.start_listening_for_events(lldb_instance().            \
+                                                GetCommandInterpreter().    \
+                                                GetBroadcaster(),           \
+                                                lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \
+                                                lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData)
 
             launch_event_monitor(listener)
 
@@ -272,7 +293,7 @@ class LldbCommand(WindowCommand):
             if broadcaster is not None:
                 broadcaster.end()
 
-            broadcaster = lldb_wrappers.SublimeBroadcaster(lldb_instance())
+            broadcaster = lldb_wrappers.SublimeBroadcaster(lldb_)
             broadcaster.set_output_fun(lldb_view_send)
             broadcaster.start()
 
@@ -332,16 +353,6 @@ class LldbToggleOutputView(WindowCommand):
             lldb_toggle_output_view(self.window, hide=True)
         else:
             lldb_toggle_output_view(self.window, show=True)
-
-
-def clear_lldb_out_view():
-    v = lldb_out_view()
-    v.set_read_only(False)
-    edit = v.begin_edit('lldb-view-clear')
-    v.erase(edit, sublime.Region(0, v.size()))
-    v.end_edit(edit)
-    v.set_read_only(True)
-    v.show(v.size())
 
 
 class LldbClearOutputView(WindowCommand):
