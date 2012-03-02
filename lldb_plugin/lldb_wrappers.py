@@ -205,6 +205,10 @@ class LldbListener(object):
         self.__debugger = debugger
 
     @property
+    def SBListener(self):
+        return self.__listener
+
+    @property
     def debugger(self):
         return self.__debugger
 
@@ -221,7 +225,9 @@ class LldbListener(object):
             lldb.SBTarget.GetBroadcasterClassName(),        \
             lldb.SBTarget.eBroadcastBitBreakpointChanged)
 
-    def wait_for_event(self, n_secs):
+    def wait_for_event(self, n_secs=None):
+        if n_secs is None:
+            n_secs = 4000000
         event = lldb.SBEvent()
         self.__listener.WaitForEvent(n_secs, event)
         return LldbEvent(event)
@@ -321,6 +327,11 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         self.BroadcastEvent(event.SBEvent)
 
     def run(self):
+        thread_created(threading.current_thread().name)
+
+        def debug(object):
+            print threading.current_thread().name + ' ' + str(object)
+
         listener = LldbListener(lldb.SBListener('SublimeBroadcaster'), self.__debugger)
         interpreter_broadcaster = self.__debugger.GetCommandInterpreter() \
                                                  .GetBroadcaster()
@@ -335,11 +346,12 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         #                                     Driver.eBroadcastBitThreadShouldExit)
         done = False
         while not done:
-            event = listener.wait_for_event(10)
+            debug('listening at: ' + str(listener.SBListener) + ' (' + str(listener.SBListener.name) + ')')
+            event = listener.wait_for_event()
             if not event.valid:  # timeout
                 continue
 
-            debug('SublimeBroadcaster: event:')
+            debug('SublimeBroadcaster: got event:')
             debug(event)
             if event.broadcaster.valid:
                 if event.broadcaster_matches_ref(interpreter_broadcaster):
@@ -365,6 +377,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
                             err_str.replace('\n', '\nerr> ')
                             err_str = 'err> ' + err_str
                             self.__output_fun(err_str)
+                            debug('continuing')
                         continue
                 else:  # event.broadcaster_matches_ref(driver):
                     # if event.type & driver.…readyForInput:
