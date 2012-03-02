@@ -51,9 +51,16 @@ def kill_monitors():
 
 
 def launch_monitor(fun, name='<monitor thread>', args=()):
-    t = threading.Thread(target=fun, name=name, args=args)
-    t.daemon = True
+    debug('launching monitor: ' + name)
+    debug('fun: ' + repr(fun) + ', args: ' + repr(args))
+    try:
+        t = threading.Thread(target=fun, name=name, args=args)
+    except e:
+        debug('le fu? ' + repr(e))
+    # t.daemon = True
+    debug('starting')
     t.start()
+    debug('started')
 
 
 def launch_i_o_monitor(*args):
@@ -62,7 +69,7 @@ def launch_i_o_monitor(*args):
         lldb_i_o_thread.join()
 
     lldb_i_o_thread = launch_monitor(lldb_i_o_monitor,
-                                     name='<lldb i/o monitor>',
+                                     name='<sublime-lldb i/o monitor>',
                                      args=args)
 
 
@@ -72,7 +79,7 @@ def launch_markers_monitor(*args):
         lldb_markers_thread.join()
 
     lldb_markers_thread = launch_monitor(lldb_markers_monitor,
-                                         name='<lldb file markers monitor>',
+                                         name='<sublime-lldb file markers monitor>',
                                          args=args)
 
 
@@ -83,7 +90,7 @@ def launch_event_monitor(*args):
         lldb_event_monitor_thread.join()
 
     lldb_event_monitor_thread = launch_monitor(lldb_event_monitor,
-                                               name='<lldb event monitor>',
+                                               name='<sublime-lldb event monitor>',
                                                args=args)
 
 
@@ -102,7 +109,8 @@ def lldb_i_o_monitor(broadcaster):
     if listener.valid:
         done = False
         while not done:
-            ev = listener.wait_for_event(100)
+            debug('listening at: ' + str(listener.SBListener))
+            ev = listener.wait_for_event()
             if ev.valid:
                 debug('Got event: ' + lldbutil.get_description(ev.SBEvent))
                 if ev.broadcaster.valid:
@@ -299,7 +307,8 @@ def lldb_event_monitor(listener):
     if listener.valid:
         done = False
         while not done:
-            ev = listener.wait_for_event(10)
+            debug('listening at: ' + str(listener.SBListener))
+            ev = listener.wait_for_event()
             if ev.valid:
                 debug('Got event: ' + lldbutil.get_description(ev.SBEvent))
                 if ev.broadcaster.valid:
