@@ -14,7 +14,8 @@ from root_objects import lldb_instance, set_lldb_instance,      \
                          lldb_view_write, lldb_view_send,       \
                          lldb_input_fh,  set_lldb_input_fh,     \
                          lldb_output_fh, set_lldb_output_fh,    \
-                         lldb_error_fh,  set_lldb_error_fh
+                         lldb_error_fh,  set_lldb_error_fh,     \
+                         thread_created
 
 from monitors import launch_i_o_monitor, launch_event_monitor,  \
                      launch_markers_monitor, lldb_file_markers_queue
@@ -44,6 +45,7 @@ def debugif(b, str):
 
 
 def initialize_plugin():
+    thread_created('<sublime text 2 main thread>')
     debug('Loading LLDB Sublime Text 2 plugin')
     debug('python version: %s' % (sys.version_info,))
     debug('cwd: %s' % os.getcwd())
@@ -55,6 +57,8 @@ def debug_prologue(lldb):
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
     debug('lldb prologue')
+    lldb_view_write('(lldb) log enable lldb events\n')
+    lldb_instance().interpret_command('log enable lldb events')
     lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
     lldb_instance().interpret_command('target create ~/dev/softek/lldb-plugin/tests')
     lldb_view_write('(lldb) b main\n')
@@ -279,6 +283,7 @@ class LldbCommand(WindowCommand):
             debug('error done!')
             lldb_.SetOutputFileHandle(sys.__stdout__, False)
 
+            debug('setting up listeners')
             listener = lldb_.listener
             listener.start_listening_for_breakpoint_changes()
             listener.start_listening_for_events(lldb_instance().            \
@@ -289,10 +294,12 @@ class LldbCommand(WindowCommand):
 
             launch_event_monitor(listener)
 
+            debug('cleaning up broadcaster')
             global broadcaster
             if broadcaster is not None:
                 broadcaster.end()
 
+            debug('setting up broadcaster')
             broadcaster = lldb_wrappers.SublimeBroadcaster(lldb_)
             broadcaster.set_output_fun(lldb_view_send)
             broadcaster.start()
