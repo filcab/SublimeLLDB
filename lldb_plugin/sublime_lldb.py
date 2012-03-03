@@ -284,7 +284,7 @@ class LldbCommand(WindowCommand):
             lldb_.SetOutputFileHandle(sys.__stdout__, False)
 
             debug('setting up listeners')
-            listener = lldb_.listener
+            listener = lldb_wrappers.LldbListener(lldb.SBListener('i/o listener'), lldb_instance())
             listener.start_listening_for_breakpoint_changes()
             listener.start_listening_for_events(lldb_instance().            \
                                                 GetCommandInterpreter().    \

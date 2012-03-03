@@ -127,6 +127,7 @@ def lldb_i_o_monitor(broadcaster):
                         string = 'err> ' + ev.string
                         string.replace('\n', '\nerr> ')
                         lldb_view_send(string)
+        debug('leaving...')
 
 
 # def lldb_i_o_monitor():

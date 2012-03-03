@@ -221,7 +221,7 @@ class LldbListener(object):
 
     def start_listening_for_breakpoint_changes(self):
         self.__listener.StartListeningForEventClass(        \
-            self.__debugger,                                \
+            self.__debugger.SBDebugger,                     \
             lldb.SBTarget.GetBroadcasterClassName(),        \
             lldb.SBTarget.eBroadcastBitBreakpointChanged)
 
@@ -346,7 +346,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         #                                     Driver.eBroadcastBitThreadShouldExit)
         done = False
         while not done:
-            debug('listening at: ' + str(listener.SBListener) + ' (' + str(listener.SBListener.name) + ')')
+            debug('listening at: ' + str(listener.SBListener))
             event = listener.wait_for_event()
             if not event.valid:  # timeout
                 continue
@@ -384,6 +384,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
                     debug('some weird event was received…')
 
         self.BroadcastEventByType(SublimeBroadcaster.eBroadcastBitShouldExit)
+        debug('leaving...')
         del self.__debugger
 
 
