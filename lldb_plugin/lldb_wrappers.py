@@ -1,6 +1,9 @@
 # -*- mode: python; coding: utf-8 -*-
 
+import time
+
 import lldb
+import lldbutil
 import threading
 
 
@@ -217,7 +220,11 @@ class LldbListener(object):
         return self.__listener.IsValid()
 
     def start_listening_for_events(self, broadcaster, events):
-        self.__listener.StartListeningForEvents(broadcaster, events)
+        b = broadcaster
+        if isinstance(b, LldbBroadcaster):
+            b = b.SBBroadcaster
+
+        self.__listener.StartListeningForEvents(b, events)
 
     def start_listening_for_breakpoint_changes(self):
         self.__listener.StartListeningForEventClass(        \
@@ -225,12 +232,26 @@ class LldbListener(object):
             lldb.SBTarget.GetBroadcasterClassName(),        \
             lldb.SBTarget.eBroadcastBitBreakpointChanged)
 
-    def wait_for_event(self, n_secs=None):
-        if n_secs is None:
-            n_secs = 4000000
+    def wait_for_event(self, timeout=None):
+        if timeout is None:
+            timeout = 4000000
         event = lldb.SBEvent()
-        self.__listener.WaitForEvent(n_secs, event)
+        self.__listener.WaitForEvent(timeout, event)
         return LldbEvent(event)
+
+    def wait_for_event_for_broadcaster_with_type(self, timeout, broadcaster, mask):
+        b = broadcaster
+        if isinstance(b, LldbBroadcaster):
+            b = b.SBBroadcaster
+        if timeout is None:
+            timeout = 4000000
+
+        event = lldb.SBEvent()
+        self.__listener.WaitForEventForBroadcasterWithType(timeout,
+                                             broadcaster,
+                                             mask,
+                                             event)
+        return event
 
 
 class LldbEvent(object):
@@ -291,12 +312,14 @@ class LldbBroadcaster(object):
 
 class SublimeBroadcaster(lldb.SBBroadcaster):
 
-    eBroadcastBitHasCommandInput = 1 << 0
-    eBroadcastBitShouldExit = 1 << 1
-    eBroadcastBitDidExit = 1 << 2
-    eBroadcastBitsSTDOUT = 1 << 3
-    eBroadcastBitsSTDERR = 1 << 4
+    eBroadcastBitHasInput = 1 << 0
+    eBroadcastBitHasCommandInput = 1 << 1
+    eBroadcastBitDidStart = 1 << 2
+    eBroadcastBitShouldExit = 1 << 3
+    eBroadcastBitDidExit = 1 << 4
     eBroadcastBitsSTDIN = 1 << 5
+    eBroadcastBitsSTDOUT = 1 << 6
+    eBroadcastBitsSTDERR = 1 << 7
     eAllEventBits = 0xffffffff
 
     def __init__(self, debugger):
@@ -323,27 +346,29 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         self.__t.start()
 
     def send_command(self, cmd):
-        event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
+        event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasInput, str(cmd))
         self.BroadcastEvent(event.SBEvent)
 
     def run(self):
         thread_created(threading.current_thread().name)
 
+        time.sleep(1)
+
         def debug(object):
             print threading.current_thread().name + ' ' + str(object)
 
-        listener = LldbListener(lldb.SBListener('SublimeBroadcaster'), self.__debugger)
-        interpreter_broadcaster = self.__debugger.GetCommandInterpreter() \
-                                                 .GetBroadcaster()
+        listener = LldbListener(lldb.SBListener('SublimeListener'), self.__debugger)
+        interpreter_broadcaster = self.__debugger.SBDebugger.GetCommandInterpreter().GetBroadcaster()
         listener.start_listening_for_events(interpreter_broadcaster,
-                                            lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit |
+                                            lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit | \
                                             lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived)
-        listener.start_listening_for_events(self,
-                                            SublimeBroadcaster.eBroadcastBitHasCommandInput |
-                                            SublimeBroadcaster.eBroadcastBitShouldExit)
-        # listener.start_listening_for_events(self,
-        #                                     Driver.eBroadcastBitReadyForInput |
-        #                                     Driver.eBroadcastBitThreadShouldExit)
+
+        listener.start_listening_for_events(self, SublimeBroadcaster.eBroadcastBitShouldExit | \
+                                                  SublimeBroadcaster.eBroadcastBitHasInput)
+
+        debug('broadcasting DidStart')
+        self.BroadcastEventByType(SublimeBroadcaster.eBroadcastBitDidStart)
+
         done = False
         while not done:
             debug('listening at: ' + str(listener.SBListener))
@@ -351,8 +376,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
             if not event.valid:  # timeout
                 continue
 
-            debug('SublimeBroadcaster: got event:')
-            debug(event)
+            debug('SublimeBroadcaster: got event: ' + lldbutil.get_description(event.SBEvent))
             if event.broadcaster.valid:
                 if event.broadcaster_matches_ref(interpreter_broadcaster):
                     if event.type & lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit \
@@ -365,27 +389,21 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
                         debug('exiting from broadcaster due to self')
                         done = True
                         continue
-                    if event.type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
-                        debug('executing command: ' + event.string)
-                        result, r = self.__debugger.interpret_command(event.string, True)
-                        err_str = result.error()
-                        out_str = result.output()
+                    if event.type & SublimeBroadcaster.eBroadcastBitHasInput:
+                        cmd = event.string
+                        # TODO: This shouldn't happen!
+                        if cmd is None:
+                            cmd = ''
 
-                        self.__output_fun(out_str)
-
-                        if len(err_str) != 0:
-                            err_str.replace('\n', '\nerr> ')
-                            err_str = 'err> ' + err_str
-                            self.__output_fun(err_str)
-                            debug('continuing')
+                        debug('sending command to event-listener: ' + cmd)
+                        event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
+                        self.BroadcastEvent(event.SBEvent)
                         continue
-                else:  # event.broadcaster_matches_ref(driver):
-                    # if event.type & driver.…readyForInput:
-                    debug('some weird event was received…')
 
         self.BroadcastEventByType(SublimeBroadcaster.eBroadcastBitShouldExit)
         debug('leaving...')
         del self.__debugger
+        self.BroadcastEventByType(SublimeBroadcaster.eBroadcastBitDidExit)
 
 
 

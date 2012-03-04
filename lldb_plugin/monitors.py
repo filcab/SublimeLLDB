@@ -12,8 +12,9 @@ import Queue
 import select
 import threading
 
-from root_objects import lldb_instance, lldb_view_write, \
-                         lldb_output_fh, lldb_error_fh,  \
+from root_objects import lldb_instance, set_lldb_instance, \
+                         lldb_view_write, lldb_view_send,  \
+                         lldb_output_fh, lldb_error_fh,    \
                          thread_created
 
 
@@ -39,6 +40,8 @@ lldb_file_markers_queue = Queue.Queue()
 
 
 def kill_monitors():
+    global lldb_i_o_thread, lldb_event_monitor_thread, lldb_markers_thread
+
     if lldb_i_o_thread is not None and lldb_i_o_thread.is_alive():
         lldb_i_o_thread.kill()
         lldb_i_o_thread = None
@@ -94,39 +97,39 @@ def launch_event_monitor(*args):
                                                args=args)
 
 
-def lldb_i_o_monitor(broadcaster):
-    thread_created(threading.current_thread().name)
-    debug_thr()
-    debug('started')
+def lldb_i_o_monitor():
+    # thread_created(threading.current_thread().name)
+    # debug_thr()
+    # debug('started')
 
-    listener = LldbListener(lldb.SBListener('i/o listener'), lldb_instance())
-    listener.start_listening_for_events(broadcaster,
-                                    SublimeBroadcaster.eBroadcastBitsSTDOUT |
-                                    SublimeBroadcaster.eBroadcastBitsSTDERR |
-                                    SublimeBroadcaster.eBroadcastBitDidExit |
-                                    SublimeBroadcaster.eBroadcastBitShouldExit)
+    # listener = LldbListener(lldb.SBListener('i/o listener'), lldb_instance())
+    # listener.start_listening_for_events(broadcaster,
+    #                                 SublimeBroadcaster.eBroadcastBitsSTDOUT |
+    #                                 SublimeBroadcaster.eBroadcastBitsSTDERR |
+    #                                 SublimeBroadcaster.eBroadcastBitDidExit |
+    #                                 SublimeBroadcaster.eBroadcastBitShouldExit)
 
-    if listener.valid:
-        done = False
-        while not done:
-            debug('listening at: ' + str(listener.SBListener))
-            ev = listener.wait_for_event()
-            if ev.valid:
-                debug('Got event: ' + lldbutil.get_description(ev.SBEvent))
-                if ev.broadcaster.valid:
-                    if ev.type & SublimeBroadcaster.eBroadcastBitShouldExit \
-                        or ev.type & SublimeBroadcaster.eBroadcastBitDidExit:
-                        debug('leaving due to SublimeBroadcaster')
-                        done = True
-                        continue
-                    elif ev.type & SublimeBroadcaster.eBroadcastBitsSTDOUT:
-                        debug('stdout bits')
-                        lldb_view_send(ev.string)
-                    elif ev.type & SublimeBroadcaster.eBroadcastBitsSTDERR:
-                        debug('stderr bits')
-                        string = 'err> ' + ev.string
-                        string.replace('\n', '\nerr> ')
-                        lldb_view_send(string)
+    # if listener.valid:
+    #     done = False
+    #     while not done:
+    #         debug('listening at: ' + str(listener.SBListener))
+    #         ev = listener.wait_for_event()
+    #         if ev.valid:
+    #             debug('Got event: ' + lldbutil.get_description(ev.SBEvent))
+    #             if ev.broadcaster.valid:
+    #                 if ev.type & SublimeBroadcaster.eBroadcastBitShouldExit \
+    #                     or ev.type & SublimeBroadcaster.eBroadcastBitDidExit:
+    #                     debug('leaving due to SublimeBroadcaster')
+    #                     done = True
+    #                     continue
+    #                 elif ev.type & SublimeBroadcaster.eBroadcastBitsSTDOUT:
+    #                     debug('stdout bits')
+    #                     lldb_view_send(ev.string)
+    #                 elif ev.type & SublimeBroadcaster.eBroadcastBitsSTDERR:
+    #                     debug('stderr bits')
+    #                     string = 'err> ' + ev.string
+    #                     string.replace('\n', '\nerr> ')
+    #                     lldb_view_send(string)
         debug('leaving...')
 
 
@@ -298,12 +301,32 @@ def update_breakpoints(window):
     sublime.set_timeout(bulk_update, 0)
 
 
-def lldb_event_monitor(listener):
+# event_monitor mimics the Driver class, in Driver.cpp
+def lldb_event_monitor(sublime_broadcaster):
     thread_created(threading.current_thread().name)
     debug_thr()
     debug('started')
 
+    listener = LldbListener(lldb.SBListener('event listener'), lldb_instance())
+
+    listener.start_listening_for_events(sublime_broadcaster,                                \
+                                        SublimeBroadcaster.eBroadcastBitDidStart | \
+                                        SublimeBroadcaster.eBroadcastBitHasCommandInput |   \
+                                        SublimeBroadcaster.eBroadcastBitShouldExit      |   \
+                                        SublimeBroadcaster.eBroadcastBitDidExit)
+
+    debug('waiting for SublimeBroadcaster')
+    listener.wait_for_event_for_broadcaster_with_type(400000,                                       \
+                                                      sublime_broadcaster,                          \
+                                                      SublimeBroadcaster.eBroadcastBitDidStart)
+
+    listener.start_listening_for_breakpoint_changes()
+
     interpreter_broadcaster = listener.debugger.GetCommandInterpreter().GetBroadcaster()
+    listener.start_listening_for_events(interpreter_broadcaster,                                        \
+                                        lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived    | \
+                                        lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \
+                                        lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData)
 
     if listener.valid:
         done = False
@@ -330,9 +353,28 @@ def lldb_event_monitor(listener):
                         elif ev.type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData:
                             debug('got output data')
                             lldb_view_send(ev.string)
-            # else:
-                # debug('Event is not valid (timeout)')
+                    elif ev.broadcaster_matches_ref(sublime_broadcaster):
+                        if ev.type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
+                            result, r = lldb_instance().interpret_command(ev.string, True)
+                            err_str = result.error()
+                            out_str = result.output()
+
+                            lldb_view_send(out_str)
+
+                            if len(err_str) != 0:
+                                err_str.replace('\n', '\nerr> ')
+                                err_str = 'err> ' + err_str
+                                lldb_view_send(err_str)
+                                debug('continuing')
+                            continue
+
+                        elif ev.type & SublimeBroadcaster.eBroadcastBitShouldExit \
+                            or ev.type & SublimeBroadcaster.eBroadcastBitDidExit:
+                            done = True
+                            continue
     debug('exiting')
+    set_lldb_instance(None)
+    kill_monitors()
 
 
 def handle_process_event(ev):
