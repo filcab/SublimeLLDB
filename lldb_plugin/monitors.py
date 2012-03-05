@@ -392,7 +392,7 @@ def handle_process_event(ev):
             or state == lldb.eStateLaunching \
             or state == lldb.eStateStepping  \
             or state == lldb.eStateDetached:
-            debug("Process %llu %s\n", process.GetProcessID(),
+            lldb_view_send("Process %llu %s\n", process.GetProcessID(),
                 lldb_instance().StateAsCString(state))
 
         elif state == lldb.eStateRunning:
@@ -405,7 +405,7 @@ def handle_process_event(ev):
             or state == lldb.eStateCrashed   \
             or state == lldb.eStateSuspended:
             if lldb.SBProcess.GetRestartedFromEvent(ev.SBEvent):
-                debug('Process %llu stopped and was programmatically restarted.' %
+                lldb_view_send('Process %llu stopped and was programmatically restarted.' %
                     process.GetProcessID())
             else:
                 # FIXME:
@@ -450,7 +450,7 @@ def handle_breakpoint_event(ev):
         new_locs = lldb.SBBreakpoint.GetNumBreakpointLocationsFromEvent(ev.SBEvent)
         if new_locs > 0:
             bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev.SBEvent)
-            debug("%d locations added to breakpoint %d\n" %
+            lldb_view_send("%d locations added to breakpoint %d\n" %
                 (new_locs, breakpoint.GetID()))
     elif type & lldb.eBreakpointEventTypeLocationsRemoved:
         None
