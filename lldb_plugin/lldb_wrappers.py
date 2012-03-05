@@ -5,6 +5,7 @@ import time
 import lldb
 import lldbutil
 import threading
+import traceback
 
 
 def debug(str):
@@ -404,6 +405,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
                         cmd = event.string
                         # TODO: This shouldn't happen!
                         if cmd is None:
+                            traceback.print_stack()
                             cmd = ''
 
                         event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
