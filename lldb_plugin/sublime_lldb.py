@@ -45,7 +45,7 @@ def debugif(b, str):
 
 
 def initialize_plugin():
-    thread_created('<sublime text 2 main thread>')
+    thread_created('<' + threading.current_thread().name + '>')
     debug('Loading LLDB Sublime Text 2 plugin')
     debug('python version: %s' % (sys.version_info,))
     debug('cwd: %s' % os.getcwd())
