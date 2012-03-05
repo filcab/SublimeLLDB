@@ -346,27 +346,21 @@ def lldb_event_monitor(sublime_broadcaster):
                             done = True
                             debug('quit received')
                         elif ev.type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData:
-                            debug('got error data')
-                            string = ev.string
-                            string = 'err> ' + string
-                            string.replace('\n', '\nerr> ')
-                            lldb_view_send(string)
+                            debug('got async error data')
+                            lldb_view_send(stderr_msg(ev.string))
                         elif ev.type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData:
-                            debug('got output data')
-                            lldb_view_send(ev.string)
+                            debug('got async output data')
+                            lldb_view_send(stdout_msg(ev.string))
                     elif ev.broadcaster_matches_ref(sublime_broadcaster):
                         if ev.type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
                             result, r = lldb_instance().interpret_command(ev.string, True)
-                            err_str = result.error()
-                            out_str = result.output()
+                            err_str = stderr_msg(result.error)
+                            out_str = stdout_msg(result.output)
 
                             lldb_view_send(out_str)
 
                             if len(err_str) != 0:
-                                err_str.replace('\n', '\nerr> ')
-                                err_str = 'err> ' + err_str
                                 lldb_view_send(err_str)
-                                debug('continuing')
                             continue
 
                         elif ev.type & SublimeBroadcaster.eBroadcastBitShouldExit \
@@ -410,10 +404,9 @@ def handle_process_event(ev):
         elif state == lldb.eStateRunning:
             None  # Don't be too chatty
         elif state == lldb.eStateExited:
-            None  # FIXME:
-            # r = lldb_instance().interpret_command('process status')
-            # debug(r[0].output())
-            # debug(r[0].error())
+            r = lldb_instance().interpret_command('process status')
+            lldb_view_send(stdout_msg(r[0].output))
+            lldb_view_send(stderr_msg(r[0].error))
         elif state == lldb.eStateStopped     \
             or state == lldb.eStateCrashed   \
             or state == lldb.eStateSuspended:
@@ -424,30 +417,26 @@ def handle_process_event(ev):
                 # FIXME:
                 # update_selected_thread()
                 r = lldb_instance().interpret_command('process status')
-                debug(r[0].output())
-                debug(r[0].error())
+                lldb_view_send(stdout_msg(r[0].output))
+                lldb_view_send(stderr_msg(r[0].error))
 
 
 def get_process_stdout():
-    string = lldb_instance().SBDebugger.GetSelectedTarget(). \
-        GetProcess().GetSTDOUT(1024)
+    string = stdout_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
+        GetProcess().GetSTDOUT(1024))
     while len(string) > 0:
-        debug('program stdout')
-        debug(string)
-        string = lldb_instance().SBDebugger.GetSelectedTarget(). \
-            GetProcess().GetSTDOUT(1024)
+        lldb_view_send(string)
+        string = stdout_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
+            GetProcess().GetSTDOUT(1024))
 
 
 def get_process_stderr():
-    string = lldb_instance().SBDebugger.GetSelectedTarget(). \
-        GetProcess().GetSTDOUT(1024)
+    string = stderr_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
+        GetProcess().GetSTDOUT(1024))
     while len(string) > 0:
-        string.replace('\n', '\nerr> ')
-        string = 'err> ' + string
-        debug('program stderr')
-        debug(string)
-        string = lldb_instance().SBDebugger.GetSelectedTarget(). \
-            GetProcess().GetSTDOUT(1024)
+        lldb_view_send(string)
+        string = stderr_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
+            GetProcess().GetSTDOUT(1024))
 
 
 def handle_breakpoint_event(ev):

@@ -194,9 +194,11 @@ class LldbCommandReturnWrapper(object):
     def ReturnObject(self):
         return self.__ret
 
+    @property
     def error(self):
         return self.__ret.GetError()
 
+    @property
     def output(self):
         return self.__ret.GetOutput()
 
