@@ -321,6 +321,7 @@ def lldb_event_monitor(sublime_broadcaster):
                                                       SublimeBroadcaster.eBroadcastBitDidStart)
 
     listener.start_listening_for_breakpoint_changes()
+    listener.start_listening_for_process_events()
 
     interpreter_broadcaster = listener.debugger.GetCommandInterpreter().GetBroadcaster()
     listener.start_listening_for_events(interpreter_broadcaster,                                        \

@@ -226,6 +226,15 @@ class LldbListener(object):
 
         self.__listener.StartListeningForEvents(b, events)
 
+    def start_listening_for_process_events(self):
+        self.__listener.StartListeningForEventClass(        \
+            self.__debugger.SBDebugger,                     \
+            lldb.SBProcess.GetBroadcasterClassName(),       \
+            lldb.SBProcess.eBroadcastBitStateChanged |      \
+            lldb.SBProcess.eBroadcastBitInterrupt |         \
+            lldb.SBProcess.eBroadcastBitSTDOUT |            \
+            lldb.SBProcess.eBroadcastBitSTDERR)
+
     def start_listening_for_breakpoint_changes(self):
         self.__listener.StartListeningForEventClass(        \
             self.__debugger.SBDebugger,                     \
