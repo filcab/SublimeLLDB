@@ -406,7 +406,6 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
                         if cmd is None:
                             cmd = ''
 
-                        debug('sending command to event-listener: ' + cmd)
                         event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
                         self.BroadcastEvent(event.SBEvent)
                         continue

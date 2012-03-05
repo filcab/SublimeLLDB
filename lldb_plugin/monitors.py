@@ -54,16 +54,9 @@ def kill_monitors():
 
 
 def launch_monitor(fun, name='<monitor thread>', args=()):
-    debug('launching monitor: ' + name)
-    debug('fun: ' + repr(fun) + ', args: ' + repr(args))
-    try:
-        t = threading.Thread(target=fun, name=name, args=args)
-    except e:
-        debug('le fu? ' + repr(e))
+    t = threading.Thread(target=fun, name=name, args=args)
     # t.daemon = True
-    debug('starting')
     t.start()
-    debug('started')
 
 
 def launch_i_o_monitor(*args):
@@ -130,7 +123,7 @@ def lldb_i_o_monitor():
     #                     string = 'err> ' + ev.string
     #                     string.replace('\n', '\nerr> ')
     #                     lldb_view_send(string)
-        debug('leaving...')
+    debug('leaving...')
 
 
 # def lldb_i_o_monitor():
@@ -177,8 +170,8 @@ def lldb_i_o_monitor():
 #             if not fh.closed:
 #                 string = fh.read()
 #                 debug(string)
-#                 # if fh == lldbout:
-#                 #     sublime.set_timeout(lambda: lldb_view_write(string), 0)
+#                 if fh == lldbout:
+#                     sublime.set_timeout(lambda: lldb_view_write(string), 0)
 #                 if fh == lldberr:
 #                     # We're sure we read something
 #                     string.replace('\n', '\nerr> ')
@@ -379,6 +372,7 @@ def handle_process_event(ev):
     elif ev.type & lldb.SBProcess.eBroadcastBitSTDOUT:
         get_process_stderr()
     elif ev.type & lldb.SBProcess.eBroadcastBitStateChanged:
+        debug('state changed event')
         get_process_stdout()
         get_process_stderr()
 
