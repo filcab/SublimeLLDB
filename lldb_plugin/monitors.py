@@ -4,15 +4,17 @@ import sublime
 
 # FIXME: Use lldb_wrappers
 from lldb_wrappers import LldbListener, SublimeBroadcaster
+import lldb_wrappers
 import lldb
 import lldbutil
 
+import time
 import Queue
 import threading
 
 from root_objects import lldb_instance, set_lldb_instance, \
                          lldb_view_send,  \
-                         thread_created
+                         thread_created, show_lldb_panel
 
 from utilities import stdout_msg, stderr_msg
 
@@ -36,6 +38,10 @@ lldb_event_monitor_thread = None
 lldb_markers_thread = None
 lldb_last_location_view = None
 lldb_file_markers_queue = Queue.Queue()
+
+def marker_update(name, args=(), after=None):
+    dict = {'marks': name, 'args': args, 'after': after}
+    lldb_file_markers_queue.put(dict)
 
 
 def kill_monitors():
@@ -181,74 +187,73 @@ def lldb_i_o_monitor():
 #     debug('stopped')
 
 
-def lldb_markers_monitor():
+def lldb_markers_monitor(w):
     thread_created(threading.current_thread().name)
     debug_thr()
     debug('started')
-    # In the future, use lldb events to know what to update
-    while True:
+
+    done = False
+    while not done:
         v = lldb_file_markers_queue.get(True)
         m = v['marks']
-        w = v['window']
-        f = v['after']
+        args = v['args']
+        after = v['after']
 
         debug('got: ' + str(v))
         if 'pc' == m:
-            update_code_view(w)
+            f = lambda: update_code_view(w, *args)
         elif 'bp' == m:
-            update_breakpoints(w)
+            f = lambda: update_breakpoints(w, *args)
         elif 'all' == m:
-            update_breakpoints(w)
-            update_code_view(w)
+            f = lambda: (update_breakpoints(w, *args), update_code_view(w, *args))
         elif 'quit' == m:
-            update_breakpoints(w)
-            update_code_view(w)
-            if f is not None:
-                sublime.set_timeout(f, 0)
-            return
+            done = True
+            f = lambda: (update_breakpoints(w, *args), update_code_view(w, *args))
 
-        if f is not None:
-                sublime.set_timeout(f, 0)
+        if after:
+            sublime.set_timeout(lambda: (f(), after()), 0)
+        else:
+            sublime.set_timeout(f, 0)
 
     debug('stopped')
 
 
-def update_code_view(window):
+def update_code_view(window, entry):
     global lldb_last_location_view
     if lldb_last_location_view is not None:
-        # WARNING!! Fix this! (erase_regions noton the main thread)
-        sublime.set_timeout(
-            lambda: lldb_last_location_view.erase_regions("lldb-location"), 0)
+        lldb_last_location_view.erase_regions("lldb-location")
 
-    if lldb_instance():
-        entry = lldb_instance().current_line_entry()
+    if entry:
+            (directory, file, line, column) = entry
+            filename = directory + '/' + file
 
-        if entry:
-                (directory, file, line, column) = entry
-                filename = directory + '/' + file
+            loc = filename + ':' + str(line) + ':' + str(column)
 
-                loc = filename + ':' + str(line) + ':' + str(column)
+            window.focus_group(0)
+            view = window.open_file(loc, sublime.ENCODED_POSITION)
 
-                def temp_function():
-                    window.focus_group(0)
-                    view = window.open_file(loc, sublime.ENCODED_POSITION)
-                    window.focus_view(view)
+            # Try to wait for a while, otherwise the marker will be wrong.
+            retries = 0
+            while view.is_loading() and retries < 100:
+                retries += 1
+                time.sleep(0.1)
 
-                    global lldb_last_location_view
-                    lldb_last_location_view = view
-                    debug('marking loc at: ' + str(view))
-                    region = [view.full_line(
-                                view.text_point(line - 1, column - 1))]
-                    sublime.set_timeout(lambda:
-                        view.add_regions("lldb-location",
-                                         region,
-                                         "entity.name.class", "bookmark",
-                                         sublime.HIDDEN), 100)
+            debug('view.is_loading: ' + str(view.is_loading()))
+            window.set_view_index(view, 0, 0)
+            debug('setting view index')
 
-                sublime.set_timeout(temp_function, 0)
-                return
+            lldb_last_location_view = view
+            debug('marking loc at: ' + str(view))
+            region = [view.full_line(
+                        view.text_point(line - 1, column - 1))]
+            view.add_regions("lldb-location",
+                             region,
+                             "entity.name.class", "bookmark",
+                             sublime.HIDDEN)
+            show_lldb_panel()
 
-    debug("No location info available")
+    else:
+        debug("No location info available")
 
 
 def update_breakpoints(window):
@@ -260,37 +265,34 @@ def update_breakpoints(window):
         # Just erase the current bp markers
         breakpoints = []
 
-    def bulk_update():
-        seen = []
-        for w in sublime.windows():
-            for v in w.views():
-                debug('marking view: ' + str(v.file_name()) + ' (' + str(v.name()) + ')')
-                if v in seen:
-                    continue
-                else:
-                    seen.append(v)
+    seen = []
+    for w in sublime.windows():
+        for v in w.views():
+            debug('marking view: ' + str(v.file_name()) + ' (' + str(v.name()) + ')')
+            if v in seen:
+                continue
+            else:
+                seen.append(v)
 
-                v.erase_regions("lldb-breakpoint")
-                regions = []
-                for bp in breakpoints:
-                    for bp_loc in bp.line_entries():
-                        debug('bp entries: ' + str(bp.line_entries()))
-                        if bp_loc and v.file_name() == bp_loc[0] + '/' + bp_loc[1]:
-                            debug('marking: ' + str(bp_loc) + ' at: ' + v.file_name() + ' (' + v.name() + ')')
-                            debug('regions: ' + str(regions))
-                            regions.append(
-                                v.full_line(
-                                  v.text_point(bp_loc[2] - 1, bp_loc[3] - 1)))
-                            debug('regions (after): ' + str(regions))
+            v.erase_regions("lldb-breakpoint")
+            regions = []
+            for bp in breakpoints:
+                for bp_loc in bp.line_entries():
+                    debug('bp entries: ' + str(bp.line_entries()))
+                    if bp_loc and v.file_name() == bp_loc[0] + '/' + bp_loc[1]:
+                        debug('marking: ' + str(bp_loc) + ' at: ' + v.file_name() + ' (' + v.name() + ')')
+                        debug('regions: ' + str(regions))
+                        regions.append(
+                            v.full_line(
+                              v.text_point(bp_loc[2] - 1, bp_loc[3] - 1)))
+                        debug('regions (after): ' + str(regions))
 
-                if len(regions) > 0:
-                    debug('marking regions:')
-                    debug(regions)
-                    v.add_regions("lldb-breakpoint", regions, \
-                                 "string", "circle",          \
-                                 sublime.HIDDEN)
-
-    sublime.set_timeout(bulk_update, 0)
+            if len(regions) > 0:
+                debug('marking regions:')
+                debug(regions)
+                v.add_regions("lldb-breakpoint", regions, \
+                             "string", "circle",          \
+                             sublime.HIDDEN)
 
 
 # event_monitor mimics the Driver class, in Driver.cpp
@@ -413,10 +415,11 @@ def handle_process_event(ev):
                     process.GetProcessID())
             else:
                 # FIXME:
-                # update_selected_thread()
+                update_selected_thread(lldb_instance())
                 r = lldb_instance().interpret_command('process status')
                 lldb_view_send(stdout_msg(r[0].output))
                 lldb_view_send(stderr_msg(r[0].error))
+                marker_update('pc', (lldb_instance().line_entry,))
 
 
 def get_process_stdout():
@@ -435,6 +438,47 @@ def get_process_stderr():
         lldb_view_send(string)
         string = stderr_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
             GetProcess().GetSTDOUT(1024))
+
+
+def update_selected_thread(debugger):
+    proc = debugger.target.process
+    if proc.valid:
+        curr_thread = proc.thread
+        current_thread_stop_reason = curr_thread.stop_reason
+
+        debug('thread stop reason: ' + str(current_thread_stop_reason))
+        other_thread = lldb_wrappers.ThreadWrapper()
+        plan_thread = lldb_wrappers.ThreadWrapper()
+        if not curr_thread.valid \
+            or current_thread_stop_reason == lldb.eStopReasonInvalid \
+            or current_thread_stop_reason == lldb.eStopReasonNone:
+            for t in proc:
+                t_stop_reason = t.stop_reason
+                if t_stop_reason == lldb.eStopReasonInvalid \
+                    or t_stop_reason == lldb.eStopReasonNone:
+                    pass
+                elif t_stop_reason == lldb.eStopReasonTrace \
+                    or t_stop_reason == lldb.eStopReasonBreakpoint \
+                    or t_stop_reason == lldb.eStopReasonWatchpoint \
+                    or t_stop_reason == lldb.eStopReasonSignal \
+                    or t_stop_reason == lldb.eStopReasonException:
+                    if not other_thread:
+                        other_thread = t
+                    elif t_stop_reason == lldb.eStopReasonPlanComplete:
+                        if not plan_thread:
+                            plan_thread = t
+
+            if plan_thread:
+                proc.thread = plan_thread
+            elif other_thread:
+                proc.threading = other_thread
+            else:
+                if curr_thread:
+                    thread = curr_thread
+                else:
+                    thread = proc[0]
+
+                proc.thread = thread
 
 
 def handle_breakpoint_event(ev):
