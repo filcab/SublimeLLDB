@@ -7,10 +7,44 @@ thread_created = lldb_wrappers.thread_created
 
 lldb_ = None
 lldb_view = None
+lldb_input_panel_on_done = None
+w_ref = None
 
 pipe_in = None
 pipe_out = None
 pipe_err = None
+
+
+def debug(thing):
+    print thing
+
+
+def window_ref():
+    return w_ref
+
+
+def set_window_ref(w):
+    debug('setting window_ref: ' + str(w))
+    global w_ref
+    w_ref = w
+
+
+def set_got_input_function(f):
+    global lldb_input_panel_on_done
+    lldb_input_panel_on_done = f
+
+
+def got_input_function():
+    return lldb_input_panel_on_done
+
+
+def show_lldb_panel(w=None):
+    if not w:
+        w = window_ref()
+    # last args: on_done, on_change, on_cancel.
+    # On change we could try to complete the input using a quick_panel.
+    w.show_input_panel('lldb', '',
+                        lldb_input_panel_on_done, None, None),
 
 
 def lldb_input_fh():

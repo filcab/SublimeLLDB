@@ -9,16 +9,17 @@ import atexit
 import datetime
 import threading
 
-from root_objects import lldb_instance, set_lldb_instance,      \
-                         lldb_out_view, set_lldb_out_view,      \
-                         lldb_view_write, lldb_view_send,       \
-                         thread_created
+from root_objects import lldb_instance, set_lldb_instance,              \
+                         lldb_out_view, set_lldb_out_view,              \
+                         lldb_view_write, lldb_view_send,               \
+                         thread_created, window_ref, set_window_ref,    \
+                         show_lldb_panel, set_got_input_function
                          # lldb_input_fh,  set_lldb_input_fh,     \
                          # lldb_output_fh, set_lldb_output_fh,    \
                          # lldb_error_fh,  set_lldb_error_fh,     \
 
 from monitors import launch_event_monitor,  \
-                     lldb_file_markers_queue
+                     launch_markers_monitor
 
 
 # import this specific name without the prefix
@@ -88,7 +89,6 @@ lldb_prog_view = None
 lldb_prog_input = None
 lldb_prog_output = None
 lldb_prog_error = None
-window_ref = None  # For the 'on_done' panel helper
 lldb_window_layout = {
                         "cols": [0.0, 1.0],  # start, end
                         "rows": [0.0, 0.75, 1.0],  # start1, start2, end
@@ -102,17 +102,17 @@ basic_layout = {  # 1 group
 # backup_layout = None
 
 
-def good_lldb_layout(window=window_ref):
+def good_lldb_layout(window=window_ref()):
     # if the user already has two groups, it's a good layout
     return window.num_groups() == 2
 
 
-def set_lldb_window_layout(window=window_ref):
+def set_lldb_window_layout(window=window_ref()):
     if lldb_out_view() != None and window.num_groups() != 2:
         window.run_command('set_layout', lldb_window_layout)
 
 
-def set_regular_window_layout(window=window_ref):
+def set_regular_window_layout(window=window_ref()):
     window.run_command("set_layout", basic_layout)
 
 
@@ -191,34 +191,34 @@ def lldb_in_panel_on_done(cmd):
     #     lldb_view_write(err_str)
 
     # We don't have a window, so let's re-use the one active on lldb launch
-    lldb_toggle_output_view(window_ref, show=True)
+    lldb_toggle_output_view(window_ref(), show=True)
 
     v = lldb_out_view()
     v.show_at_center(v.size() + 1)
 
     # if r.is_quit():
-    #     cleanup(window_ref)
+    #     cleanup(window_ref())
     # else:
-    #     update_markers(window_ref, after=lambda:
-    #         window_ref.show_input_panel('lldb', '',
+    #     update_markers(window_ref(), after=lambda:
+    #         window_ref().show_input_panel('lldb', '',
     #                                     lldb_in_panel_on_done, None, None))
-    window_ref.show_input_panel('lldb', '',
-                                lldb_in_panel_on_done, None, None)
+    show_lldb_panel()
 
 
 def update_markers(window, after=None):
-    lldb_file_markers_queue.put({'marks': 'all', 'window': window, 'after': after})
+    after
+    # lldb_file_markers_queue.put({'marks': 'all', 'window': window, 'after': after})
 
 
 @atexit.register
 def atexit_function():
     debug('running atexit_function')
-    cleanup(window_ref)
+    cleanup(window_ref())
 
 
 def unload_handler():
     debug('unloading lldb plugin')
-    cleanup(window_ref)
+    cleanup(window_ref())
 
 
 def cleanup(window, full=True):
@@ -240,6 +240,8 @@ def cleanup(window, full=True):
 
 
 def initialize_lldb():
+    set_got_input_function(lldb_in_panel_on_done)
+
     lldb_wrappers.initialize()
     lldb = LldbWrapper(True, lldb_view_send)
 
@@ -247,7 +249,7 @@ def initialize_lldb():
 
 
 def start_debugging():
-    cleanup(window_ref)
+    cleanup(window_ref())
 
     # Really start the debugger
     set_lldb_instance(initialize_lldb())
@@ -298,7 +300,7 @@ def start_debugging():
     # lldb_instance().SetErrorFileHandle(pipe_err, True)
 
     # launch_i_o_monitor()
-    # launch_markers_monitor()
+    launch_markers_monitor(window_ref())
 
 
 class WindowCommand(sublime_plugin.WindowCommand):
@@ -315,14 +317,13 @@ class LldbCommand(WindowCommand):
         self.setup()
 
         global lldb_view_name
-        global window_ref
 
         if lldb_instance() is None:
             # if should_clear_lldb_view:
             clear_lldb_out_view()
 
             debug('Creating an SBDebugger instance.')
-            window_ref = self.window
+            set_window_ref(self.window)
 
             start_debugging()
 
@@ -338,10 +339,7 @@ class LldbCommand(WindowCommand):
 
             debug_prologue(lldb_instance())
 
-        # last args: on_done, on_change, on_cancel.
-        # On change we could try to complete the input using a quick_panel.
-        self.window.show_input_panel('lldb', '',
-                                     lldb_in_panel_on_done, None, None)
+        show_lldb_panel(self.window)
 
 
 class LldbToggleOutputView(WindowCommand):
