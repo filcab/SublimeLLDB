@@ -304,7 +304,7 @@ def lldb_event_monitor(sublime_broadcaster):
     listener.start_listening_for_events(sublime_broadcaster,                                \
                                         SublimeBroadcaster.eBroadcastBitDidStart | \
                                         SublimeBroadcaster.eBroadcastBitHasCommandInput |   \
-                                        SublimeBroadcaster.eBroadcastBitShouldExit      |   \
+                                        SublimeBroadcaster.eBroadcastBitShouldExit |   \
                                         SublimeBroadcaster.eBroadcastBitDidExit)
 
     debug('waiting for SublimeBroadcaster')
@@ -317,7 +317,7 @@ def lldb_event_monitor(sublime_broadcaster):
 
     interpreter_broadcaster = listener.debugger.GetCommandInterpreter().GetBroadcaster()
     listener.start_listening_for_events(interpreter_broadcaster,                                        \
-                                        lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived    | \
+                                        lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived | \
                                         lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \
                                         lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData)
 
@@ -450,6 +450,6 @@ def handle_breakpoint_event(ev):
         if new_locs > 0:
             bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev.SBEvent)
             lldb_view_send("%d locations added to breakpoint %d\n" %
-                (new_locs, breakpoint.GetID()))
+                (new_locs, bp.GetID()))
     elif type & lldb.eBreakpointEventTypeLocationsRemoved:
         None

@@ -179,7 +179,7 @@ def lldb_in_panel_on_done(cmd):
 
     lldb_view_write(lldb_prompt + cmd + '\n')
 
-    r = broadcaster.send_command(cmd)
+    broadcaster.send_command(cmd)
     # err_str = result.error()
     # out_str = result.output()
 
@@ -299,7 +299,6 @@ def start_debugging():
 
     # launch_i_o_monitor()
     # launch_markers_monitor()
-
 
 
 class WindowCommand(sublime_plugin.WindowCommand):
