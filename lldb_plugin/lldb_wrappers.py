@@ -28,9 +28,12 @@ def thread_created(string):
 
 
 class LldbWrapper(object):
-    def __init__(self):
+    def __init__(self, source_init_files, log_callback=None):
         debug('Initting LldbWrapper')
-        self.__lldb = lldb.SBDebugger.Create()
+        if log_callback is None:
+            self.__lldb = lldb.SBDebugger.Create(source_init_files)
+        else:
+            self.__lldb = lldb.SBDebugger.Create(source_init_files, log_callback)
         self.__listener = LldbListener(
                             lldb.SBListener(
                                 self.__lldb.GetListener()), self.__lldb)

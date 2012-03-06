@@ -241,7 +241,7 @@ def cleanup(window, full=True):
 
 def initialize_lldb():
     lldb_wrappers.initialize()
-    lldb = LldbWrapper()
+    lldb = LldbWrapper(True, lldb_view_send)
 
     return lldb
 
