@@ -51,12 +51,14 @@ class LldbWrapper(object):
 
         return bps
 
-    def current_frame(self):
+    @property
+    def frame(self):
         return self.__lldb.GetSelectedTarget().GetProcess() \
                           .GetSelectedThread().GetSelectedFrame()
 
-    def current_line_entry(self):
-        entry = self.current_frame().GetLineEntry()
+    @property
+    def line_entry(self):
+        entry = self.frame.GetLineEntry()
         filespec = entry.GetFileSpec()
 
         if filespec:
@@ -65,8 +67,13 @@ class LldbWrapper(object):
         else:
             return None
 
-    # def current_sc(self):
-    #     return self.current_frame().GetSymbolContext(0xffffffff)
+    @property
+    def target(self):
+        return TargetWrapper(self.__lldb.GetSelectedTarget())
+
+    # @property
+    # def symbol_context(self):
+    #     return self.frame().GetSymbolContext(0xffffffff)
 
     def destroy(self):
         self.__listener = None
