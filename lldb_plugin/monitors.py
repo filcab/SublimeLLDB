@@ -345,7 +345,12 @@ def lldb_event_monitor(sublime_broadcaster):
                             lldb_view_send(stdout_msg(ev.string))
                     elif ev.broadcaster_matches_ref(sublime_broadcaster):
                         if ev.type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
-                            result, r = lldb_instance().interpret_command(ev.string, True)
+                            string = ev.string
+                            if ev.string is None:
+                                debug('ev.string is None: ' + 'SublimeBroadcaster.eBroadcastBitHasCommandInput')
+                                string = ''
+
+                            result, r = lldb_instance().interpret_command(string, True)
                             err_str = stderr_msg(result.error)
                             out_str = stdout_msg(result.output)
 
