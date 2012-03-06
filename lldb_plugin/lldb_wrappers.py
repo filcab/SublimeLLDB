@@ -134,6 +134,62 @@ class LldbWrapper(object):
         return self.__lldb.StateAsCString(state)
 
 
+class TargetWrapper(object):
+    def __init__(self, t):
+        self.__t = t
+
+    @property
+    def process(self):
+        return ProcessWrapper(self.__t.GetProcess())
+
+
+class ProcessWrapper(object):
+    def __init__(self, p=None):
+        self.__p = p
+
+    @property
+    def num_threads(self):
+        return self.__p.GetNumThreads()
+
+    @property
+    def thread(self):
+        return ThreadWrapper(self.__p.GetSelectedThread())
+
+    @property
+    def valid(self):
+        return self.__p.IsValid()
+
+    def __iter__(self):
+        for t in self.__p:
+            debug(t)
+            yield ThreadWrapper(t)
+
+    def __nonzero__(self):
+        if self.__p:
+            return True
+        else:
+            return False
+
+
+class ThreadWrapper(object):
+    def __init__(self, t=None):
+        self.__t = t
+
+    @property
+    def stop_reason(self):
+        return self.__t.GetStopReason()
+
+    @property
+    def valid(self):
+        return self.__t.IsValid()
+
+    def __nonzero__(self):
+        if self.__t:
+            return True
+        else:
+            return False
+
+
 class BreakpointWrapper(object):
     def __init__(self, b):
         self.__b = b
