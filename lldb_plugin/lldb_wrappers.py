@@ -407,8 +407,8 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
                     if event.type & SublimeBroadcaster.eBroadcastBitHasInput:
                         cmd = event.string
                         # TODO: This shouldn't happen!
+                        # GetCStringFromEvent() is returning None when the string is empty.
                         if cmd is None:
-                            traceback.print_stack()
                             cmd = ''
 
                         event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
