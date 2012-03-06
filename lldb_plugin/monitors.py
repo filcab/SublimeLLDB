@@ -7,15 +7,14 @@ from lldb_wrappers import LldbListener, SublimeBroadcaster
 import lldb
 import lldbutil
 
-import errno
 import Queue
-import select
 import threading
 
 from root_objects import lldb_instance, set_lldb_instance, \
-                         lldb_view_write, lldb_view_send,  \
-                         lldb_output_fh, lldb_error_fh,    \
+                         lldb_view_send,  \
                          thread_created
+
+from utilities import stdout_msg, stderr_msg
 
 
 def debug_thr():

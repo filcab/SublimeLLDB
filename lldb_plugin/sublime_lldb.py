@@ -12,15 +12,14 @@ import threading
 from root_objects import lldb_instance, set_lldb_instance,      \
                          lldb_out_view, set_lldb_out_view,      \
                          lldb_view_write, lldb_view_send,       \
-                         lldb_input_fh,  set_lldb_input_fh,     \
-                         lldb_output_fh, set_lldb_output_fh,    \
-                         lldb_error_fh,  set_lldb_error_fh,     \
                          thread_created
+                         # lldb_input_fh,  set_lldb_input_fh,     \
+                         # lldb_output_fh, set_lldb_output_fh,    \
+                         # lldb_error_fh,  set_lldb_error_fh,     \
 
-from monitors import launch_i_o_monitor, launch_event_monitor,  \
-                     launch_markers_monitor, lldb_file_markers_queue
+from monitors import launch_event_monitor,  \
+                     lldb_file_markers_queue
 
-import lldb
 
 # import this specific name without the prefix
 from lldb_wrappers import LldbWrapper
