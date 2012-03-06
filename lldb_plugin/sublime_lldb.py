@@ -255,9 +255,9 @@ def start_debugging():
     set_lldb_instance(initialize_lldb())
     lldb_ = lldb_instance()
     debug('setting file handles')
-    lldb_.SetInputFileHandle(sys.__stdin__, False)
-    lldb_.SetErrorFileHandle(sys.__stderr__, False)
-    lldb_.SetOutputFileHandle(sys.__stdout__, False)
+    # lldb_.SetInputFileHandle(sys.__stdin__, False)
+    # lldb_.SetErrorFileHandle(sys.__stderr__, False)
+    # lldb_.SetOutputFileHandle(sys.__stdout__, False)
 
     debug('setting up broadcaster')
     global broadcaster
