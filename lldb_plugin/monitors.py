@@ -238,26 +238,13 @@ def update_code_view(window, entry):
 
             window.focus_group(0)
             view = window.open_file(loc, sublime.ENCODED_POSITION)
-
-            # Try to wait for a while, otherwise the marker will be wrong.
-            retries = 0
-            while view.is_loading() and retries < 100:
-                retries += 1
-                time.sleep(0.1)
-
-            debug('view.is_loading: ' + str(view.is_loading()))
             window.set_view_index(view, 0, 0)
-            debug('setting view index')
 
-            lldb_last_location_view = view
-            debug('marking loc at: ' + str(view))
-            region = [view.full_line(
-                        view.text_point(line - 1, column - 1))]
-            view.add_regions("lldb-location",
-                             region,
-                             "entity.name.class", "bookmark",
-                             sublime.HIDDEN)
-            show_lldb_panel()
+            # If the view is already loaded:
+            # (Otherwise, let the listener do the work)
+            if not view.is_loading():
+                lldb_last_location_view = view
+                mark_code_loc(view, lldb_current_location)
 
     else:
         debug("No location info available")
