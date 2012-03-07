@@ -230,21 +230,21 @@ def update_code_view(window, entry):
 
     debug(entry)
     if entry:
-            (directory, file, line, column) = entry
-            filename = directory + '/' + file
-            lldb_current_location = (filename, line, column)
+        (directory, file, line, column) = entry
+        filename = directory + '/' + file
+        lldb_current_location = (filename, line, column)
 
-            loc = filename + ':' + str(line) + ':' + str(column)
+        loc = filename + ':' + str(line) + ':' + str(column)
 
-            window.focus_group(0)
-            view = window.open_file(loc, sublime.ENCODED_POSITION)
-            window.set_view_index(view, 0, 0)
+        window.focus_group(0)
+        view = window.open_file(loc, sublime.ENCODED_POSITION)
+        window.set_view_index(view, 0, 0)
 
-            # If the view is already loaded:
-            # (Otherwise, let the listener do the work)
-            if not view.is_loading():
-                lldb_last_location_view = view
-                mark_code_loc(view, lldb_current_location)
+        # If the view is already loaded:
+        # (Otherwise, let the listener do the work)
+        if not view.is_loading():
+            lldb_last_location_view = view
+            mark_code_loc(view, lldb_current_location)
 
     else:
         debug("No location info available")
