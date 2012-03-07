@@ -24,8 +24,8 @@ def debug_thr():
     # traceback.print_stack()
 
 
-def debug(str):
-    print threading.current_thread().name + ' ' + str
+def debug(string):
+    print threading.current_thread().name + ' ' + str(string)
 
 
 def debugif(b, str):
