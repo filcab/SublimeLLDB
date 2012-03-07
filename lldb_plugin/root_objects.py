@@ -43,8 +43,9 @@ def show_lldb_panel(w=None):
         w = window_ref()
     # last args: on_done, on_change, on_cancel.
     # On change we could try to complete the input using a quick_panel.
-    w.show_input_panel('lldb', '',
-                        lldb_input_panel_on_done, None, None),
+    if w:
+        w.show_input_panel('lldb', '',
+                            lldb_input_panel_on_done, None, None),
 
 
 def lldb_input_fh():

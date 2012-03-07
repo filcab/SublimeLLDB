@@ -177,32 +177,34 @@ def lldb_in_panel_on_done(cmd):
     if cmd is None:
         cmd = ''
 
-    lldb_view_write(lldb_prompt + cmd + '\n')
+    if lldb_instance():
+        lldb_view_write(lldb_prompt + cmd + '\n')
 
-    broadcaster.send_command(cmd)
-    # err_str = result.error()
-    # out_str = result.output()
+        broadcaster.send_command(cmd)
+        # err_str = result.error()
+        # out_str = result.output()
 
-    # lldb_view_write(out_str)
+        # lldb_view_write(out_str)
 
-    # if len(err_str) != 0:
-    #     err_str.replace('\n', '\nerr> ')
-    #     err_str = 'err> ' + err_str
-    #     lldb_view_write(err_str)
+        # if len(err_str) != 0:
+        #     err_str.replace('\n', '\nerr> ')
+        #     err_str = 'err> ' + err_str
+        #     lldb_view_write(err_str)
 
-    # We don't have a window, so let's re-use the one active on lldb launch
-    lldb_toggle_output_view(window_ref(), show=True)
+        # We don't have a window, so let's re-use the one active on lldb launch
+        lldb_toggle_output_view(window_ref(), show=True)
 
-    v = lldb_out_view()
-    v.show_at_center(v.size() + 1)
+        v = lldb_out_view()
+        v.show_at_center(v.size() + 1)
 
-    # if r.is_quit():
-    #     cleanup(window_ref())
-    # else:
-    #     update_markers(window_ref(), after=lambda:
-    #         window_ref().show_input_panel('lldb', '',
-    #                                     lldb_in_panel_on_done, None, None))
-    show_lldb_panel()
+        # if r.is_quit():
+        #     cleanup(window_ref())
+        # else:
+        #     update_markers(window_ref(), after=lambda:
+        #         window_ref().show_input_panel('lldb', '',
+        #                                     lldb_in_panel_on_done, None, None))
+
+        show_lldb_panel()
 
 
 def update_markers(window, after=None):
