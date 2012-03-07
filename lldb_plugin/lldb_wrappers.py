@@ -5,7 +5,7 @@ import time
 import lldb
 import lldbutil
 import threading
-import traceback
+# import traceback
 
 
 def debug(str):
@@ -13,6 +13,10 @@ def debug(str):
 
 
 debug('Loading LLDB wrappers for Sublime Text 2 plugin')
+
+
+def version():
+    return lldb.SBDebugger.GetVersionString()
 
 
 def initialize():
@@ -65,6 +69,32 @@ class LldbWrapper(object):
             return (filespec.GetDirectory(), filespec.GetFilename(), \
                     entry.GetLine(), entry.GetColumn())
         else:
+            return None
+
+    @property
+    def first_line_entry_with_source(self):
+        entry = self.line_entry
+        if entry:
+            return entry
+        else:
+            # Get ALL the SBStackFrames
+            debug('going through stackframes')
+            t = self.target.process.thread.SBThread
+            n = t.GetNumFrames()
+            for i in xrange(0, n):
+                f = t.GetFrameAtIndex(i)
+                if f:
+                    entry = f.line_entry
+                    if entry and entry.GetFileSpec():
+                        filespec = entry.GetFileSpec()
+
+                        if filespec:
+                            return (filespec.GetDirectory(), filespec.GetFilename(), \
+                                    entry.GetLine(), entry.GetColumn())
+                        else:
+                            return None
+            debug('not touching stackframes any more')
+
             return None
 
     @property
@@ -170,6 +200,12 @@ class ProcessWrapper(object):
         else:
             return False
 
+    def SetSelectedThread(self, t):
+        self.__p.SetSelectedThread(t.SBThread)
+
+    def GetThreadAtIndex(self, i):
+        return ThreadWrapper(self.__p.GetThreadAtIndex(i))
+
 
 class ThreadWrapper(object):
     def __init__(self, t=None):
@@ -188,6 +224,32 @@ class ThreadWrapper(object):
             return True
         else:
             return False
+
+    def __iter__(self):
+        for f in self.__t:
+            yield FrameWrapper(f)
+
+    @property
+    def SBThread(self):
+        return self.__t
+
+
+class FrameWrapper(object):
+    def __init__(self, f):
+        self.__f = f
+
+    @property
+    def line_entry(self):
+        entry = self.__f.GetLineEntry()
+        debug('entry: ' + str(entry))
+        filespec = entry.GetFileSpec()
+        debug('filespec: ' + str(filespec))
+
+        if filespec:
+            return (filespec.GetDirectory(), filespec.GetFilename(), \
+                    entry.GetLine(), entry.GetColumn())
+        else:
+            return None
 
 
 class BreakpointWrapper(object):
