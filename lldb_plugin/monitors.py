@@ -432,9 +432,13 @@ def handle_process_event(ev):
                 lldb_view_send('Process %llu stopped and was programmatically restarted.' %
                     process.GetProcessID())
             else:
-                # FIXME:
                 update_selected_thread(lldb_instance())
-                r = lldb_instance().interpret_command('process status')
+                # We don't need to run 'process status' like Driver.cpp
+                # Since we open the file and show the source line.
+                r = lldb_instance().interpret_command('thread list')
+                lldb_view_send(stdout_msg(r[0].output))
+                lldb_view_send(stderr_msg(r[0].error))
+                r = lldb_instance().interpret_command('frame info')
                 lldb_view_send(stdout_msg(r[0].output))
                 lldb_view_send(stderr_msg(r[0].error))
                 marker_update('pc', (lldb_instance().line_entry,))
