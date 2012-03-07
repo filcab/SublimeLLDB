@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*-
 
 import sublime
+import sublime_plugin
 
 # FIXME: Use lldb_wrappers
 from lldb_wrappers import LldbListener, SublimeBroadcaster
@@ -37,6 +38,7 @@ lldb_i_o_thread = None
 lldb_event_monitor_thread = None
 lldb_markers_thread = None
 lldb_last_location_view = None
+lldb_current_location = None
 lldb_file_markers_queue = Queue.Queue()
 
 def marker_update(name, args=(), after=None):
@@ -223,9 +225,14 @@ def update_code_view(window, entry):
     if lldb_last_location_view is not None:
         lldb_last_location_view.erase_regions("lldb-location")
 
+    global lldb_current_location
+    lldb_current_location = None
+
+    debug(entry)
     if entry:
             (directory, file, line, column) = entry
             filename = directory + '/' + file
+            lldb_current_location = (filename, line, column)
 
             loc = filename + ':' + str(line) + ':' + str(column)
 
@@ -254,6 +261,30 @@ def update_code_view(window, entry):
 
     else:
         debug("No location info available")
+
+
+def mark_code_loc(view, loc):
+    line = loc[1]
+    column = loc[2]
+
+    debug('marking loc at: ' + str(view))
+    region = [view.full_line(
+                view.text_point(line - 1, column - 1))]
+    view.add_regions("lldb-location",
+                     region,
+                     "entity.name.class", "bookmark",
+                     sublime.HIDDEN)
+    show_lldb_panel()
+
+
+class MarkersListener(sublime_plugin.EventListener):
+    def on_load(self, view):
+        debug('on_load(): '+ str(view.file_name()) + ' (' + view.name() + ')')
+        debug('loc: ' + str(lldb_current_location))
+        if lldb_current_location:
+            if view.file_name() == lldb_current_location[0]:
+                lldb_last_location_view = view
+                mark_code_loc(view, lldb_current_location)
 
 
 def update_breakpoints(window):
