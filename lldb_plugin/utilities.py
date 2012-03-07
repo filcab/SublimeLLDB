@@ -9,8 +9,8 @@ def stderr_msg(string):
     if string is not None and len(string) > 0:
         string = 'err> ' + string.replace('\n', '\nerr> ')
 
+    # Remove the last 'err> '
     if string[-6:] == '\nerr> ':
-        debug('newline at the end')
         string = string[:-5]
 
     return string

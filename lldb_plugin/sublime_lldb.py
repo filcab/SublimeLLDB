@@ -19,7 +19,7 @@ from root_objects import lldb_instance, set_lldb_instance,              \
                          # lldb_error_fh,  set_lldb_error_fh,     \
 
 from monitors import launch_event_monitor,  \
-                     launch_markers_monitor
+                     launch_markers_monitor, cleanup
 
 
 # import this specific name without the prefix
@@ -57,8 +57,10 @@ def debug_prologue(lldb):
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
     debug('lldb prologue')
-    # lldb_view_write('(lldb) log enable lldb events\n')
-    # lldb_instance().interpret_command('log enable lldb events')
+    lldb_view_write('(lldb) log enable lldb thread\n')
+    lldb_instance().interpret_command('log enable lldb thread')
+    lldb_view_write('(lldb) log enable gdb-remote thread\n')
+    lldb_instance().interpret_command('log enable gdb-remote thread')
     lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
     lldb_instance().interpret_command('target create ~/dev/softek/lldb-plugin/tests')
     lldb_view_write('(lldb) b main\n')
@@ -68,7 +70,8 @@ def debug_prologue(lldb):
 
 def lldb_greeting():
     return datetime.date.today().__str__() + \
-           '\nWelcome to the LLDB plugin for Sublime Text 2\n'
+           '\nWelcome to the LLDB plugin for Sublime Text 2\n' + \
+           lldb_wrappers.version() + '\n'
 
 
 lldb_view_name = 'lldb i/o'
@@ -207,11 +210,6 @@ def lldb_in_panel_on_done(cmd):
         show_lldb_panel()
 
 
-def update_markers(window, after=None):
-    after
-    # lldb_file_markers_queue.put({'marks': 'all', 'window': window, 'after': after})
-
-
 @atexit.register
 def atexit_function():
     debug('running atexit_function')
@@ -221,24 +219,6 @@ def atexit_function():
 def unload_handler():
     debug('unloading lldb plugin')
     cleanup(window_ref())
-
-
-def cleanup(window, full=True):
-    debug('cleaning up the lldb plugin')
-
-    update_markers(window)  # markers will be removed
-
-    # kill_monitors()
-    if lldb_instance() is not None:
-        lldb_instance().destroy()
-    set_lldb_instance(None)
-
-    # close the pipes
-    # if broadcaster is not None:
-    #     broadcaster.end()
-    # broadcaster = None
-
-    # lldb_wrappers.terminate()
 
 
 def initialize_lldb():
@@ -269,6 +249,7 @@ def start_debugging():
 
     debug('setting up event monitor')
     launch_event_monitor(broadcaster)
+    launch_markers_monitor(window_ref())
 
     # launch_i_o_monitor(broadcaster)
 
@@ -301,9 +282,6 @@ def start_debugging():
     # lldb_instance().SetOutputFileHandle(pipe_out, True)
     # lldb_instance().SetErrorFileHandle(pipe_err, True)
 
-    # launch_i_o_monitor()
-    launch_markers_monitor(window_ref())
-
 
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
@@ -323,11 +301,10 @@ class LldbCommand(WindowCommand):
         if lldb_instance() is None:
             # if should_clear_lldb_view:
             clear_lldb_out_view()
-
-            debug('Creating an SBDebugger instance.')
             set_window_ref(self.window)
 
             start_debugging()
+            debug('Creating an SBDebugger instance.')
 
             g = lldb_greeting()
             if lldb_out_view().size() > 0:
