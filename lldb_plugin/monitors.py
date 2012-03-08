@@ -334,7 +334,7 @@ def lldb_event_monitor(sublime_broadcaster):
     debug_thr()
     debug('started')
 
-    listener = LldbListener(lldb.SBListener('event listener'), lldb_instance())
+    listener = LldbListener('event listener')
 
     listener.start_listening_for_events(sublime_broadcaster,                                \
                                         SublimeBroadcaster.eBroadcastBitDidStart | \
@@ -347,10 +347,10 @@ def lldb_event_monitor(sublime_broadcaster):
                                                       sublime_broadcaster,                          \
                                                       SublimeBroadcaster.eBroadcastBitDidStart)
 
-    listener.start_listening_for_breakpoint_changes()
-    listener.start_listening_for_process_events()
+    listener.start_listening_for_breakpoint_changes(lldb_instance())
+    listener.start_listening_for_process_events(lldb_instance())
 
-    interpreter_broadcaster = listener.debugger.GetCommandInterpreter().GetBroadcaster()
+    interpreter_broadcaster = lldb_instance().GetCommandInterpreter().GetBroadcaster()
     listener.start_listening_for_events(interpreter_broadcaster,                                        \
                                         lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived | \
                                         lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \

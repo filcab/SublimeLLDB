@@ -245,7 +245,7 @@ def start_debugging():
     global broadcaster
     broadcaster = lldb_wrappers.SublimeBroadcaster(lldb_)
     broadcaster.set_output_fun(lldb_view_send)
-    broadcaster.start()
+    broadcaster.start(lldb_instance())
 
     debug('setting up event monitor')
     launch_event_monitor(broadcaster)
