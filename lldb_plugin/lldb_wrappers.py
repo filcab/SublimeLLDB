@@ -88,6 +88,10 @@ class LldbDriver(threading.Thread):
     def is_done(self, done):
         self.__is_done = done
 
+    def send_command(self, cmd):
+        event = lldb.SBEvent(IOChannel.eBroadcastBitHasUserInput, str(cmd))
+        self.io_channel.broadcaster.BroadcastEvent(event)
+
     def ready_for_command(self):
         if not self.__waiting_for_command:
             self.__ready_for_command = True
@@ -185,7 +189,20 @@ class LldbDriver(threading.Thread):
                         if event.GetBroadcaster():
                             ev_type = event.GetType()
                             if (event.BroadcasterMatchesRef(self.io_channel.broadcaster)):
-                                if ev_type & IOChannel.eBroadcastBitThreadShouldExit \
+                                if ev_type & IOChannel.eBroadcastBitHasUserInput:
+                                    command_string = lldb.SBEvent.GetCStringFromEvent(event)
+                                    if (command_string == NULL)
+                                        command_string = ''
+                                    result = lldb.SBCommandReturnObject()
+
+                                    self.debugger.GetCommandInterpreter().HandleCommand(command_string, result, True)
+                                    if result.GetOutputSize() > 0:
+                                        self.io_channel.out_write(result.GetOutput(), result.GetOutputSize(), IOChannel.NO_ASYNC)
+
+                                    if result.GetErrorSize() > 0:
+                                        self.io_channel.err_write(result.GetError(), result.GetErrorSize(), IOChannel.NO_ASYNC)
+
+                                elif ev_type & IOChannel.eBroadcastBitThreadShouldExit \
                                     or ev_type & IOChannel.eBroadcastBitThreadDidExit:
                                     self.is_done = True
                                     if ev_type & IOChannel.eBroadcastBitThreadDidExit:
