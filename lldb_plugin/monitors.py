@@ -5,7 +5,7 @@ import sublime_plugin
 
 # FIXME: Use lldb_wrappers
 from lldb_wrappers import BIG_TIMEOUT, LldbListener, SublimeBroadcaster, start_listening_for_breakpoint_changes, \
-    start_listening_for_process_events
+    start_listening_for_process_events, interpret_command
 import lldb_wrappers
 import lldb
 import lldbutil
@@ -356,9 +356,9 @@ def lldb_event_monitor(driver, sublime_broadcaster):
 
     interpreter_broadcaster = debugger.GetCommandInterpreter().GetBroadcaster()
     listener.StartListeningForEvents(interpreter_broadcaster,
-                                        lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived |    \
-                                        lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \
-                                        lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData)
+                                     lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived |    \
+                                     lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \
+                                     lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData)
 
     if listener.valid:
         done = False
@@ -369,30 +369,31 @@ def lldb_event_monitor(driver, sublime_broadcaster):
             if ev.IsValid():
                 debug('Got event: ' + lldbutil.get_description(ev))
                 if ev.GetBroadcaster().IsValid():
-                    if ev.is_process_event():
+                    type = ev.GetType()
+                    string = lldb.SBEvent.GetCStringFromEvent(ev)
+                    if lldb.SBProcess.EventIsProcessEvent(ev):
                         handle_process_event(ev)
-                    elif ev.is_breakpoint_event():
+                    elif lldb.SBBreakpoint.EventIsBreakpointEvent(ev):
                         handle_breakpoint_event(ev)
-                    elif ev.broadcaster_matches_ref(interpreter_broadcaster):
-                        if ev.type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
+                    elif ev.BroadcasterMatchesRef(interpreter_broadcaster):
+                        if type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
                             done = True
                             debug('quit received')
-                        elif ev.type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData:
+                        elif type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData:
                             debug('got async error data')
-                            lldb_view_send(stderr_msg(ev.string))
-                        elif ev.type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData:
+                            lldb_view_send(stderr_msg(string))
+                        elif type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData:
                             debug('got async output data')
-                            lldb_view_send(stdout_msg(ev.string))
-                    elif ev.broadcaster_matches_ref(sublime_broadcaster):
-                        if ev.type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
-                            string = ev.string
-                            if ev.string is None:
+                            lldb_view_send(stdout_msg(string))
+                    elif ev.BroadcasterMatchesRef(sublime_broadcaster):
+                        if type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
+                            if string is None:
                                 debug('ev.string is None: ' + 'SublimeBroadcaster.eBroadcastBitHasCommandInput')
                                 string = ''
 
                             result, r = interpret_command(debugger, string, True)
-                            err_str = stderr_msg(result.error)
-                            out_str = stdout_msg(result.output)
+                            err_str = stderr_msg(result.GetError())
+                            out_str = stdout_msg(result.GetOutput())
 
                             lldb_view_send(out_str)
 
@@ -400,8 +401,8 @@ def lldb_event_monitor(driver, sublime_broadcaster):
                                 lldb_view_send(err_str)
                             continue
 
-                        elif ev.type & SublimeBroadcaster.eBroadcastBitShouldExit \
-                            or ev.type & SublimeBroadcaster.eBroadcastBitDidExit:
+                        elif type & SublimeBroadcaster.eBroadcastBitShouldExit \
+                            or type & SublimeBroadcaster.eBroadcastBitDidExit:
                             done = True
                             continue
     debug('exiting')
@@ -443,8 +444,8 @@ def handle_process_event(ev):
             None  # Don't be too chatty
         elif state == lldb.eStateExited:
             r = interpret_command(lldb_instance().debugger, 'process status')
-            lldb_view_send(stdout_msg(r[0].output))
-            lldb_view_send(stderr_msg(r[0].error))
+            lldb_view_send(stdout_msg(r[0].GetOutput()))
+            lldb_view_send(stderr_msg(r[0].GetError()))
             marker_update('pc', (lldb_instance().line_entry,))
         elif state == lldb.eStateStopped     \
             or state == lldb.eStateCrashed   \
@@ -457,21 +458,22 @@ def handle_process_event(ev):
                 debug('updating selected thread')
                 update_selected_thread(lldb_instance().debugger)
                 debug('updated selected thread')
+                debugger = lldb_instance().debugger
                 entry = lldb_instance().line_entry
                 if entry:
                     # We don't need to run 'process status' like Driver.cpp
                     # Since we open the file and show the source line.
-                    r = interpret_command(lldb_instance().debugger, 'thread list')
-                    lldb_view_send(stdout_msg(r[0].output))
-                    lldb_view_send(stderr_msg(r[0].error))
-                    r = interpret_command(lldb_instance().debugger, 'frame info')
-                    lldb_view_send(stdout_msg(r[0].output))
-                    lldb_view_send(stderr_msg(r[0].error))
+                    r = interpret_command(debugger, 'thread list')
+                    lldb_view_send(stdout_msg(r[0].GetOutput()))
+                    lldb_view_send(stderr_msg(r[0].GetError()))
+                    r = interpret_command(debugger, 'frame info')
+                    lldb_view_send(stdout_msg(r[0].GetOutput()))
+                    lldb_view_send(stderr_msg(r[0].GetError()))
                 else:
                     # Give us some assembly to check the crash/stop
-                    r = interpret_command(lldb_instance().debugger, 'process status')
-                    lldb_view_send(stdout_msg(r[0].output))
-                    lldb_view_send(stderr_msg(r[0].error))
+                    r = interpret_command(debugger, 'process status')
+                    lldb_view_send(stdout_msg(r[0].GetOutput()))
+                    lldb_view_send(stderr_msg(r[0].GetError()))
                     entry = lldb_instance().first_line_entry_with_source
 
                 scope = 'bookmark'

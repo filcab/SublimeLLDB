@@ -57,9 +57,9 @@ def debug_prologue(lldb):
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
     debug('lldb prologue')
-    lldb_view_write('(lldb) log enable lldb thread\n')
-    interpret_command(lldb_instance().debugger, 'log enable lldb thread')
-    lldb_view_write('(lldb) log enable gdb-remote thread\n')
+    lldb_view_write('(lldb) log enable -v lldb thread unwind\n')
+    interpret_command(lldb_instance().debugger, 'log enable lldb thread unwind')
+    lldb_view_write('(lldb) log enable -v gdb-remote thread\n')
     interpret_command(lldb_instance().debugger, 'log enable gdb-remote thread')
     lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
     interpret_command(lldb_instance().debugger, 'target create ~/dev/softek/lldb-plugin/tests')

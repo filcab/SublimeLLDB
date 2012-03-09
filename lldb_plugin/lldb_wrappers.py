@@ -9,6 +9,7 @@ import threading
 
 BIG_TIMEOUT = 42000000
 
+
 def debug(str):
     print str
 
@@ -44,6 +45,44 @@ class LldbDriver(object):
     def debugger(self):
         return self._debugger
 
+    @property
+    def line_entry(self):
+        frame = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame()
+        entry = frame.GetLineEntry()
+        filespec = entry.GetFileSpec()
+
+        if filespec:
+            return (filespec.GetDirectory(), filespec.GetFilename(), \
+                    entry.GetLine(), entry.GetColumn())
+        else:
+            return None
+
+    @property
+    def first_line_entry_with_source(self):
+        entry = self.line_entry
+        if entry:
+            return entry
+        else:
+            # Get ALL the SBStackFrames
+            debug('going through stackframes')
+            t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
+            n = t.GetNumFrames()
+            for i in xrange(0, n):
+                f = t.GetFrameAtIndex(i)
+                if f:
+                    entry = f.line_entry
+                    if entry and entry.GetFileSpec():
+                        filespec = entry.GetFileSpec()
+
+                        if filespec:
+                            return (filespec.GetDirectory(), filespec.GetFilename(), \
+                                    entry.GetLine(), entry.GetColumn())
+                        else:
+                            return None
+            debug('not touching stackframes any more')
+
+            return None
+
 
 def get_breakpoints(debugger):
     bps = []
@@ -71,43 +110,6 @@ class LldbWrapper(lldb.SBDebugger):
     def frame(self):
         return self.GetSelectedTarget().GetProcess() \
                    .GetSelectedThread().GetSelectedFrame()
-
-    @property
-    def line_entry(self):
-        entry = self.frame.GetLineEntry()
-        filespec = entry.GetFileSpec()
-
-        if filespec:
-            return (filespec.GetDirectory(), filespec.GetFilename(), \
-                    entry.GetLine(), entry.GetColumn())
-        else:
-            return None
-
-    @property
-    def first_line_entry_with_source(self):
-        entry = self.line_entry
-        if entry:
-            return entry
-        else:
-            # Get ALL the SBStackFrames
-            debug('going through stackframes')
-            t = self.target.process.thread.SBThread
-            n = t.GetNumFrames()
-            for i in xrange(0, n):
-                f = t.GetFrameAtIndex(i)
-                if f:
-                    entry = f.line_entry
-                    if entry and entry.GetFileSpec():
-                        filespec = entry.GetFileSpec()
-
-                        if filespec:
-                            return (filespec.GetDirectory(), filespec.GetFilename(), \
-                                    entry.GetLine(), entry.GetColumn())
-                        else:
-                            return None
-            debug('not touching stackframes any more')
-
-            return None
 
     @property
     def target(self):
@@ -318,23 +320,30 @@ _finished_returns = [lldb.eReturnStatusSuccessFinishNoResult,       \
 _continuing_returns = [lldb.eReturnStatusSuccessContinuingNoResult, \
                        lldb.eReturnStatusSuccessContinuingResult]
 
+
 def is_return_success(r):
     return r in _success_returns
+
 
 def is_return_finished(r):
     return r in _finished_returns
 
+
 def is_return_continuing(r):
     return r in _continuing_returns
+
 
 def is_return_started(r):
     return r == lldb.eReturnStatusStarted
 
+
 def is_return_quit(r):
     return r == lldb.eReturnStatusQuit
 
+
 def is_return_failed(r):
     return r == lldb.eReturnStatusFailed
+
 
 def is_return_invalid(r):
     return r == lldb.eReturnStatusInvalid
@@ -385,54 +394,12 @@ class LldbListener(lldb.SBListener):
 
         self.StartListeningForEvents(b, events)
 
-    def wait_for_event(self, timeout=None):
-        if timeout is None:
-            timeout = 4000000
-        event = lldb.SBEvent()
-        self.WaitForEvent(timeout, event)
-        return LldbEvent(event)
-
-    def wait_for_event_for_broadcaster_with_type(self, timeout, broadcaster, mask):
-        b = broadcaster
-        if isinstance(b, LldbBroadcaster):
-            b = b.SBBroadcaster
-        if timeout is None:
-            timeout = 4000000
-
-        event = lldb.SBEvent()
-        self.WaitForEventForBroadcasterWithType(timeout,
-                                                b,
-                                                mask,
-                                                event)
-        return event
 
     # def __getattr__(self, name):
     #     return self.__listener.__getattr__(name)
 
     # def __setattr__(self, name, value):
     #     self.__listener.__setattr__(name, value)
-
-
-class LldbEvent(lldb.SBEvent):
-    def __init__(self, *args):
-        self.__ev = lldb.SBEvent(*args)
-
-    @property
-    def broadcaster(self):
-        return LldbBroadcaster(self.__ev.GetBroadcaster())
-
-    def broadcaster_matches_ref(self, bb):
-        b = bb
-        if isinstance(b, LldbBroadcaster):
-            b = b.SBBroadcaster
-
-        return self.__ev.BroadcasterMatchesRef(b)
-
-    def is_breakpoint_event(self):
-        return lldb.SBBreakpoint.EventIsBreakpointEvent(self.__ev)
-
-    def is_process_event(self):
-        return lldb.SBProcess.EventIsProcessEvent(self.__ev)
 
 
 class LldbBroadcaster(lldb.SBBroadcaster):
