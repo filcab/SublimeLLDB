@@ -14,7 +14,7 @@ import time
 import Queue
 import threading
 
-from root_objects import lldb_instance, set_lldb_instance, \
+from root_objects import driver_instance, set_driver_instance, \
                          lldb_view_send,  \
                          thread_created, show_lldb_panel,  \
                          window_ref
@@ -52,10 +52,10 @@ def cleanup(window, full=True):
     debug('cleaning up the lldb plugin')
 
     sublime.set_timeout(lambda: update_code_view(window, None), 0)
-    if lldb_instance() is not None:
-        lldb_instance().destroy()
+    if driver_instance() is not None:
+        driver_instance().destroy()
         lldb_wrappers.terminate()
-        set_lldb_instance(None)
+        set_driver_instance(None)
 
     # close the pipes
     # if broadcaster is not None:
@@ -120,7 +120,7 @@ def lldb_i_o_monitor():
     # debug_thr()
     # debug('started')
 
-    # listener = LldbListener(lldb.SBListener('i/o listener'), lldb_instance())
+    # listener = LldbListener(lldb.SBListener('i/o listener'), driver_instance())
     # listener.start_listening_for_events(broadcaster,
     #                                 SublimeBroadcaster.eBroadcastBitsSTDOUT |
     #                                 SublimeBroadcaster.eBroadcastBitsSTDERR |
@@ -156,7 +156,7 @@ def lldb_i_o_monitor():
 #     debug_thr()
 #     debug('started')
 
-#     while lldb_instance() != None:
+#     while driver_instance() != None:
 #         lldberr = lldb_output_fh()
 #         lldbout = lldb_error_fh()
 
@@ -293,8 +293,8 @@ class MarkersListener(sublime_plugin.EventListener):
 def update_breakpoints(window):
     debug_thr()
 
-    if lldb_instance():
-        breakpoints = lldb_instance().breakpoints()
+    if driver_instance():
+        breakpoints = driver_instance().breakpoints()
     else:
         # Just erase the current bp markers
         breakpoints = []
@@ -406,7 +406,7 @@ def lldb_event_monitor(driver, sublime_broadcaster):
                             done = True
                             continue
     debug('exiting')
-    set_lldb_instance(None)
+    set_driver_instance(None)
     kill_monitors()
 
 
@@ -438,28 +438,28 @@ def handle_process_event(ev):
             or state == lldb.eStateStepping  \
             or state == lldb.eStateDetached:
             lldb_view_send("Process %llu %s\n", process.GetProcessID(),
-                lldb_instance().StateAsCString(state))
+                driver_instance().StateAsCString(state))
 
         elif state == lldb.eStateRunning:
             None  # Don't be too chatty
         elif state == lldb.eStateExited:
-            r = interpret_command(lldb_instance().debugger, 'process status')
+            r = interpret_command(driver_instance().debugger, 'process status')
             lldb_view_send(stdout_msg(r[0].GetOutput()))
             lldb_view_send(stderr_msg(r[0].GetError()))
-            marker_update('pc', (lldb_instance().line_entry,))
+            marker_update('pc', (driver_instance().line_entry,))
         elif state == lldb.eStateStopped     \
             or state == lldb.eStateCrashed   \
             or state == lldb.eStateSuspended:
             if lldb.SBProcess.GetRestartedFromEvent(ev):
                 lldb_view_send('Process %llu stopped and was programmatically restarted.' %
                     process.GetProcessID())
-                marker_update('pc', (lldb_instance().line_entry,))
+                marker_update('pc', (driver_instance().line_entry,))
             else:
                 debug('updating selected thread')
-                update_selected_thread(lldb_instance().debugger)
+                update_selected_thread(driver_instance().debugger)
                 debug('updated selected thread')
-                debugger = lldb_instance().debugger
-                entry = lldb_instance().line_entry
+                debugger = driver_instance().debugger
+                entry = driver_instance().line_entry
                 if entry:
                     # We don't need to run 'process status' like Driver.cpp
                     # Since we open the file and show the source line.
@@ -474,7 +474,7 @@ def handle_process_event(ev):
                     r = interpret_command(debugger, 'process status')
                     lldb_view_send(stdout_msg(r[0].GetOutput()))
                     lldb_view_send(stderr_msg(r[0].GetError()))
-                    entry = lldb_instance().first_line_entry_with_source
+                    entry = driver_instance().first_line_entry_with_source
 
                 scope = 'bookmark'
                 if state == lldb.eStateCrashed:
@@ -484,20 +484,20 @@ def handle_process_event(ev):
 
 
 def get_process_stdout():
-    string = stdout_msg(lldb_instance().debugger.GetSelectedTarget(). \
+    string = stdout_msg(driver_instance().debugger.GetSelectedTarget(). \
         GetProcess().GetSTDOUT(1024))
     while len(string) > 0:
         lldb_view_send(string)
-        string = stdout_msg(lldb_instance().debugger.GetSelectedTarget(). \
+        string = stdout_msg(driver_instance().debugger.GetSelectedTarget(). \
             GetProcess().GetSTDOUT(1024))
 
 
 def get_process_stderr():
-    string = stderr_msg(lldb_instance().debugger.GetSelectedTarget(). \
+    string = stderr_msg(driver_instance().debugger.GetSelectedTarget(). \
         GetProcess().GetSTDOUT(1024))
     while len(string) > 0:
         lldb_view_send(string)
-        string = stderr_msg(lldb_instance().debugger.GetSelectedTarget(). \
+        string = stderr_msg(driver_instance().debugger.GetSelectedTarget(). \
             GetProcess().GetSTDOUT(1024))
 
 

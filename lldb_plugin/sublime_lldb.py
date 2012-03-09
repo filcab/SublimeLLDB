@@ -9,7 +9,7 @@ import atexit
 import datetime
 import threading
 
-from root_objects import lldb_instance, set_lldb_instance,              \
+from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
@@ -28,11 +28,11 @@ import lldb_wrappers
 
 
 # import traceback
-def debug_thr():
-    threading.current_thread()
-    1 + 1
-    # print ('thread id: ' + threading.current_thread().name)
-    # traceback.print_stack()
+def debug_thr(string=None):
+    if string:
+        print ('thread id: ' + threading.current_thread().name + ' ' + string)
+    else:
+        print ('thread id: ' + threading.current_thread().name)
 
 
 def debug(str):
@@ -51,20 +51,21 @@ def initialize_plugin():
     debug('cwd: %s' % os.getcwd())
 
 
-def debug_prologue(lldb):
+def debug_prologue(driver):
     """
     Prologue for the debugging session during the development of the plugin.
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
     debug('lldb prologue')
+    debugger = driver.debugger
     lldb_view_write('(lldb) log enable -v lldb thread unwind\n')
-    interpret_command(lldb_instance().debugger, 'log enable lldb thread unwind')
+    interpret_command(debugger, 'log enable lldb thread unwind')
     lldb_view_write('(lldb) log enable -v gdb-remote thread\n')
-    interpret_command(lldb_instance().debugger, 'log enable gdb-remote thread')
+    interpret_command(debugger, 'log enable gdb-remote thread')
     lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
-    interpret_command(lldb_instance().debugger, 'target create ~/dev/softek/lldb-plugin/tests')
+    interpret_command(debugger, 'target create ~/dev/softek/lldb-plugin/tests')
     lldb_view_write('(lldb) b main\n')
-    interpret_command(lldb_instance().debugger, 'b main')
+    interpret_command(debugger, 'b main')
     debug('ended lldb prologue')
 
 
@@ -78,7 +79,7 @@ lldb_view_name = 'lldb i/o'
 lldb_prog_view_name = 'program i/o'
 lldb_prompt = '(lldb) '
 
-# lldb_instance = None
+# driver_instance = None
 # lldb_out_view = None
 
 # To hold on to the pipes. Otherwise GC takes them
@@ -180,7 +181,7 @@ def lldb_in_panel_on_done(cmd):
     if cmd is None:
         cmd = ''
 
-    if lldb_instance():
+    if driver_instance():
         lldb_view_write(lldb_prompt + cmd + '\n')
 
         broadcaster.send_command(cmd)
@@ -234,8 +235,8 @@ def start_debugging():
     cleanup(window_ref())
 
     # Really start the debugger
-    set_lldb_instance(initialize_lldb())
-    lldb_ = lldb_instance().debugger
+    set_driver_instance(initialize_lldb())
+    lldb_ = driver_instance().debugger
     debug('setting file handles')
     # lldb_.SetInputFileHandle(sys.__stdin__, False)
     # lldb_.SetErrorFileHandle(sys.__stderr__, False)
@@ -245,10 +246,10 @@ def start_debugging():
     global broadcaster
     broadcaster = lldb_wrappers.SublimeBroadcaster(lldb_)
     broadcaster.set_output_fun(lldb_view_send)
-    broadcaster.start(lldb_instance())
+    broadcaster.start(driver_instance())
 
     debug('setting up event monitor')
-    launch_event_monitor(lldb_instance(), broadcaster)
+    launch_event_monitor(driver_instance(), broadcaster)
     launch_markers_monitor(window_ref())
 
     # launch_i_o_monitor(broadcaster)
@@ -278,14 +279,14 @@ def start_debugging():
     # debug('out: %s, %s' % (str(lldb_debugger_pipe_out), str(pipe_out)))
     # debug('err: %s, %s' % (str(lldb_debugger_pipe_err), str(pipe_err)))
 
-    # lldb_instance().SetInputFileHandle(pipe_in, True)
-    # lldb_instance().SetOutputFileHandle(pipe_out, True)
-    # lldb_instance().SetErrorFileHandle(pipe_err, True)
+    # driver_instance().SetInputFileHandle(pipe_in, True)
+    # driver_instance().SetOutputFileHandle(pipe_out, True)
+    # driver_instance().SetErrorFileHandle(pipe_err, True)
 
 
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
-        debug_thr()
+        debug_thr('starting')
 
         # global lldb_out_view
         if lldb_out_view() is None:
@@ -298,7 +299,7 @@ class LldbCommand(WindowCommand):
 
         global lldb_view_name
 
-        if lldb_instance() is None:
+        if driver_instance() is None:
             # if should_clear_lldb_view:
             clear_lldb_out_view()
             set_window_ref(self.window)
@@ -311,12 +312,9 @@ class LldbCommand(WindowCommand):
                 g = '\n\n' + lldb_greeting()
             lldb_view_write(g)
             lldb_view_write('cwd: ' + os.getcwd() + '\n')
-
-            if lldb_out_view() is None:
-                debug('uh oh, starting lldb and the i/o view is not ready!')
             self.window.set_view_index(lldb_out_view(), 1, 0)
 
-            debug_prologue(lldb_instance())
+            debug_prologue(driver_instance())
 
         show_lldb_panel(self.window)
 

@@ -75,11 +75,11 @@ def set_lldb_error_fh(error):
     pipe_err = error
 
 
-def lldb_instance():
+def driver_instance():
     return lldb_
 
 
-def set_lldb_instance(i):
+def set_driver_instance(i):
     global lldb_
     lldb_ = i
 
