@@ -7,6 +7,8 @@ import lldbutil
 import threading
 # import traceback
 
+BIG_TIMEOUT = 42000000
+
 
 def debug(str):
     print str
@@ -31,38 +33,22 @@ def thread_created(string):
     lldb.SBHostOS.ThreadCreated(string)
 
 
-class LldbWrapper(object):
-    def __init__(self, source_init_files, log_callback=None):
-        debug('Initting LldbWrapper')
-        if log_callback is None:
-            self.__lldb = lldb.SBDebugger.Create(source_init_files)
+class LldbDriver(object):
+    def __init__(self, source_init_files, log_writer):
+        debug('Initting LldbDriver')
+        if log_writer is None:
+            self._debugger = lldb.SBDebugger.Create(source_init_files)
         else:
-            self.__lldb = lldb.SBDebugger.Create(source_init_files, log_callback)
-        self.__listener = LldbListener(
-                            lldb.SBListener(
-                                self.__lldb.GetListener()), self.__lldb)
-        self.__last_cmd = ''
-
-    def breakpoints(self):
-        bps = []
-        target = self.__lldb.GetSelectedTarget()
-        if target:
-            n = target.GetNumBreakpoints()
-            for i in xrange(n):
-                bps.insert(i, BreakpointWrapper(self.__lldb
-                                                    .GetSelectedTarget()
-                                                    .GetBreakpointAtIndex(i)))
-
-        return bps
+            self._debugger = lldb.SBDebugger.Create(source_init_files, log_writer)
 
     @property
-    def frame(self):
-        return self.__lldb.GetSelectedTarget().GetProcess() \
-                          .GetSelectedThread().GetSelectedFrame()
+    def debugger(self):
+        return self._debugger
 
     @property
     def line_entry(self):
-        entry = self.frame.GetLineEntry()
+        frame = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame()
+        entry = frame.GetLineEntry()
         filespec = entry.GetFileSpec()
 
         if filespec:
@@ -79,7 +65,7 @@ class LldbWrapper(object):
         else:
             # Get ALL the SBStackFrames
             debug('going through stackframes')
-            t = self.target.process.thread.SBThread
+            t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
             n = t.GetNumFrames()
             for i in xrange(0, n):
                 f = t.GetFrameAtIndex(i)
@@ -97,97 +83,116 @@ class LldbWrapper(object):
 
             return None
 
+
+def get_breakpoints(debugger):
+    bps = []
+    target = debugger.GetSelectedTarget()
+    if target:
+        n = target.GetNumBreakpoints()
+        for i in xrange(n):
+            bps.insert(i, BreakpointWrapper(debugger.GetSelectedTarget()
+                                                    .GetBreakpointAtIndex(i)))
+
+    return bps
+
+
+def interpret_command(debugger, cmd, add_to_history=False):
+    result = lldb.SBCommandReturnObject()
+    ci = debugger.GetCommandInterpreter()
+
+    r = ci.HandleCommand(cmd.__str__(), result, add_to_history)
+
+    return (result, r)
+
+
+class LldbWrapper(lldb.SBDebugger):
+    @property
+    def frame(self):
+        return self.GetSelectedTarget().GetProcess() \
+                   .GetSelectedThread().GetSelectedFrame()
+
     @property
     def target(self):
-        return TargetWrapper(self.__lldb.GetSelectedTarget())
+        return TargetWrapper(self.GetSelectedTarget())
 
     # @property
     # def symbol_context(self):
     #     return self.frame().GetSymbolContext(0xffffffff)
 
     def destroy(self):
-        self.__listener = None
-        lldb.SBDebugger.Destroy(self.__lldb)
-        self.__lldb = None
-
-    def interpret_command(self, cmd, add_to_history=False):
-        result = LldbCommandReturnWrapper()
-        ci = self.__lldb.GetCommandInterpreter()
-
-        r = LldbResultStatusWrapper(ci.HandleCommand(cmd.__str__(),
-                                                     result.ReturnObject(),
-                                                     add_to_history))
-
-        return (result, r)
-
-    @property
-    def listener(self):
-        return self.__listener
+        lldb.SBDebugger.Destroy(self.lldb)
+        self.lldb = None
 
     @property
     def SBDebugger(self):
-        return self.__lldb
+        return self
 
-    # bridges to SBDebugger methods:
-    def set_async(self, async):
-        self.__lldb.SetAsync(async)
+    # # bridges to SBDebugger methods:
+    # def set_async(self, async):
+    #     self.__lldb.SetAsync(async)
 
     # CamelCase methods are simple bridges to the SBDebugger object
     # def GetCommandInterpreter(self):
     #     return self.lldb.GetCommandInterpreter()
 
-    def GetCommandInterpreter(self):
-        return self.__lldb.GetCommandInterpreter()
+    # def GetCommandInterpreter(self):
+    #     return self.__lldb.GetCommandInterpreter()
 
-    def SetInputFileHandle(self, fh, transfer_ownership):
-        self.__lldb.SetInputFileHandle(fh, transfer_ownership)
+    # def SetInputFileHandle(self, fh, transfer_ownership):
+    #     self.__lldb.SetInputFileHandle(fh, transfer_ownership)
 
-    def SetOutputFileHandle(self, fh, transfer_ownership):
-        self.__lldb.SetOutputFileHandle(fh, transfer_ownership)
+    # def SetOutputFileHandle(self, fh, transfer_ownership):
+    #     self.__lldb.SetOutputFileHandle(fh, transfer_ownership)
 
-    def SetErrorFileHandle(self, fh, transfer_ownership):
-        self.__lldb.SetErrorFileHandle(fh, transfer_ownership)
+    # def SetErrorFileHandle(self, fh, transfer_ownership):
+    #     self.__lldb.SetErrorFileHandle(fh, transfer_ownership)
 
-    def GetInputFileHandle(self):
-        return self.__lldb.GetInputFileHandle()
+    # def GetInputFileHandle(self):
+    #     return self.__lldb.GetInputFileHandle()
 
-    def GetOutputFileHandle(self):
-        return self.__lldb.GetOutputFileHandle()
+    # def GetOutputFileHandle(self):
+    #     return self.__lldb.GetOutputFileHandle()
 
-    def GetErrorFileHandle(self):
-        return self.__lldb.GetErrorFileHandle()
+    # def GetErrorFileHandle(self):
+    #     return self.__lldb.GetErrorFileHandle()
 
-    def SetAsync(self, arg):
-        return self.__lldb.SetAsync(arg)
+    # def SetAsync(self, arg):
+    #     return self.__lldb.SetAsync(arg)
 
-    def StateAsCString(self, state):
-        return self.__lldb.StateAsCString(state)
+    # def StateAsCString(self, state):
+    #     return self.__lldb.StateAsCString(state)
 
 
-class TargetWrapper(object):
+class TargetWrapper(lldb.SBTarget):
     def __init__(self, t):
         self.__t = t
 
     @property
     def process(self):
-        return ProcessWrapper(self.__t.GetProcess())
+        return ProcessWrapper(self.GetProcess())
+
+    # def __getattr__(self, name):
+    #     return self.__t.__getattr__(name)
+
+    # def __setattr__(self, name, value):
+    #     self.__t.__setattr__(name, value)
 
 
-class ProcessWrapper(object):
+class ProcessWrapper(lldb.SBProcess):
     def __init__(self, p=None):
         self.__p = p
 
     @property
     def num_threads(self):
-        return self.__p.GetNumThreads()
+        return self.GetNumThreads()
 
     @property
     def thread(self):
-        return ThreadWrapper(self.__p.GetSelectedThread())
+        return ThreadWrapper(self.GetSelectedThread())
 
     @property
     def valid(self):
-        return self.__p.IsValid()
+        return self.IsValid()
 
     def __iter__(self):
         for t in self.__p:
@@ -201,23 +206,29 @@ class ProcessWrapper(object):
             return False
 
     def SetSelectedThread(self, t):
-        self.__p.SetSelectedThread(t.SBThread)
+        self.SetSelectedThread(t.SBThread)
 
     def GetThreadAtIndex(self, i):
         return ThreadWrapper(self.__p.GetThreadAtIndex(i))
 
+    # def __getattr__(self, name):
+    #     return self.__p.__getattr__(name)
 
-class ThreadWrapper(object):
+    # def __setattr__(self, name, value):
+    #     self.__p.__setattr__(name, value)
+
+
+class ThreadWrapper(lldb.SBThread):
     def __init__(self, t=None):
         self.__t = t
 
     @property
     def stop_reason(self):
-        return self.__t.GetStopReason()
+        return self.GetStopReason()
 
     @property
     def valid(self):
-        return self.__t.IsValid()
+        return self.IsValid()
 
     def __nonzero__(self):
         if self.__t:
@@ -233,14 +244,20 @@ class ThreadWrapper(object):
     def SBThread(self):
         return self.__t
 
+    # def __getattr__(self, name):
+    #     return self.__t.__getattr__(name)
 
-class FrameWrapper(object):
+    # def __setattr__(self, name, value):
+    #     self.__t.__setattr__(name, value)
+
+
+class FrameWrapper(lldb.SBFrame):
     def __init__(self, f):
         self.__f = f
 
     @property
     def line_entry(self):
-        entry = self.__f.GetLineEntry()
+        entry = self.GetLineEntry()
         debug('entry: ' + str(entry))
         filespec = entry.GetFileSpec()
         debug('filespec: ' + str(filespec))
@@ -251,22 +268,26 @@ class FrameWrapper(object):
         else:
             return None
 
+    # def __getattr__(self, name):
+    #     return self.__f.__getattr__(name)
 
-class BreakpointWrapper(object):
+    # def __setattr__(self, name, value):
+    #     self.__f.__setattr__(name, value)
+
+
+class BreakpointWrapper(lldb.SBBreakpoint):
     def __init__(self, b):
         self.__b = b
 
     def enabled(self):
-        return self.__b.IsEnabled()
-    # def set_enabled(self, e):
-    #     self.__b.SetEnabled(e)
+        return self.IsEnabled()
 
     def line_entries(self):
         entries = []
 
-        n = self.__b.GetNumLocations()
+        n = self.GetNumLocations()
         for i in xrange(n):
-            bp_loc = self.__b.GetLocationAtIndex(i)
+            bp_loc = self.GetLocationAtIndex(i)
             addr = bp_loc.GetAddress()
             entry = addr.GetLineEntry()
             filespec = entry.GetFileSpec()
@@ -281,163 +302,107 @@ class BreakpointWrapper(object):
 
         return entries
 
+    # def __getattr__(self, name):
+    #     return self.__b.__getattr__(name)
 
-class LldbResultStatusWrapper(object):
-    _success_returns = [lldb.eReturnStatusSuccessFinishNoResult,        \
-                        lldb.eReturnStatusSuccessFinishResult,          \
-                        lldb.eReturnStatusSuccessContinuingNoResult,    \
-                        lldb.eReturnStatusSuccessContinuingResult]
-                        # lldb.eReturnStatusStarted]
-    _finished_returns = [lldb.eReturnStatusSuccessFinishNoResult,       \
-                         lldb.eReturnStatusSuccessFinishResult]
-
-    _continuing_returns = [lldb.eReturnStatusSuccessContinuingNoResult, \
-                           lldb.eReturnStatusSuccessContinuingResult]
-
-    def __init__(self, r):
-        self.__r = r
-
-    def is_success(self):
-        return self.__r in self._success_returns
-
-    def is_finished(self):
-        return self.__r in self._finished_returns
-
-    def is_started(self):
-        return self.__r == lldb.eReturnStatusStarted
-
-    def is_quit(self):
-        return self.__r == lldb.eReturnStatusQuit
-
-    def is_failed(self):
-        return self.__r == lldb.eReturnStatusFailed
-
-    def is_invalid(self):
-        return self.__r == lldb.eReturnStatusInvalid
+    # def __setattr__(self, name, value):
+    #     self.__b.__setattr__(name, value)
 
 
-class LldbCommandReturnWrapper(object):
-    def __init__(self):
-        self.__ret = lldb.SBCommandReturnObject()
+_success_returns = [lldb.eReturnStatusSuccessFinishNoResult,        \
+                    lldb.eReturnStatusSuccessFinishResult,          \
+                    lldb.eReturnStatusSuccessContinuingNoResult,    \
+                    lldb.eReturnStatusSuccessContinuingResult]
+                    # lldb.eReturnStatusStarted]
+_finished_returns = [lldb.eReturnStatusSuccessFinishNoResult,       \
+                     lldb.eReturnStatusSuccessFinishResult]
 
+_continuing_returns = [lldb.eReturnStatusSuccessContinuingNoResult, \
+                       lldb.eReturnStatusSuccessContinuingResult]
+
+
+def is_return_success(r):
+    return r in _success_returns
+
+
+def is_return_finished(r):
+    return r in _finished_returns
+
+
+def is_return_continuing(r):
+    return r in _continuing_returns
+
+
+def is_return_started(r):
+    return r == lldb.eReturnStatusStarted
+
+
+def is_return_quit(r):
+    return r == lldb.eReturnStatusQuit
+
+
+def is_return_failed(r):
+    return r == lldb.eReturnStatusFailed
+
+
+def is_return_invalid(r):
+    return r == lldb.eReturnStatusInvalid
+
+
+class LldbCommandReturnWrapper(lldb.SBCommandReturnObject):
     def ReturnObject(self):
-        return self.__ret
+        return self
 
     @property
     def error(self):
-        return self.__ret.GetError()
+        return self.GetError()
 
     @property
     def output(self):
-        return self.__ret.GetOutput()
+        return self.GetOutput()
 
 
 # Listeners and broadcasters
-class LldbListener(object):
-    def __init__(self, listener, debugger):
-        self.__listener = listener
-        self.__debugger = debugger
+def start_listening_for_process_events(listener, debugger):
+    listener.StartListeningForEventClass(debugger,
+        lldb.SBProcess.GetBroadcasterClassName(),
+        lldb.SBProcess.eBroadcastBitStateChanged |      \
+        lldb.SBProcess.eBroadcastBitInterrupt |         \
+        lldb.SBProcess.eBroadcastBitSTDOUT |            \
+        lldb.SBProcess.eBroadcastBitSTDERR)
 
+
+def start_listening_for_breakpoint_changes(listener, debugger):
+    listener.StartListeningForEventClass(debugger,
+        lldb.SBTarget.GetBroadcasterClassName(),
+        lldb.SBTarget.eBroadcastBitBreakpointChanged)
+
+
+class LldbListener(lldb.SBListener):
     @property
     def SBListener(self):
-        return self.__listener
-
-    @property
-    def debugger(self):
-        return self.__debugger
+        return self
 
     @property
     def valid(self):
-        return self.__listener.IsValid()
+        return self.IsValid()
 
     def start_listening_for_events(self, broadcaster, events):
         b = broadcaster
         if isinstance(b, LldbBroadcaster):
             b = b.SBBroadcaster
 
-        self.__listener.StartListeningForEvents(b, events)
-
-    def start_listening_for_process_events(self):
-        self.__listener.StartListeningForEventClass(        \
-            self.__debugger.SBDebugger,                     \
-            lldb.SBProcess.GetBroadcasterClassName(),       \
-            lldb.SBProcess.eBroadcastBitStateChanged |      \
-            lldb.SBProcess.eBroadcastBitInterrupt |         \
-            lldb.SBProcess.eBroadcastBitSTDOUT |            \
-            lldb.SBProcess.eBroadcastBitSTDERR)
-
-    def start_listening_for_breakpoint_changes(self):
-        self.__listener.StartListeningForEventClass(        \
-            self.__debugger.SBDebugger,                     \
-            lldb.SBTarget.GetBroadcasterClassName(),        \
-            lldb.SBTarget.eBroadcastBitBreakpointChanged)
-
-    def wait_for_event(self, timeout=None):
-        if timeout is None:
-            timeout = 4000000
-        event = lldb.SBEvent()
-        self.__listener.WaitForEvent(timeout, event)
-        return LldbEvent(event)
-
-    def wait_for_event_for_broadcaster_with_type(self, timeout, broadcaster, mask):
-        b = broadcaster
-        if isinstance(b, LldbBroadcaster):
-            b = b.SBBroadcaster
-        if timeout is None:
-            timeout = 4000000
-
-        event = lldb.SBEvent()
-        self.__listener.WaitForEventForBroadcasterWithType(timeout,
-                                             broadcaster,
-                                             mask,
-                                             event)
-        return event
+        self.StartListeningForEvents(b, events)
 
 
-class LldbEvent(object):
-    def __init__(self, *args):
-        self.__ev = lldb.SBEvent(*args)
+    # def __getattr__(self, name):
+    #     return self.__listener.__getattr__(name)
 
-    @property
-    def broadcaster(self):
-        return LldbBroadcaster(self.__ev.GetBroadcaster())
-
-    def broadcaster_matches_ref(self, bb):
-        b = bb
-        if isinstance(b, LldbBroadcaster):
-            b = b.SBBroadcaster
-
-        return self.__ev.BroadcasterMatchesRef(b)
-
-    @property
-    def string(self):
-        return lldb.SBEvent.GetCStringFromEvent(self.__ev)
-
-    def is_breakpoint_event(self):
-        return lldb.SBBreakpoint.EventIsBreakpointEvent(self.__ev)
-
-    def is_process_event(self):
-        return lldb.SBProcess.EventIsProcessEvent(self.__ev)
-
-    @property
-    def valid(self):
-        return self.__ev.IsValid()
-
-    @property
-    def SBEvent(self):
-        return self.__ev
-
-    @property
-    def type(self):
-        return self.__ev.GetType()
-
-    def __str__(self):
-        stream = lldb.SBStream()
-        self.__ev.GetDescription(stream)
-        return stream.GetData()
+    # def __setattr__(self, name, value):
+    #     self.__listener.__setattr__(name, value)
 
 
-class LldbBroadcaster(object):
+class LldbBroadcaster(lldb.SBBroadcaster):
     def __init__(self, broadcaster):
         self.__broadcaster = broadcaster
 
@@ -448,6 +413,12 @@ class LldbBroadcaster(object):
     @property
     def valid(self):
         return self.__broadcaster.IsValid()
+
+    # def __getattr__(self, name):
+    #     return self.__broadcaster.__getattr__(name)
+
+    # def __setattr__(self, name, value):
+    #     self.__broadcaster.__setattr__(name, value)
 
 
 class SublimeBroadcaster(lldb.SBBroadcaster):
@@ -480,16 +451,16 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
             self.__t.kill()
         del self.__t
 
-    def start(self):
+    def start(self, debugger):
         debug('creating thread: <' + self.GetName() + '>')
-        self.__t = threading.Thread(name='<' + self.GetName() + '>', target=self.run)
+        self.__t = threading.Thread(name='<' + self.GetName() + '>', target=self.run, args=(debugger,))
         self.__t.start()
 
     def send_command(self, cmd):
-        event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasInput, str(cmd))
-        self.BroadcastEvent(event.SBEvent)
+        event = lldb.SBEvent(SublimeBroadcaster.eBroadcastBitHasInput, str(cmd))
+        self.BroadcastEvent(event)
 
-    def run(self):
+    def run(self, debugger):
         thread_created(threading.current_thread().name)
 
         time.sleep(1)
@@ -497,14 +468,14 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         def debug(object):
             print threading.current_thread().name + ' ' + str(object)
 
-        listener = LldbListener(lldb.SBListener('SublimeListener'), self.__debugger)
-        interpreter_broadcaster = self.__debugger.SBDebugger.GetCommandInterpreter().GetBroadcaster()
-        listener.start_listening_for_events(interpreter_broadcaster,
-                                            lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit | \
-                                            lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived)
+        listener = LldbListener('SublimeListener')
+        interpreter_broadcaster = debugger.debugger.GetCommandInterpreter().GetBroadcaster()
+        listener.StartListeningForEvents(interpreter_broadcaster,
+                                         lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit | \
+                                         lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived)
 
-        listener.start_listening_for_events(self, SublimeBroadcaster.eBroadcastBitShouldExit | \
-                                                  SublimeBroadcaster.eBroadcastBitHasInput)
+        listener.StartListeningForEvents(self, SublimeBroadcaster.eBroadcastBitShouldExit | \
+                                               SublimeBroadcaster.eBroadcastBitHasInput)
 
         debug('broadcasting DidStart')
         self.BroadcastEventByType(SublimeBroadcaster.eBroadcastBitDidStart)
@@ -512,32 +483,34 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         done = False
         while not done:
             debug('listening at: ' + str(listener.SBListener))
-            event = listener.wait_for_event()
-            if not event.valid:  # timeout
+            event = lldb.SBEvent()
+            listener.WaitForEvent(BIG_TIMEOUT, event)
+            if not event.IsValid():  # timeout
                 continue
 
-            debug('SublimeBroadcaster: got event: ' + lldbutil.get_description(event.SBEvent))
-            if event.broadcaster.valid:
-                if event.broadcaster_matches_ref(interpreter_broadcaster):
-                    if event.type & lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit \
-                        or event.type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
+            debug('SublimeBroadcaster: got event: ' + lldbutil.get_description(event))
+            if event.GetBroadcaster().IsValid():
+                type = event.GetType()
+                if event.BroadcasterMatchesRef(interpreter_broadcaster):
+                    if type & lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit \
+                        or type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
                         debug('exiting from broadcaster due to interpreter')
                         done = True
                         continue
-                elif event.broadcaster_matches_ref(self):
-                    if event.type & SublimeBroadcaster.eBroadcastBitShouldExit:
+                elif event.BroadcasterMatchesRef(self):
+                    if type & SublimeBroadcaster.eBroadcastBitShouldExit:
                         debug('exiting from broadcaster due to self')
                         done = True
                         continue
-                    if event.type & SublimeBroadcaster.eBroadcastBitHasInput:
-                        cmd = event.string
+                    if type & SublimeBroadcaster.eBroadcastBitHasInput:
+                        cmd = lldb.SBEvent.GetCStringFromEvent(event)
                         # TODO: This shouldn't happen!
                         # GetCStringFromEvent() is returning None when the string is empty.
                         if cmd is None:
                             cmd = ''
 
-                        event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
-                        self.BroadcastEvent(event.SBEvent)
+                        event = lldb.SBEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
+                        self.BroadcastEvent(event)
                         continue
 
         self.BroadcastEventByType(SublimeBroadcaster.eBroadcastBitShouldExit)

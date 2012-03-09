@@ -4,7 +4,8 @@ import sublime
 import sublime_plugin
 
 # FIXME: Use lldb_wrappers
-from lldb_wrappers import LldbListener, SublimeBroadcaster
+from lldb_wrappers import BIG_TIMEOUT, LldbListener, SublimeBroadcaster, start_listening_for_breakpoint_changes, \
+    start_listening_for_process_events, interpret_command
 import lldb_wrappers
 import lldb
 import lldbutil
@@ -329,65 +330,70 @@ def update_breakpoints(window):
 
 
 # event_monitor mimics the Driver class, in Driver.cpp
-def lldb_event_monitor(sublime_broadcaster):
+def lldb_event_monitor(driver, sublime_broadcaster):
     thread_created(threading.current_thread().name)
     debug_thr()
     debug('started')
 
-    listener = LldbListener(lldb.SBListener('event listener'), lldb_instance())
+    debugger = driver.debugger
+    listener = LldbListener('event listener')
 
-    listener.start_listening_for_events(sublime_broadcaster,                                \
-                                        SublimeBroadcaster.eBroadcastBitDidStart | \
-                                        SublimeBroadcaster.eBroadcastBitHasCommandInput |   \
-                                        SublimeBroadcaster.eBroadcastBitShouldExit |   \
-                                        SublimeBroadcaster.eBroadcastBitDidExit)
+    listener.StartListeningForEvents(sublime_broadcaster,
+                                     SublimeBroadcaster.eBroadcastBitDidStart |         \
+                                     SublimeBroadcaster.eBroadcastBitHasCommandInput |  \
+                                     SublimeBroadcaster.eBroadcastBitShouldExit |       \
+                                     SublimeBroadcaster.eBroadcastBitDidExit)
 
     debug('waiting for SublimeBroadcaster')
-    listener.wait_for_event_for_broadcaster_with_type(400000,                                       \
-                                                      sublime_broadcaster,                          \
-                                                      SublimeBroadcaster.eBroadcastBitDidStart)
+    event = lldb.SBEvent()
+    listener.WaitForEventForBroadcasterWithType(400000,
+                                                sublime_broadcaster,
+                                                SublimeBroadcaster.eBroadcastBitDidStart,
+                                                event)
 
-    listener.start_listening_for_breakpoint_changes()
-    listener.start_listening_for_process_events()
+    start_listening_for_breakpoint_changes(listener, debugger)
+    start_listening_for_process_events(listener, debugger)
 
-    interpreter_broadcaster = listener.debugger.GetCommandInterpreter().GetBroadcaster()
-    listener.start_listening_for_events(interpreter_broadcaster,                                        \
-                                        lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived | \
-                                        lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \
-                                        lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData)
+    interpreter_broadcaster = debugger.GetCommandInterpreter().GetBroadcaster()
+    listener.StartListeningForEvents(interpreter_broadcaster,
+                                     lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived |    \
+                                     lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \
+                                     lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData)
 
     if listener.valid:
         done = False
         while not done:
             debug('listening at: ' + str(listener.SBListener))
-            ev = listener.wait_for_event()
-            if ev.valid:
-                debug('Got event: ' + lldbutil.get_description(ev.SBEvent))
-                if ev.broadcaster.valid:
-                    if ev.is_process_event():
+            ev = lldb.SBEvent()
+            listener.WaitForEvent(BIG_TIMEOUT, ev)
+            if ev.IsValid():
+                debug('Got event: ' + lldbutil.get_description(ev))
+                if ev.GetBroadcaster().IsValid():
+                    type = ev.GetType()
+                    string = lldb.SBEvent.GetCStringFromEvent(ev)
+                    if lldb.SBProcess.EventIsProcessEvent(ev):
                         handle_process_event(ev)
-                    elif ev.is_breakpoint_event():
+                    elif lldb.SBBreakpoint.EventIsBreakpointEvent(ev):
                         handle_breakpoint_event(ev)
-                    elif ev.broadcaster_matches_ref(interpreter_broadcaster):
-                        if ev.type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
+                    elif ev.BroadcasterMatchesRef(interpreter_broadcaster):
+                        if type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
                             done = True
                             debug('quit received')
-                        elif ev.type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData:
+                        elif type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData:
                             debug('got async error data')
-                            lldb_view_send(stderr_msg(ev.string))
-                        elif ev.type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData:
+                            lldb_view_send(stderr_msg(string))
+                        elif type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData:
                             debug('got async output data')
-                            lldb_view_send(stdout_msg(ev.string))
-                    elif ev.broadcaster_matches_ref(sublime_broadcaster):
-                        if ev.type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
-                            string = ev.string
-                            if ev.string is None:
+                            lldb_view_send(stdout_msg(string))
+                    elif ev.BroadcasterMatchesRef(sublime_broadcaster):
+                        if type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
+                            if string is None:
                                 debug('ev.string is None: ' + 'SublimeBroadcaster.eBroadcastBitHasCommandInput')
                                 string = ''
 
-                            result, r = lldb_instance().interpret_command(string, True)
-                            err_str = stderr_msg(result.error)
-                            out_str = stdout_msg(result.output)
+                            result, r = interpret_command(debugger, string, True)
+                            err_str = stderr_msg(result.GetError())
+                            out_str = stdout_msg(result.GetOutput())
 
                             lldb_view_send(out_str)
 
@@ -395,8 +401,8 @@ def lldb_event_monitor(sublime_broadcaster):
                                 lldb_view_send(err_str)
                             continue
 
-                        elif ev.type & SublimeBroadcaster.eBroadcastBitShouldExit \
-                            or ev.type & SublimeBroadcaster.eBroadcastBitDidExit:
+                        elif type & SublimeBroadcaster.eBroadcastBitShouldExit \
+                            or type & SublimeBroadcaster.eBroadcastBitDidExit:
                             done = True
                             continue
     debug('exiting')
@@ -406,22 +412,22 @@ def lldb_event_monitor(sublime_broadcaster):
 
 def handle_process_event(ev):
     debug('process event: ' + str(ev))
-    if ev.type & lldb.SBProcess.eBroadcastBitSTDOUT:
+    type = ev.GetType()
+    if type & lldb.SBProcess.eBroadcastBitSTDOUT:
         get_process_stdout()
-    elif ev.type & lldb.SBProcess.eBroadcastBitSTDOUT:
+    elif type & lldb.SBProcess.eBroadcastBitSTDOUT:
         get_process_stderr()
-    elif ev.type & lldb.SBProcess.eBroadcastBitStateChanged:
-        debug('state changed event')
+    elif type & lldb.SBProcess.eBroadcastBitStateChanged:
         get_process_stdout()
         get_process_stderr()
 
         # only after printing the std* can we print our prompts
-        state = lldb.SBProcess.GetStateFromEvent(ev.SBEvent)
+        state = lldb.SBProcess.GetStateFromEvent(ev)
         if state == lldb.eStateInvalid:
             debug('invalid process state')
             return
 
-        process = lldb.SBProcess.GetProcessFromEvent(ev.SBEvent)
+        process = lldb.SBProcess.GetProcessFromEvent(ev)
         assert process.IsValid()
 
         if state == lldb.eStateInvalid       \
@@ -437,36 +443,37 @@ def handle_process_event(ev):
         elif state == lldb.eStateRunning:
             None  # Don't be too chatty
         elif state == lldb.eStateExited:
-            r = lldb_instance().interpret_command('process status')
-            lldb_view_send(stdout_msg(r[0].output))
-            lldb_view_send(stderr_msg(r[0].error))
+            r = interpret_command(lldb_instance().debugger, 'process status')
+            lldb_view_send(stdout_msg(r[0].GetOutput()))
+            lldb_view_send(stderr_msg(r[0].GetError()))
             marker_update('pc', (lldb_instance().line_entry,))
         elif state == lldb.eStateStopped     \
             or state == lldb.eStateCrashed   \
             or state == lldb.eStateSuspended:
-            if lldb.SBProcess.GetRestartedFromEvent(ev.SBEvent):
+            if lldb.SBProcess.GetRestartedFromEvent(ev):
                 lldb_view_send('Process %llu stopped and was programmatically restarted.' %
                     process.GetProcessID())
                 marker_update('pc', (lldb_instance().line_entry,))
             else:
                 debug('updating selected thread')
-                update_selected_thread(lldb_instance())
+                update_selected_thread(lldb_instance().debugger)
                 debug('updated selected thread')
+                debugger = lldb_instance().debugger
                 entry = lldb_instance().line_entry
                 if entry:
                     # We don't need to run 'process status' like Driver.cpp
                     # Since we open the file and show the source line.
-                    r = lldb_instance().interpret_command('thread list')
-                    lldb_view_send(stdout_msg(r[0].output))
-                    lldb_view_send(stderr_msg(r[0].error))
-                    r = lldb_instance().interpret_command('frame info')
-                    lldb_view_send(stdout_msg(r[0].output))
-                    lldb_view_send(stderr_msg(r[0].error))
+                    r = interpret_command(debugger, 'thread list')
+                    lldb_view_send(stdout_msg(r[0].GetOutput()))
+                    lldb_view_send(stderr_msg(r[0].GetError()))
+                    r = interpret_command(debugger, 'frame info')
+                    lldb_view_send(stdout_msg(r[0].GetOutput()))
+                    lldb_view_send(stderr_msg(r[0].GetError()))
                 else:
                     # Give us some assembly to check the crash/stop
-                    r = lldb_instance().interpret_command('process status')
-                    lldb_view_send(stdout_msg(r[0].output))
-                    lldb_view_send(stderr_msg(r[0].error))
+                    r = interpret_command(debugger, 'process status')
+                    lldb_view_send(stdout_msg(r[0].GetOutput()))
+                    lldb_view_send(stderr_msg(r[0].GetError()))
                     entry = lldb_instance().first_line_entry_with_source
 
                 scope = 'bookmark'
@@ -477,37 +484,37 @@ def handle_process_event(ev):
 
 
 def get_process_stdout():
-    string = stdout_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
+    string = stdout_msg(lldb_instance().debugger.GetSelectedTarget(). \
         GetProcess().GetSTDOUT(1024))
     while len(string) > 0:
         lldb_view_send(string)
-        string = stdout_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
+        string = stdout_msg(lldb_instance().debugger.GetSelectedTarget(). \
             GetProcess().GetSTDOUT(1024))
 
 
 def get_process_stderr():
-    string = stderr_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
+    string = stderr_msg(lldb_instance().debugger.GetSelectedTarget(). \
         GetProcess().GetSTDOUT(1024))
     while len(string) > 0:
         lldb_view_send(string)
-        string = stderr_msg(lldb_instance().SBDebugger.GetSelectedTarget(). \
+        string = stderr_msg(lldb_instance().debugger.GetSelectedTarget(). \
             GetProcess().GetSTDOUT(1024))
 
 
 def update_selected_thread(debugger):
-    proc = debugger.target.process
-    if proc.valid:
-        curr_thread = proc.thread
-        current_thread_stop_reason = curr_thread.stop_reason
+    proc = debugger.GetSelectedTarget().GetProcess()
+    if proc.IsValid():
+        curr_thread = proc.GetSelectedThread()
+        current_thread_stop_reason = curr_thread.GetStopReason()
 
         debug('thread stop reason: ' + str(current_thread_stop_reason))
-        other_thread = lldb_wrappers.ThreadWrapper()
-        plan_thread = lldb_wrappers.ThreadWrapper()
-        if not curr_thread.valid \
+        other_thread = lldb.SBThread()
+        plan_thread = lldb.SBThread()
+        if not curr_thread.IsValid() \
             or current_thread_stop_reason == lldb.eStopReasonInvalid \
             or current_thread_stop_reason == lldb.eStopReasonNone:
             for t in proc:
-                t_stop_reason = t.stop_reason
+                t_stop_reason = t.GetStopReason()
                 if t_stop_reason == lldb.eStopReasonInvalid \
                     or t_stop_reason == lldb.eStopReasonNone:
                     pass
@@ -536,7 +543,7 @@ def update_selected_thread(debugger):
 
 
 def handle_breakpoint_event(ev):
-    type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev.SBEvent)
+    type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
     debug('breakpoint event: ' + str(type))
 
     if type & lldb.eBreakpointEventTypeAdded                \
@@ -549,9 +556,9 @@ def handle_breakpoint_event(ev):
         or type & lldb.eBreakpointEventTypeLocationsResolved:
         None
     elif type & lldb.eBreakpointEventTypeLocationsAdded:
-        new_locs = lldb.SBBreakpoint.GetNumBreakpointLocationsFromEvent(ev.SBEvent)
+        new_locs = lldb.SBBreakpoint.GetNumBreakpointLocationsFromEvent(ev)
         if new_locs > 0:
-            bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev.SBEvent)
+            bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
             lldb_view_send("%d locations added to breakpoint %d\n" %
                 (new_locs, bp.GetID()))
     elif type & lldb.eBreakpointEventTypeLocationsRemoved:
