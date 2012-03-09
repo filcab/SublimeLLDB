@@ -23,7 +23,7 @@ from monitors import launch_event_monitor,  \
 
 
 # import this specific name without the prefix
-from lldb_wrappers import LldbWrapper
+from lldb_wrappers import LldbDriver, interpret_command
 import lldb_wrappers
 
 
@@ -58,13 +58,13 @@ def debug_prologue(lldb):
     """
     debug('lldb prologue')
     lldb_view_write('(lldb) log enable lldb thread\n')
-    lldb_instance().interpret_command('log enable lldb thread')
+    interpret_command(lldb_instance().debugger, 'log enable lldb thread')
     lldb_view_write('(lldb) log enable gdb-remote thread\n')
-    lldb_instance().interpret_command('log enable gdb-remote thread')
+    interpret_command(lldb_instance().debugger, 'log enable gdb-remote thread')
     lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
-    lldb_instance().interpret_command('target create ~/dev/softek/lldb-plugin/tests')
+    interpret_command(lldb_instance().debugger, 'target create ~/dev/softek/lldb-plugin/tests')
     lldb_view_write('(lldb) b main\n')
-    lldb_instance().interpret_command('b main')
+    interpret_command(lldb_instance().debugger, 'b main')
     debug('ended lldb prologue')
 
 
@@ -225,7 +225,7 @@ def initialize_lldb():
     set_got_input_function(lldb_in_panel_on_done)
 
     lldb_wrappers.initialize()
-    lldb = LldbWrapper(True, lldb_view_send)
+    lldb = LldbDriver(True, lldb_view_send)
 
     return lldb
 
@@ -235,7 +235,7 @@ def start_debugging():
 
     # Really start the debugger
     set_lldb_instance(initialize_lldb())
-    lldb_ = lldb_instance()
+    lldb_ = lldb_instance().debugger
     debug('setting file handles')
     # lldb_.SetInputFileHandle(sys.__stdin__, False)
     # lldb_.SetErrorFileHandle(sys.__stderr__, False)
@@ -248,7 +248,7 @@ def start_debugging():
     broadcaster.start(lldb_instance())
 
     debug('setting up event monitor')
-    launch_event_monitor(broadcaster)
+    launch_event_monitor(lldb_instance(), broadcaster)
     launch_markers_monitor(window_ref())
 
     # launch_i_o_monitor(broadcaster)

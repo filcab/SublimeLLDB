@@ -7,6 +7,7 @@ import lldbutil
 import threading
 # import traceback
 
+BIG_TIMEOUT = 42000000
 
 def debug(str):
     print str
@@ -31,6 +32,19 @@ def thread_created(string):
     lldb.SBHostOS.ThreadCreated(string)
 
 
+class LldbDriver(object):
+    def __init__(self, source_init_files, log_writer):
+        debug('Initting LldbDriver')
+        if log_writer is None:
+            self._debugger = lldb.SBDebugger.Create(source_init_files)
+        else:
+            self._debugger = lldb.SBDebugger.Create(source_init_files, log_writer)
+
+    @property
+    def debugger(self):
+        return self._debugger
+
+
 def get_breakpoints(debugger):
     bps = []
     target = debugger.GetSelectedTarget()
@@ -42,17 +56,17 @@ def get_breakpoints(debugger):
 
     return bps
 
+
+def interpret_command(debugger, cmd, add_to_history=False):
+    result = lldb.SBCommandReturnObject()
+    ci = debugger.GetCommandInterpreter()
+
+    r = ci.HandleCommand(cmd.__str__(), result, add_to_history)
+
+    return (result, r)
+
+
 class LldbWrapper(lldb.SBDebugger):
-    lldb = None
-    listener = None
-
-    def __init__(self, source_init_files, log_callback=None):
-        debug('Initting LldbWrapper')
-        if log_callback is None:
-            self.lldb = lldb.SBDebugger.Create(source_init_files)
-        else:
-            self.lldb = lldb.SBDebugger.Create(source_init_files, log_callback)
-
     @property
     def frame(self):
         return self.GetSelectedTarget().GetProcess() \
@@ -106,14 +120,6 @@ class LldbWrapper(lldb.SBDebugger):
     def destroy(self):
         lldb.SBDebugger.Destroy(self.lldb)
         self.lldb = None
-
-    def interpret_command(self, cmd, add_to_history=False):
-        result = LldbCommandReturnWrapper()
-        ci = self.lldb.GetCommandInterpreter()
-
-        r = ci.HandleCommand(cmd.__str__(), result, add_to_history)
-
-        return (result, r)
 
     @property
     def SBDebugger(self):
@@ -348,6 +354,21 @@ class LldbCommandReturnWrapper(lldb.SBCommandReturnObject):
 
 
 # Listeners and broadcasters
+def start_listening_for_process_events(listener, debugger):
+    listener.StartListeningForEventClass(debugger,
+        lldb.SBProcess.GetBroadcasterClassName(),
+        lldb.SBProcess.eBroadcastBitStateChanged |      \
+        lldb.SBProcess.eBroadcastBitInterrupt |         \
+        lldb.SBProcess.eBroadcastBitSTDOUT |            \
+        lldb.SBProcess.eBroadcastBitSTDERR)
+
+
+def start_listening_for_breakpoint_changes(listener, debugger):
+    listener.StartListeningForEventClass(debugger,
+        lldb.SBTarget.GetBroadcasterClassName(),
+        lldb.SBTarget.eBroadcastBitBreakpointChanged)
+
+
 class LldbListener(lldb.SBListener):
     @property
     def SBListener(self):
@@ -363,21 +384,6 @@ class LldbListener(lldb.SBListener):
             b = b.SBBroadcaster
 
         self.StartListeningForEvents(b, events)
-
-    def start_listening_for_process_events(self, debugger):
-        self.StartListeningForEventClass(        \
-            debugger,                                       \
-            lldb.SBProcess.GetBroadcasterClassName(),       \
-            lldb.SBProcess.eBroadcastBitStateChanged |      \
-            lldb.SBProcess.eBroadcastBitInterrupt |         \
-            lldb.SBProcess.eBroadcastBitSTDOUT |            \
-            lldb.SBProcess.eBroadcastBitSTDERR)
-
-    def start_listening_for_breakpoint_changes(self, debugger):
-        self.StartListeningForEventClass(                   \
-            debugger,                                       \
-            lldb.SBTarget.GetBroadcasterClassName(),        \
-            lldb.SBTarget.eBroadcastBitBreakpointChanged)
 
     def wait_for_event(self, timeout=None):
         if timeout is None:
@@ -422,38 +428,11 @@ class LldbEvent(lldb.SBEvent):
 
         return self.__ev.BroadcasterMatchesRef(b)
 
-    @property
-    def string(self):
-        return lldb.SBEvent.GetCStringFromEvent(self.__ev)
-
     def is_breakpoint_event(self):
         return lldb.SBBreakpoint.EventIsBreakpointEvent(self.__ev)
 
     def is_process_event(self):
         return lldb.SBProcess.EventIsProcessEvent(self.__ev)
-
-    @property
-    def valid(self):
-        return self.IsValid()
-
-    @property
-    def SBEvent(self):
-        return self.__ev
-
-    @property
-    def type(self):
-        return self.GetType()
-
-    def __str__(self):
-        stream = lldb.SBStream()
-        self.GetDescription(stream)
-        return stream.GetData()
-
-    # def __getattr__(self, name):
-    #     return self.__ev.__getattr__(name)
-
-    # def __setattr__(self, name, value):
-    #     self.__ev.__setattr__(name, value)
 
 
 class LldbBroadcaster(lldb.SBBroadcaster):
@@ -511,7 +490,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         self.__t.start()
 
     def send_command(self, cmd):
-        event = SBEvent(SublimeBroadcaster.eBroadcastBitHasInput, str(cmd))
+        event = lldb.SBEvent(SublimeBroadcaster.eBroadcastBitHasInput, str(cmd))
         self.BroadcastEvent(event)
 
     def run(self, debugger):
@@ -523,7 +502,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
             print threading.current_thread().name + ' ' + str(object)
 
         listener = LldbListener('SublimeListener')
-        interpreter_broadcaster = debugger.GetCommandInterpreter().GetBroadcaster()
+        interpreter_broadcaster = debugger.debugger.GetCommandInterpreter().GetBroadcaster()
         listener.StartListeningForEvents(interpreter_broadcaster,
                                          lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit | \
                                          lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived)
@@ -537,33 +516,34 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         done = False
         while not done:
             debug('listening at: ' + str(listener.SBListener))
-            event = SBEvent()
+            event = lldb.SBEvent()
             listener.WaitForEvent(BIG_TIMEOUT, event)
             if not event.IsValid():  # timeout
                 continue
 
             debug('SublimeBroadcaster: got event: ' + lldbutil.get_description(event))
             if event.GetBroadcaster().IsValid():
+                type = event.GetType()
                 if event.BroadcasterMatchesRef(interpreter_broadcaster):
-                    if event.type & lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit \
-                        or event.type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
+                    if type & lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit \
+                        or type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
                         debug('exiting from broadcaster due to interpreter')
                         done = True
                         continue
-                elif event.broadcaster_matches_ref(self):
-                    if event.type & SublimeBroadcaster.eBroadcastBitShouldExit:
+                elif event.BroadcasterMatchesRef(self):
+                    if type & SublimeBroadcaster.eBroadcastBitShouldExit:
                         debug('exiting from broadcaster due to self')
                         done = True
                         continue
-                    if event.type & SublimeBroadcaster.eBroadcastBitHasInput:
-                        cmd = event.string
+                    if type & SublimeBroadcaster.eBroadcastBitHasInput:
+                        cmd = lldb.SBEvent.GetCStringFromEvent(event)
                         # TODO: This shouldn't happen!
                         # GetCStringFromEvent() is returning None when the string is empty.
                         if cmd is None:
                             cmd = ''
 
-                        event = LldbEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
-                        self.BroadcastEvent(event.SBEvent)
+                        event = lldb.SBEvent(SublimeBroadcaster.eBroadcastBitHasCommandInput, str(cmd))
+                        self.BroadcastEvent(event)
                         continue
 
         self.BroadcastEventByType(SublimeBroadcaster.eBroadcastBitShouldExit)
