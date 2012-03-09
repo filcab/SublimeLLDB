@@ -18,8 +18,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          # lldb_output_fh, set_lldb_output_fh,    \
                          # lldb_error_fh,  set_lldb_error_fh,     \
 
-from monitors import launch_event_monitor,  \
-                     launch_markers_monitor, cleanup
+from monitors import cleanup
 
 
 # import this specific name without the prefix
@@ -225,7 +224,7 @@ def unload_handler():
 def initialize_lldb():
     set_got_input_function(lldb_in_panel_on_done)
 
-    lldb_wrappers.initialize()
+    # lldb_wrappers.initialize()
     lldb = LldbDriver(True, lldb_view_send)
 
     return lldb
@@ -236,21 +235,10 @@ def start_debugging():
 
     # Really start the debugger
     set_driver_instance(initialize_lldb())
-    lldb_ = driver_instance().debugger
     debug('setting file handles')
     # lldb_.SetInputFileHandle(sys.__stdin__, False)
     # lldb_.SetErrorFileHandle(sys.__stderr__, False)
     # lldb_.SetOutputFileHandle(sys.__stdout__, False)
-
-    debug('setting up broadcaster')
-    global broadcaster
-    broadcaster = lldb_wrappers.SublimeBroadcaster(lldb_)
-    broadcaster.set_output_fun(lldb_view_send)
-    broadcaster.start(driver_instance())
-
-    debug('setting up event monitor')
-    launch_event_monitor(driver_instance(), broadcaster)
-    launch_markers_monitor(window_ref())
 
     # launch_i_o_monitor(broadcaster)
 

@@ -4,13 +4,12 @@ import sublime
 import sublime_plugin
 
 # FIXME: Use lldb_wrappers
-from lldb_wrappers import BIG_TIMEOUT, LldbListener, SublimeBroadcaster, start_listening_for_breakpoint_changes, \
+from lldb_wrappers import BIG_TIMEOUT, SublimeBroadcaster, start_listening_for_breakpoint_changes, \
     start_listening_for_process_events, interpret_command
 import lldb_wrappers
 import lldb
 import lldbutil
 
-import time
 import Queue
 import threading
 
@@ -42,6 +41,7 @@ lldb_markers_thread = None
 lldb_last_location_view = None
 lldb_current_location = None
 lldb_file_markers_queue = Queue.Queue()
+
 
 def marker_update(marks, args=(), after=None):
     dict = {'marks': marks, 'args': args, 'after': after}
@@ -327,87 +327,6 @@ def update_breakpoints(window):
                 v.add_regions("lldb-breakpoint", regions, \
                              "string", "circle",          \
                              sublime.HIDDEN)
-
-
-# event_monitor mimics the Driver class, in Driver.cpp
-def lldb_event_monitor(driver, sublime_broadcaster):
-    thread_created(threading.current_thread().name)
-    debug_thr()
-    debug('started')
-
-    debugger = driver.debugger
-    listener = LldbListener('event listener')
-
-    listener.StartListeningForEvents(sublime_broadcaster,
-                                     SublimeBroadcaster.eBroadcastBitDidStart |         \
-                                     SublimeBroadcaster.eBroadcastBitHasCommandInput |  \
-                                     SublimeBroadcaster.eBroadcastBitShouldExit |       \
-                                     SublimeBroadcaster.eBroadcastBitDidExit)
-
-    debug('waiting for SublimeBroadcaster')
-    event = lldb.SBEvent()
-    listener.WaitForEventForBroadcasterWithType(400000,
-                                                sublime_broadcaster,
-                                                SublimeBroadcaster.eBroadcastBitDidStart,
-                                                event)
-
-    start_listening_for_breakpoint_changes(listener, debugger)
-    start_listening_for_process_events(listener, debugger)
-
-    interpreter_broadcaster = debugger.GetCommandInterpreter().GetBroadcaster()
-    listener.StartListeningForEvents(interpreter_broadcaster,
-                                     lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived |    \
-                                     lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData | \
-                                     lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData)
-
-    if listener.valid:
-        done = False
-        while not done:
-            debug('listening at: ' + str(listener.SBListener))
-            ev = lldb.SBEvent()
-            listener.WaitForEvent(BIG_TIMEOUT, ev)
-            if ev.IsValid():
-                debug('Got event: ' + lldbutil.get_description(ev))
-                if ev.GetBroadcaster().IsValid():
-                    type = ev.GetType()
-                    string = lldb.SBEvent.GetCStringFromEvent(ev)
-                    if lldb.SBProcess.EventIsProcessEvent(ev):
-                        handle_process_event(ev)
-                    elif lldb.SBBreakpoint.EventIsBreakpointEvent(ev):
-                        handle_breakpoint_event(ev)
-                    elif ev.BroadcasterMatchesRef(interpreter_broadcaster):
-                        if type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
-                            done = True
-                            debug('quit received')
-                        elif type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousErrorData:
-                            debug('got async error data')
-                            lldb_view_send(stderr_msg(string))
-                        elif type & lldb.SBCommandInterpreter.eBroadcastBitAsynchronousOutputData:
-                            debug('got async output data')
-                            lldb_view_send(stdout_msg(string))
-                    elif ev.BroadcasterMatchesRef(sublime_broadcaster):
-                        if type & SublimeBroadcaster.eBroadcastBitHasCommandInput:
-                            if string is None:
-                                debug('ev.string is None: ' + 'SublimeBroadcaster.eBroadcastBitHasCommandInput')
-                                string = ''
-
-                            result, r = interpret_command(debugger, string, True)
-                            err_str = stderr_msg(result.GetError())
-                            out_str = stdout_msg(result.GetOutput())
-
-                            lldb_view_send(out_str)
-
-                            if len(err_str) != 0:
-                                lldb_view_send(err_str)
-                            continue
-
-                        elif type & SublimeBroadcaster.eBroadcastBitShouldExit \
-                            or type & SublimeBroadcaster.eBroadcastBitDidExit:
-                            done = True
-                            continue
-    debug('exiting')
-    set_driver_instance(None)
-    kill_monitors()
 
 
 def handle_process_event(ev):

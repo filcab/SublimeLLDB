@@ -1,9 +1,6 @@
 # -*- mode: python; coding: utf-8 -*-
 
-import lldb_wrappers
 import sublime
-
-thread_created = lldb_wrappers.thread_created
 
 lldb_ = None
 lldb_view = None
@@ -105,3 +102,7 @@ def lldb_view_write(string):
         lldb_view.end_edit(edit)
         lldb_view.set_read_only(True)
         lldb_view.show(lldb_view.size())
+
+import lldb_wrappers
+
+thread_created = lldb_wrappers.thread_created
