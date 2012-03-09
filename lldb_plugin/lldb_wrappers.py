@@ -36,6 +36,8 @@ def thread_created(string):
 
 
 class LldbDriver(threading.Thread):
+    eBroadcastBitThreadShouldExit = 1 << 0
+
     __is_done = False
     __io_channel = None
     __broadcaster = None
@@ -74,10 +76,6 @@ class LldbDriver(threading.Thread):
     def io_channel(self):
         return self.__io_channel
 
-    @io_channel.setter
-    def io_channel(self, channel):
-        self.__io_channel = channel
-
     @io_channel.deleter
     def io_channel(self):
         del self.__io_channel
@@ -93,10 +91,7 @@ class LldbDriver(threading.Thread):
     def ready_for_command(self):
         if not self.__waiting_for_command:
             self.__ready_for_command = True
-            self.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, True)
-
-    def BroadcastEventByType(self, type, unique):
-        'blow up'
+            self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, True)
 
     # @property
     # def line_entry(self):
@@ -141,7 +136,7 @@ class LldbDriver(threading.Thread):
 
         # bool quit_success = sb_interpreter.SetCommandOverrideCallback ("quit", QuitCommandOverrideCallback, this);
         # assert quit_success
-        self.io_channel = IOChannel(self, lldb_view_write)
+        self.__io_channel = IOChannel(self, lldb_view_write)
 
         sb_interpreter = self._debugger.GetCommandInterpreter()
         listener = lldb.SBListener(self._debugger.GetListener())
@@ -262,6 +257,56 @@ class IOChannel(threading.Thread):
         self.__err_write = err_write
         self.__out_write = out_write
         self.__broadcaster = lldb.SBBroadcaster('IOChannel')
+
+    @property
+    def driver(self):
+        return self.__driver
+
+    @property
+    def broadcaster(self):
+        return self.__broadcaster
+
+    def run(self):
+        listener = lldb.SBListener('IOChannel.run')
+        interpreter_broadcaster = self.driver.debugger.GetCommandInterpreter().GetBroadcaster()
+
+        listener.StartListeningForEvents(interpreter_broadcaster,
+                    lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit |   \
+                    lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived)
+
+        listener.StartListeningForEvents(self.broadcaster,
+                    IOChannel.eBroadcastBitThreadShouldExit)
+
+        listener.StartListeningForEvents(self.driver.broadcaster,
+                    LldbDriver.eBroadcastBitThreadShouldExit)
+
+        self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadDidStart)
+
+        done = False
+        while not done:
+            event = lldb.SBEvent()
+            listener.WaitForEvent(BIG_TIMEOUT, event)
+            if not event:
+                continue
+
+            event_type = event.GetType()
+            if event.GetBroadcaster():
+                if event.BroadcasterMatchesPtr(self.driver.broadcaster):
+                    # if event_type & LldbDriver.eBroadcastBitReadyForInput
+                    if event_type & LldbDriver.eBroadcastBitThreadShouldExit:
+                        done = True
+                        continue
+                elif event.BroadcasterMatchesRef(interpreter_broadcaster):
+                    if event_type == lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit \
+                        or event_type == lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
+                        done = True
+                elif event.BroadcasterMatchesPtr(self.broadcaster):
+                    if event_type & IOChannel.eBroadcastBitThreadShouldExit:
+                        done = True
+                        continue
+
+        self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadDidExit)
+        self.__driver = None
 
 
 def interpret_command(debugger, cmd, add_to_history=False):
@@ -614,7 +659,7 @@ class SublimeBroadcaster(lldb.SBBroadcaster):
         return self
 
     def end(self):
-        self.BroadcastEventByType(self.eBroadcastBitThreadShouldExit)
+        self.broadcaster.BroadcastEventByType(self.eBroadcastBitThreadShouldExit)
         if self.__t:
             self.__t.kill()
         del self.__t
