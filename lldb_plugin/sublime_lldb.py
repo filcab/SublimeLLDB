@@ -9,6 +9,8 @@ import atexit
 import datetime
 import threading
 
+import lldb
+
 from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
                          lldb_view_write, lldb_view_send,               \
@@ -18,11 +20,11 @@ from root_objects import driver_instance, set_driver_instance,          \
                          # lldb_output_fh, set_lldb_output_fh,    \
                          # lldb_error_fh,  set_lldb_error_fh,     \
 
-from monitors import cleanup
+# from monitors import cleanup
 
 
 # import this specific name without the prefix
-from lldb_wrappers import LldbDriver, interpret_command
+from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 import lldb_wrappers
 
 
@@ -182,17 +184,7 @@ def lldb_in_panel_on_done(cmd):
 
     if driver_instance():
         lldb_view_write(lldb_prompt + cmd + '\n')
-
-        broadcaster.send_command(cmd)
-        # err_str = result.error()
-        # out_str = result.output()
-
-        # lldb_view_write(out_str)
-
-        # if len(err_str) != 0:
-        #     err_str.replace('\n', '\nerr> ')
-        #     err_str = 'err> ' + err_str
-        #     lldb_view_write(err_str)
+        driver_instance().send_command(cmd)
 
         # We don't have a window, so let's re-use the one active on lldb launch
         lldb_toggle_output_view(window_ref(), show=True)
@@ -200,14 +192,14 @@ def lldb_in_panel_on_done(cmd):
         v = lldb_out_view()
         v.show_at_center(v.size() + 1)
 
-        # if r.is_quit():
-        #     cleanup(window_ref())
-        # else:
-        #     update_markers(window_ref(), after=lambda:
-        #         window_ref().show_input_panel('lldb', '',
-        #                                     lldb_in_panel_on_done, None, None))
-
         show_lldb_panel()
+
+
+def cleanup(w=None):
+    driver = driver_instance()
+    if driver:
+        driver.stop()
+        set_driver_instance(None)
 
 
 @atexit.register
@@ -224,17 +216,30 @@ def unload_handler():
 def initialize_lldb():
     set_got_input_function(lldb_in_panel_on_done)
 
-    # lldb_wrappers.initialize()
-    lldb = LldbDriver(True, lldb_view_send)
+    driver = LldbDriver()
+    driver.start()
 
-    return lldb
+    # ESPERAR QUE ESTEJA TUDO INICIALIZADO!
+    event = lldb.SBEvent()
+    listener = lldb.SBListener('Wait for lldb initialization')
+    listener.WaitForEventForBroadcasterWithType(START_LLDB_TIMEOUT,
+                driver.broadcaster,
+                LldbDriver.eBroadcastBitThreadDidStart,
+                event)
+
+    if not event:
+        lldb_view_write("oops... the event isn't valid")
+
+    # Warn whoever started us that we can start working
+    driver.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
+    return driver
 
 
 def start_debugging():
     cleanup(window_ref())
 
     # Really start the debugger
-    set_driver_instance(initialize_lldb())
+    initialize_lldb()
     debug('setting file handles')
     # lldb_.SetInputFileHandle(sys.__stdin__, False)
     # lldb_.SetErrorFileHandle(sys.__stderr__, False)

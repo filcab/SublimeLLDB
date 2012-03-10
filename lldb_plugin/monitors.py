@@ -4,8 +4,7 @@ import sublime
 import sublime_plugin
 
 # FIXME: Use lldb_wrappers
-from lldb_wrappers import BIG_TIMEOUT, SublimeBroadcaster, start_listening_for_breakpoint_changes, \
-    start_listening_for_process_events, interpret_command
+from lldb_wrappers import BIG_TIMEOUT, interpret_command
 import lldb_wrappers
 import lldb
 import lldbutil
@@ -329,97 +328,6 @@ def update_breakpoints(window):
                              sublime.HIDDEN)
 
 
-def handle_process_event(ev):
-    debug('process event: ' + str(ev))
-    type = ev.GetType()
-    if type & lldb.SBProcess.eBroadcastBitSTDOUT:
-        get_process_stdout()
-    elif type & lldb.SBProcess.eBroadcastBitSTDOUT:
-        get_process_stderr()
-    elif type & lldb.SBProcess.eBroadcastBitStateChanged:
-        get_process_stdout()
-        get_process_stderr()
-
-        # only after printing the std* can we print our prompts
-        state = lldb.SBProcess.GetStateFromEvent(ev)
-        if state == lldb.eStateInvalid:
-            debug('invalid process state')
-            return
-
-        process = lldb.SBProcess.GetProcessFromEvent(ev)
-        assert process.IsValid()
-
-        if state == lldb.eStateInvalid       \
-            or state == lldb.eStateUnloaded  \
-            or state == lldb.eStateConnected \
-            or state == lldb.eStateAttaching \
-            or state == lldb.eStateLaunching \
-            or state == lldb.eStateStepping  \
-            or state == lldb.eStateDetached:
-            lldb_view_send("Process %llu %s\n", process.GetProcessID(),
-                driver_instance().StateAsCString(state))
-
-        elif state == lldb.eStateRunning:
-            None  # Don't be too chatty
-        elif state == lldb.eStateExited:
-            r = interpret_command(driver_instance().debugger, 'process status')
-            lldb_view_send(stdout_msg(r[0].GetOutput()))
-            lldb_view_send(stderr_msg(r[0].GetError()))
-            marker_update('pc', (driver_instance().line_entry,))
-        elif state == lldb.eStateStopped     \
-            or state == lldb.eStateCrashed   \
-            or state == lldb.eStateSuspended:
-            if lldb.SBProcess.GetRestartedFromEvent(ev):
-                lldb_view_send('Process %llu stopped and was programmatically restarted.' %
-                    process.GetProcessID())
-                marker_update('pc', (driver_instance().line_entry,))
-            else:
-                debug('updating selected thread')
-                update_selected_thread(driver_instance().debugger)
-                debug('updated selected thread')
-                debugger = driver_instance().debugger
-                entry = driver_instance().line_entry
-                if entry:
-                    # We don't need to run 'process status' like Driver.cpp
-                    # Since we open the file and show the source line.
-                    r = interpret_command(debugger, 'thread list')
-                    lldb_view_send(stdout_msg(r[0].GetOutput()))
-                    lldb_view_send(stderr_msg(r[0].GetError()))
-                    r = interpret_command(debugger, 'frame info')
-                    lldb_view_send(stdout_msg(r[0].GetOutput()))
-                    lldb_view_send(stderr_msg(r[0].GetError()))
-                else:
-                    # Give us some assembly to check the crash/stop
-                    r = interpret_command(debugger, 'process status')
-                    lldb_view_send(stdout_msg(r[0].GetOutput()))
-                    lldb_view_send(stderr_msg(r[0].GetError()))
-                    entry = driver_instance().first_line_entry_with_source
-
-                scope = 'bookmark'
-                if state == lldb.eStateCrashed:
-                    scope = 'invalid'
-                debug('updating marker')
-                marker_update('pc', (entry, scope))
-
-
-def get_process_stdout():
-    string = stdout_msg(driver_instance().debugger.GetSelectedTarget(). \
-        GetProcess().GetSTDOUT(1024))
-    while len(string) > 0:
-        lldb_view_send(string)
-        string = stdout_msg(driver_instance().debugger.GetSelectedTarget(). \
-            GetProcess().GetSTDOUT(1024))
-
-
-def get_process_stderr():
-    string = stderr_msg(driver_instance().debugger.GetSelectedTarget(). \
-        GetProcess().GetSTDOUT(1024))
-    while len(string) > 0:
-        lldb_view_send(string)
-        string = stderr_msg(driver_instance().debugger.GetSelectedTarget(). \
-            GetProcess().GetSTDOUT(1024))
-
-
 def update_selected_thread(debugger):
     proc = debugger.GetSelectedTarget().GetProcess()
     if proc.IsValid():
@@ -459,26 +367,3 @@ def update_selected_thread(debugger):
                     thread = proc.GetThreadAtIndex(0)
 
                 proc.SetSelectedThread(thread)
-
-
-def handle_breakpoint_event(ev):
-    type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
-    debug('breakpoint event: ' + str(type))
-
-    if type & lldb.eBreakpointEventTypeAdded                \
-        or type & lldb.eBreakpointEventTypeRemoved          \
-        or type & lldb.eBreakpointEventTypeEnabled          \
-        or type & lldb.eBreakpointEventTypeDisabled         \
-        or type & lldb.eBreakpointEventTypeCommandChanged   \
-        or type & lldb.eBreakpointEventTypeConditionChanged \
-        or type & lldb.eBreakpointEventTypeIgnoreChanged    \
-        or type & lldb.eBreakpointEventTypeLocationsResolved:
-        None
-    elif type & lldb.eBreakpointEventTypeLocationsAdded:
-        new_locs = lldb.SBBreakpoint.GetNumBreakpointLocationsFromEvent(ev)
-        if new_locs > 0:
-            bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
-            lldb_view_send("%d locations added to breakpoint %d\n" %
-                (new_locs, bp.GetID()))
-    elif type & lldb.eBreakpointEventTypeLocationsRemoved:
-        None

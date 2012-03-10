@@ -5,11 +5,12 @@
 import lldb
 # import lldbutil
 import threading
-from root_objects import set_driver_instance, lldb_view_send, lldb_view_write
+from root_objects import set_driver_instance, lldb_view_send
 from utilities import stderr_msg, stdout_msg
 # import traceback
 
 BIG_TIMEOUT = 42000000
+START_LLDB_TIMEOUT = 5
 
 
 def debug(str):
@@ -37,6 +38,8 @@ def thread_created(string):
 
 class LldbDriver(threading.Thread):
     eBroadcastBitThreadShouldExit = 1 << 0
+    eBroadcastBitThreadDidStart = 1 << 1
+    # eBroadcastBitReadyForInput = 1 << 2
 
     __is_done = False
     __io_channel = None
@@ -45,14 +48,27 @@ class LldbDriver(threading.Thread):
     __waiting_for_command = False
 
     def __init__(self):
+        super(LldbDriver, self).__init__()  # name='Driver')
+        self.name = 'Driver'
+        lldb.SBDebugger.Initialize()
         debug('Initting LldbDriver')
         self.__broadcaster = lldb.SBBroadcaster('Driver')
         self._debugger = lldb.SBDebugger.Create(False)
         set_driver_instance(self)
         # self._debugger.SetCloseInputOnEOF(False)
 
+    def __del__(self):
+        del self.__io_channel
+        del self.__broadcaster
+        del self._debugger
+        lldb.SBDebugger.Terminate()
+
+    def stop(self):
+        self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
+
     @property
     def debugger(self):
+        """The low-level SBDebugger for this driver."""
         return self._debugger
 
     @property
@@ -61,19 +77,16 @@ class LldbDriver(threading.Thread):
 
     @property
     def debug_mode(self):
-        """True if the driver is in debug mode"""
+        """True if the driver is in debug mode."""
         return self.__debug_mode
 
     @debug_mode.setter
     def debug_mode(self, value):
         self.__debug_mode = value
 
-    @debug_mode.deleter
-    def debug_mode(self):
-        del self.__debug_mode
-
     @property
     def io_channel(self):
+        """The IO channel for this driver."""
         return self.__io_channel
 
     @io_channel.deleter
@@ -82,6 +95,7 @@ class LldbDriver(threading.Thread):
 
     @property
     def is_done(self):
+        """True if the debugger has finished its work."""
         return self.__is_done
 
     @is_done.setter
@@ -89,58 +103,60 @@ class LldbDriver(threading.Thread):
         self.__is_done = done
 
     def send_command(self, cmd):
+        """Send a command asynchronously to the IO channel."""
         event = lldb.SBEvent(IOChannel.eBroadcastBitHasUserInput, str(cmd))
         self.io_channel.broadcaster.BroadcastEvent(event)
 
     def ready_for_command(self):
+        """Send an eBroadcastBitReadyForInput if the debugger wasn't ready before this call."""
         if not self.__waiting_for_command:
             self.__ready_for_command = True
-            self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, True)
+            # self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, True)
 
-    # @property
-    # def line_entry(self):
-    #     frame = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame()
-    #     entry = frame.GetLineEntry()
-    #     filespec = entry.GetFileSpec()
+    @property
+    def line_entry(self):
+        frame = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame()
+        entry = frame.GetLineEntry()
+        filespec = entry.GetFileSpec()
 
-    #     if filespec:
-    #         return (filespec.GetDirectory(), filespec.GetFilename(), \
-    #                 entry.GetLine(), entry.GetColumn())
-    #     else:
-    #         return None
+        if filespec:
+            return (filespec.GetDirectory(), filespec.GetFilename(), \
+                    entry.GetLine(), entry.GetColumn())
+        else:
+            return None
 
-    # @property
-    # def first_line_entry_with_source(self):
-    #     entry = self.line_entry
-    #     if entry:
-    #         return entry
-    #     else:
-    #         # Get ALL the SBStackFrames
-    #         debug('going through stackframes')
-    #         t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
-    #         n = t.GetNumFrames()
-    #         for i in xrange(0, n):
-    #             f = t.GetFrameAtIndex(i)
-    #             if f:
-    #                 entry = f.line_entry
-    #                 if entry and entry.GetFileSpec():
-    #                     filespec = entry.GetFileSpec()
+    @property
+    def first_line_entry_with_source(self):
+        entry = self.line_entry
+        if entry:
+            return entry
+        else:
+            # Get ALL the SBStackFrames
+            debug('going through stackframes')
+            t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
+            n = t.GetNumFrames()
+            for i in xrange(0, n):
+                f = t.GetFrameAtIndex(i)
+                if f:
+                    entry = f.line_entry
+                    if entry and entry.GetFileSpec():
+                        filespec = entry.GetFileSpec()
 
-    #                     if filespec:
-    #                         return (filespec.GetDirectory(), filespec.GetFilename(), \
-    #                                 entry.GetLine(), entry.GetColumn())
-    #                     else:
-    #                         return None
-    #         debug('not touching stackframes any more')
+                        if filespec:
+                            return (filespec.GetDirectory(), filespec.GetFilename(), \
+                                    entry.GetLine(), entry.GetColumn())
+                        else:
+                            return None
+            debug('not touching stackframes any more')
 
-    #         return None
+            return None
 
     def run(self):
-        thread_created(threading.current_thread().name)
+        thread_created(self.name)
 
         # bool quit_success = sb_interpreter.SetCommandOverrideCallback ("quit", QuitCommandOverrideCallback, this);
         # assert quit_success
-        self.__io_channel = IOChannel(self, lldb_view_write)
+        self.__io_channel = IOChannel(self, lldb_view_send)
 
         sb_interpreter = self._debugger.GetCommandInterpreter()
         listener = lldb.SBListener(self._debugger.GetListener())
@@ -170,7 +186,7 @@ class LldbDriver(threading.Thread):
                     result.PutError(self.debugger.GetErrorFileHandle())
                     result.PutOutput(self.debugger.GetOutputFileHandle())
 
-                sb_interpreter.SourceInitFileInCurrentWorkingDirectory()
+                sb_interpreter.SourceInitFileInCurrentWorkingDirectory(result)
                 if self.debug_mode:
                     result.PutError(self.debugger.GetErrorFileHandle())
                     result.PutOutput(self.debugger.GetOutputFileHandle())
@@ -181,7 +197,10 @@ class LldbDriver(threading.Thread):
                             IOChannel.eBroadcastBitThreadDidStart,
                             event)
 
-                self.ready_for_command = True
+                # Warn whoever started us that we can start working
+                self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
+
+                self.ready_for_command()
 
                 while not self.is_done:
                     listener.WaitForEvent(BIG_TIMEOUT, event)
@@ -191,16 +210,16 @@ class LldbDriver(threading.Thread):
                             if (event.BroadcasterMatchesRef(self.io_channel.broadcaster)):
                                 if ev_type & IOChannel.eBroadcastBitHasUserInput:
                                     command_string = lldb.SBEvent.GetCStringFromEvent(event)
-                                    if (command_string == NULL)
+                                    if command_string is None:
                                         command_string = ''
                                     result = lldb.SBCommandReturnObject()
 
                                     self.debugger.GetCommandInterpreter().HandleCommand(command_string, result, True)
                                     if result.GetOutputSize() > 0:
-                                        self.io_channel.out_write(result.GetOutput(), result.GetOutputSize(), IOChannel.NO_ASYNC)
+                                        self.io_channel.out_write(result.GetOutput(), IOChannel.NO_ASYNC)
 
                                     if result.GetErrorSize() > 0:
-                                        self.io_channel.err_write(result.GetError(), result.GetErrorSize(), IOChannel.NO_ASYNC)
+                                        self.io_channel.err_write(result.GetError(), IOChannel.NO_ASYNC)
 
                                 elif ev_type & IOChannel.eBroadcastBitThreadShouldExit \
                                     or ev_type & IOChannel.eBroadcastBitThreadDidExit:
@@ -237,6 +256,158 @@ class LldbDriver(threading.Thread):
 
                 lldb.SBDebugger.Destroy(self.debugger)
 
+    def handle_breakpoint_event(self, ev):
+        type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
+        debug('breakpoint event: ' + str(type))
+
+        if type & lldb.eBreakpointEventTypeAdded                \
+            or type & lldb.eBreakpointEventTypeRemoved          \
+            or type & lldb.eBreakpointEventTypeEnabled          \
+            or type & lldb.eBreakpointEventTypeDisabled         \
+            or type & lldb.eBreakpointEventTypeCommandChanged   \
+            or type & lldb.eBreakpointEventTypeConditionChanged \
+            or type & lldb.eBreakpointEventTypeIgnoreChanged    \
+            or type & lldb.eBreakpointEventTypeLocationsResolved:
+            None
+        elif type & lldb.eBreakpointEventTypeLocationsAdded:
+            new_locs = lldb.SBBreakpoint.GetNumBreakpointLocationsFromEvent(ev)
+            if new_locs > 0:
+                bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
+                lldb_view_send("%d locations added to breakpoint %d\n" %
+                    (new_locs, bp.GetID()))
+        elif type & lldb.eBreakpointEventTypeLocationsRemoved:
+            None
+
+    def handle_process_event(self, ev):
+        debug('process event: ' + str(ev))
+        type = ev.GetType()
+        if type & lldb.SBProcess.eBroadcastBitSTDOUT:
+            self.get_process_stdout()
+        elif type & lldb.SBProcess.eBroadcastBitSTDOUT:
+            self.get_process_stderr()
+        elif type & lldb.SBProcess.eBroadcastBitStateChanged:
+            self.get_process_stdout()
+            self.get_process_stderr()
+
+            # only after printing the std* can we print our prompts
+            state = lldb.SBProcess.GetStateFromEvent(ev)
+            if state == lldb.eStateInvalid:
+                debug('invalid process state')
+                return
+
+            process = lldb.SBProcess.GetProcessFromEvent(ev)
+            assert process.IsValid()
+
+            if state == lldb.eStateInvalid       \
+                or state == lldb.eStateUnloaded  \
+                or state == lldb.eStateConnected \
+                or state == lldb.eStateAttaching \
+                or state == lldb.eStateLaunching \
+                or state == lldb.eStateStepping  \
+                or state == lldb.eStateDetached:
+                lldb_view_send("Process %llu %s\n", process.GetProcessID(),
+                    self.debugger.StateAsCString(state))
+
+            elif state == lldb.eStateRunning:
+                None  # Don't be too chatty
+            elif state == lldb.eStateExited:
+                r = interpret_command(self.debugger, 'process status')
+                lldb_view_send(stdout_msg(r[0].GetOutput()))
+                lldb_view_send(stderr_msg(r[0].GetError()))
+                # marker_update('pc', (self.line_entry,))
+            elif state == lldb.eStateStopped     \
+                or state == lldb.eStateCrashed   \
+                or state == lldb.eStateSuspended:
+                if lldb.SBProcess.GetRestartedFromEvent(ev):
+                    lldb_view_send('Process %llu stopped and was programmatically restarted.' %
+                        process.GetProcessID())
+                    # marker_update('pc', (self.line_entry,))
+                else:
+                    debug('updating selected thread')
+                    self.update_selected_thread()
+                    debug('updated selected thread')
+                    debugger = self.debugger
+                    entry = self.line_entry
+                    if entry:
+                        # We don't need to run 'process status' like Driver.cpp
+                        # Since we open the file and show the source line.
+                        r = interpret_command(debugger, 'thread list')
+                        lldb_view_send(stdout_msg(r[0].GetOutput()))
+                        lldb_view_send(stderr_msg(r[0].GetError()))
+                        r = interpret_command(debugger, 'frame info')
+                        lldb_view_send(stdout_msg(r[0].GetOutput()))
+                        lldb_view_send(stderr_msg(r[0].GetError()))
+                    else:
+                        # Give us some assembly to check the crash/stop
+                        r = interpret_command(debugger, 'process status')
+                        lldb_view_send(stdout_msg(r[0].GetOutput()))
+                        lldb_view_send(stderr_msg(r[0].GetError()))
+                        entry = self.first_line_entry_with_source
+
+                    scope = 'bookmark'
+                    if state == lldb.eStateCrashed:
+                        scope = 'invalid'
+                    debug('updating marker')
+                    scope
+                    # marker_update('pc', (entry, scope))
+
+    def update_selected_thread(self):
+        debugger = self.debugger
+        proc = debugger.GetSelectedTarget().GetProcess()
+        if proc.IsValid():
+            curr_thread = proc.GetSelectedThread()
+            current_thread_stop_reason = curr_thread.GetStopReason()
+
+            debug('thread stop reason: ' + str(current_thread_stop_reason))
+            other_thread = lldb.SBThread()
+            plan_thread = lldb.SBThread()
+            if not curr_thread.IsValid() \
+                or current_thread_stop_reason == lldb.eStopReasonInvalid \
+                or current_thread_stop_reason == lldb.eStopReasonNone:
+                for t in proc:
+                    t_stop_reason = t.GetStopReason()
+                    if t_stop_reason == lldb.eStopReasonInvalid \
+                        or t_stop_reason == lldb.eStopReasonNone:
+                        pass
+                    elif t_stop_reason == lldb.eStopReasonTrace \
+                        or t_stop_reason == lldb.eStopReasonBreakpoint \
+                        or t_stop_reason == lldb.eStopReasonWatchpoint \
+                        or t_stop_reason == lldb.eStopReasonSignal \
+                        or t_stop_reason == lldb.eStopReasonException:
+                        if not other_thread:
+                            other_thread = t
+                        elif t_stop_reason == lldb.eStopReasonPlanComplete:
+                            if not plan_thread:
+                                plan_thread = t
+
+                if plan_thread:
+                    proc.SetSelectedThread(plan_thread)
+                elif other_thread:
+                    proc.SetSelectedThread(other_thread)
+                else:
+                    if curr_thread:
+                        thread = curr_thread
+                    else:
+                        thread = proc.GetThreadAtIndex(0)
+
+                    proc.SetSelectedThread(thread)
+
+    def get_process_stdout(self):
+        string = stdout_msg(self.debugger.GetSelectedTarget(). \
+            GetProcess().GetSTDOUT(1024))
+        while len(string) > 0:
+            lldb_view_send(string)
+            string = stdout_msg(self.debugger.GetSelectedTarget(). \
+                GetProcess().GetSTDOUT(1024))
+
+    def get_process_stderr(self):
+        string = stderr_msg(self.debugger.GetSelectedTarget(). \
+            GetProcess().GetSTDOUT(1024))
+        while len(string) > 0:
+            lldb_view_send(string)
+            string = stderr_msg(self.debugger.GetSelectedTarget(). \
+                GetProcess().GetSTDOUT(1024))
+
 
 # def get_breakpoints(debugger):
 #     bps = []
@@ -258,8 +429,8 @@ class IOChannel(threading.Thread):
     eBroadcastBitThreadDidExit = 1 << 4
     eAllEventBits = 0xffffffff
 
-    SYNC = 0
-    ASYNC = 1
+    NO_ASYNC = False
+    ASYNC = True
 
     __driver = None
     __err_write = None
@@ -267,6 +438,7 @@ class IOChannel(threading.Thread):
     __broadcaster = None
 
     def __init__(self, driver, out_write, err_write=None):
+        super(IOChannel, self).__init__()
         if err_write is None:
             err_write = out_write
 
@@ -282,6 +454,22 @@ class IOChannel(threading.Thread):
     @property
     def broadcaster(self):
         return self.__broadcaster
+
+    def stop(self):
+        if self.is_alive():
+            self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadShouldExit)
+
+        self.join()
+
+    def out_write(self, string, async):
+        self.__out_write(string)
+        # if (asynchronous)
+        #     m_driver->GetDebugger().NotifyTopInputReader (eInputReaderAsynchronousOutputWritten)
+
+    def err_write(self, string, async):
+        self.__err_write(string)
+        # if (asynchronous)
+        #     m_driver->GetDebugger().NotifyTopInputReader (eInputReaderAsynchronousErrorWritten)
 
     def run(self):
         listener = lldb.SBListener('IOChannel.run')
