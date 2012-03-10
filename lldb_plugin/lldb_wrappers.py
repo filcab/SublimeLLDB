@@ -55,6 +55,7 @@ class LldbDriver(threading.Thread):
         self.__broadcaster = lldb.SBBroadcaster('Driver')
         self._debugger = lldb.SBDebugger.Create(False)
         set_driver_instance(self)
+        self.__io_channel = IOChannel(self, lldb_view_send)
         # self._debugger.SetCloseInputOnEOF(False)
 
     def __del__(self):
@@ -152,11 +153,14 @@ class LldbDriver(threading.Thread):
             return None
 
     def run(self):
-        thread_created(self.name)
+        thread_created('<' + self.name + '>')
 
         # bool quit_success = sb_interpreter.SetCommandOverrideCallback ("quit", QuitCommandOverrideCallback, this);
         # assert quit_success
-        self.__io_channel = IOChannel(self, lldb_view_send)
+
+        # Warn whoever started us that we can start working
+        self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
+        debug('event was broadcast')
 
         sb_interpreter = self._debugger.GetCommandInterpreter()
         listener = lldb.SBListener(self._debugger.GetListener())
@@ -196,9 +200,6 @@ class LldbDriver(threading.Thread):
                             self.io_channel.broadcaster,
                             IOChannel.eBroadcastBitThreadDidStart,
                             event)
-
-                # Warn whoever started us that we can start working
-                self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
 
                 self.ready_for_command()
 
@@ -255,6 +256,9 @@ class LldbDriver(threading.Thread):
                         self.io_channel.stop()
 
                 lldb.SBDebugger.Destroy(self.debugger)
+
+        debug('leaving LldbDriver')
+        set_driver_instance(None)
 
     def handle_breakpoint_event(self, ev):
         type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
@@ -439,6 +443,8 @@ class IOChannel(threading.Thread):
 
     def __init__(self, driver, out_write, err_write=None):
         super(IOChannel, self).__init__()
+        self.name = 'IOChannel'
+
         if err_write is None:
             err_write = out_write
 
@@ -472,6 +478,8 @@ class IOChannel(threading.Thread):
         #     m_driver->GetDebugger().NotifyTopInputReader (eInputReaderAsynchronousErrorWritten)
 
     def run(self):
+        thread_created('<' + self.name + '>')
+
         listener = lldb.SBListener('IOChannel.run')
         interpreter_broadcaster = self.driver.debugger.GetCommandInterpreter().GetBroadcaster()
 
@@ -496,7 +504,7 @@ class IOChannel(threading.Thread):
 
             event_type = event.GetType()
             if event.GetBroadcaster():
-                if event.BroadcasterMatchesPtr(self.driver.broadcaster):
+                if event.BroadcasterMatchesRef(self.driver.broadcaster):
                     # if event_type & LldbDriver.eBroadcastBitReadyForInput
                     if event_type & LldbDriver.eBroadcastBitThreadShouldExit:
                         done = True
@@ -505,13 +513,14 @@ class IOChannel(threading.Thread):
                     if event_type == lldb.SBCommandInterpreter.eBroadcastBitThreadShouldExit \
                         or event_type == lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
                         done = True
-                elif event.BroadcasterMatchesPtr(self.broadcaster):
+                elif event.BroadcasterMatchesRef(self.broadcaster):
                     if event_type & IOChannel.eBroadcastBitThreadShouldExit:
                         done = True
                         continue
 
         self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadDidExit)
         self.__driver = None
+        debug('leaving IOChannel')
 
 
 def interpret_command(debugger, cmd, add_to_history=False):

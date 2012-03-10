@@ -217,15 +217,14 @@ def initialize_lldb():
     set_got_input_function(lldb_in_panel_on_done)
 
     driver = LldbDriver()
-    driver.start()
-
-    # ESPERAR QUE ESTEJA TUDO INICIALIZADO!
     event = lldb.SBEvent()
     listener = lldb.SBListener('Wait for lldb initialization')
-    listener.WaitForEventForBroadcasterWithType(START_LLDB_TIMEOUT,
-                driver.broadcaster,
-                LldbDriver.eBroadcastBitThreadDidStart,
-                event)
+    listener.StartListeningForEvents(driver.broadcaster,
+            LldbDriver.eBroadcastBitThreadDidStart)
+
+    driver.start()
+    listener.WaitForEvent(START_LLDB_TIMEOUT, event)
+    listener.Clear()
 
     if not event:
         lldb_view_write("oops... the event isn't valid")
@@ -279,7 +278,7 @@ def start_debugging():
 
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
-        debug_thr('starting')
+        debug_thr('starting command')
 
         # global lldb_out_view
         if lldb_out_view() is None:
