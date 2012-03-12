@@ -13,7 +13,7 @@ import lldb
 
 from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
-                         lldb_view_write,                               \
+                         lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
                          show_lldb_panel, set_got_input_function
                          # lldb_input_fh,  set_lldb_input_fh,     \
@@ -27,6 +27,7 @@ from root_objects import driver_instance, set_driver_instance,          \
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 import lldb_wrappers
 
+is_debugging = False
 
 # import traceback
 def debug_thr(string=None):
@@ -38,11 +39,6 @@ def debug_thr(string=None):
 
 def debug(str):
     print str
-
-
-def debugif(b, str):
-    if b:
-        debug(str)
 
 
 def initialize_plugin():
@@ -166,7 +162,7 @@ def lldb_toggle_output_view(window, show=False, hide=False):
 
 def clear_lldb_out_view():
     v = lldb_out_view()
-    debug('clearing view: ' + repr(v))
+
     v.set_read_only(False)
     edit = v.begin_edit('lldb-view-clear')
     v.erase(edit, sublime.Region(0, v.size()))
@@ -229,18 +225,21 @@ def initialize_lldb():
     if not event:
         lldb_view_write("oops... the event isn't valid")
 
-    # Warn whoever started us that we can start working
-    driver.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
     return driver
 
 
 def start_debugging():
-    cleanup(window_ref())
+    global is_debugging
+    if is_debugging:
+        cleanup(window_ref())
+
+    is_debugging = True
 
     # Really start the debugger
     initialize_lldb()
-    debug('setting file handles')
-    # lldb_.SetInputFileHandle(sys.__stdin__, False)
+    # debug('setting file handles')
+    driver_instance().debugger.SetInputFileHandle(sys.__stdin__, False)
+    start_markers_monitor(window_ref(), driver_instance())
     # lldb_.SetErrorFileHandle(sys.__stderr__, False)
     # lldb_.SetOutputFileHandle(sys.__stdout__, False)
 
@@ -297,7 +296,6 @@ class LldbCommand(WindowCommand):
             set_window_ref(self.window)
 
             start_debugging()
-            debug('Creating an SBDebugger instance.')
 
             g = lldb_greeting()
             if lldb_out_view().size() > 0:
@@ -315,7 +313,7 @@ class LldbToggleOutputView(WindowCommand):
     def run(self):
         self.setup()
 
-        debug('layout: ' + str(good_lldb_layout(window=self.window)))
+        # debug('layout: ' + str(good_lldb_layout(window=self.window)))
         if good_lldb_layout(window=self.window) and basic_layout != None:
             # restore backup_layout (groups and views)
             lldb_toggle_output_view(self.window, hide=True)
@@ -326,7 +324,8 @@ class LldbToggleOutputView(WindowCommand):
 class LldbClearOutputView(WindowCommand):
     def run(self):
         self.setup()
-        debug('clearing lldb view')
+        # debug('clearing lldb view')
+        # TODO: Test variable to know if we should clear the view when starting a debug session
 
         clear_lldb_out_view()
 
