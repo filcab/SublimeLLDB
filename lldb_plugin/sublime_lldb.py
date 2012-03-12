@@ -20,7 +20,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          # lldb_output_fh, set_lldb_output_fh,    \
                          # lldb_error_fh,  set_lldb_error_fh,     \
 
-# from monitors import cleanup
+from monitors import start_markers_monitor, stop_markers_monitor
 
 
 # import this specific name without the prefix
@@ -53,17 +53,13 @@ def debug_prologue(driver):
     Prologue for the debugging session during the development of the plugin.
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
-    debug('lldb prologue')
     debugger = driver.debugger
-    lldb_view_write('(lldb) log enable -v lldb thread unwind\n')
-    interpret_command(debugger, 'log enable lldb thread unwind')
-    lldb_view_write('(lldb) log enable -v gdb-remote thread\n')
-    interpret_command(debugger, 'log enable gdb-remote thread')
+    lldb_view_write('(lldb) log enable lldb events\n')
+    interpret_command(debugger, 'log enable lldb events')
     lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
     interpret_command(debugger, 'target create ~/dev/softek/lldb-plugin/tests')
     lldb_view_write('(lldb) b main\n')
     interpret_command(debugger, 'b main')
-    debug('ended lldb prologue')
 
 
 def lldb_greeting():
@@ -192,6 +188,9 @@ def lldb_in_panel_on_done(cmd):
 
 
 def cleanup(w=None):
+    is_debugging = False
+
+    stop_markers_monitor()
     driver = driver_instance()
     if driver:
         driver.stop()
