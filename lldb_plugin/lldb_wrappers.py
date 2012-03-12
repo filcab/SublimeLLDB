@@ -3,18 +3,16 @@
 # import time
 
 import lldb
-# import lldbutil
+import lldbutil
 import threading
-from root_objects import set_driver_instance, lldb_view_send
-from utilities import stderr_msg, stdout_msg
 # import traceback
 
 BIG_TIMEOUT = 42000000
 START_LLDB_TIMEOUT = 5
 
 
-def debug(str):
-    print str
+def debug(string):
+    print threading.current_thread().name + ' ' + str(string)
 
 
 debug('Loading LLDB wrappers for Sublime Text 2 plugin')
@@ -125,7 +123,7 @@ class LldbDriver(threading.Thread):
 
         if filespec:
             return (filespec.GetDirectory(), filespec.GetFilename(), \
-                    entry.GetLine(), entry.GetColumn())
+                    entry.GetLine())
         else:
             return None
 
@@ -137,14 +135,13 @@ class LldbDriver(threading.Thread):
 
         # Warn whoever started us that we can start working
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
-        debug('event was broadcast')
 
         sb_interpreter = self._debugger.GetCommandInterpreter()
         listener = lldb.SBListener(self._debugger.GetListener())
         listener.StartListeningForEventClass(self._debugger,
                      lldb.SBTarget.GetBroadcasterClassName(),
                      lldb.SBTarget.eBroadcastBitBreakpointChanged)
-        # This isn't in Driver.cpp. Check why it listens to those events
+        # This isn't in Driver.cpp. Check why it listens to those events (SBDebugger is the answer)
         listener.StartListeningForEventClass(self._debugger,
                      lldb.SBProcess.GetBroadcasterClassName(),
                      lldb.SBProcess.eBroadcastBitStateChanged |     \
@@ -241,22 +238,58 @@ class LldbDriver(threading.Thread):
 
                 lldb.SBDebugger.Destroy(self.debugger)
 
-        debug('leaving LldbDriver')
+        debug('leaving')
         set_driver_instance(None)
 
     def handle_breakpoint_event(self, ev):
         type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
-        debug('breakpoint event: ' + str(type))
+        debug('breakpoint event: ' + lldbutil.get_description(ev))
 
-        if type & lldb.eBreakpointEventTypeAdded                \
-            or type & lldb.eBreakpointEventTypeRemoved          \
-            or type & lldb.eBreakpointEventTypeEnabled          \
-            or type & lldb.eBreakpointEventTypeDisabled         \
-            or type & lldb.eBreakpointEventTypeCommandChanged   \
-            or type & lldb.eBreakpointEventTypeConditionChanged \
-            or type & lldb.eBreakpointEventTypeIgnoreChanged    \
-            or type & lldb.eBreakpointEventTypeLocationsResolved:
+        if type & lldb.eBreakpointEventTypeCommandChanged       \
+            or type & lldb.eBreakpointEventTypeConditionChanged:
             None
+        if type & lldb.eBreakpointEventTypeAdded                \
+            or type & lldb.eBreakpointEventTypeEnabled          \
+            or type & lldb.eBreakpointEventTypeLocationsResolved:
+            # TODO: show disabled bps
+            bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
+            debug(lldbutil.get_description(bp))
+            for loc in bp:
+                entry = None
+                if loc and loc.GetAddress():
+                    line_entry = loc.GetAddress().GetLineEntry()
+                    if line_entry:
+                        filespec = line_entry.GetFileSpec()
+
+                        if filespec:
+                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
+                                     line_entry.GetLine())
+                        else:
+                            return None
+                if entry:
+                    marker_update('bp', (entry,))
+
+        elif type & lldb.eBreakpointEventTypeDisabled         \
+            or type & lldb.eBreakpointEventTypeIgnoreChanged:
+            # We don't need the eBreakpointEventTypeRemoved type
+            # Because breakpoints are first disabled and then removed.
+            # or type & lldb.eBreakpointEventTypeRemoved            \
+            # TODO: show disabled bps
+            bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
+            for loc in bp:
+                entry = None
+                if loc and loc.GetAddress():
+                    line_entry = loc.GetAddress().GetLineEntry()
+                    if line_entry:
+                        filespec = line_entry.GetFileSpec()
+
+                        if filespec:
+                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
+                                     line_entry.GetLine())
+                        else:
+                            return None
+                if entry:
+                    marker_update('bp', (entry, True))
         elif type & lldb.eBreakpointEventTypeLocationsAdded:
             new_locs = lldb.SBBreakpoint.GetNumBreakpointLocationsFromEvent(ev)
             if new_locs > 0:
@@ -267,22 +300,24 @@ class LldbDriver(threading.Thread):
             None
 
     def handle_process_event(self, ev):
-        debug('process event: ' + str(ev))
         type = ev.GetType()
+        debug('process event: ' + lldbutil.get_description(ev))
+
         if type & lldb.SBProcess.eBroadcastBitSTDOUT:
             self.get_process_stdout()
         elif type & lldb.SBProcess.eBroadcastBitSTDOUT:
             self.get_process_stderr()
         elif type & lldb.SBProcess.eBroadcastBitInterrupt:
-            debug('Got an interrupt event')
+            debug('Got a process interrupt event!')
+            lldbutil.get_description(ev)
         elif type & lldb.SBProcess.eBroadcastBitStateChanged:
             self.get_process_stdout()
             self.get_process_stderr()
 
             # only after printing the std* can we print our prompts
             state = lldb.SBProcess.GetStateFromEvent(ev)
+            debug('process state: ' + lldbutil.state_type_to_str(state))
             if state == lldb.eStateInvalid:
-                debug('invalid process state')
                 return
 
             process = lldb.SBProcess.GetProcessFromEvent(ev)
@@ -304,18 +339,16 @@ class LldbDriver(threading.Thread):
                 r = interpret_command(self.debugger, 'process status')
                 lldb_view_send(stdout_msg(r[0].GetOutput()))
                 lldb_view_send(stderr_msg(r[0].GetError()))
-                # marker_update('pc', (self.line_entry,))
+                # Remove program counter markers
+                marker_update('pc', (None,))
             elif state == lldb.eStateStopped     \
                 or state == lldb.eStateCrashed   \
                 or state == lldb.eStateSuspended:
                 if lldb.SBProcess.GetRestartedFromEvent(ev):
                     lldb_view_send('Process %llu stopped and was programmatically restarted.' %
                         process.GetProcessID())
-                    # marker_update('pc', (self.line_entry,))
                 else:
-                    debug('updating selected thread')
                     self.update_selected_thread()
-                    debug('updated selected thread')
                     debugger = self.debugger
                     entry = self.line_entry
                     if entry:
@@ -332,7 +365,6 @@ class LldbDriver(threading.Thread):
                         r = interpret_command(debugger, 'process status')
                         lldb_view_send(stdout_msg(r[0].GetOutput()))
                         lldb_view_send(stderr_msg(r[0].GetError()))
-                        entry = self.line_entry
                         if not entry:
                             # Get ALL the SBFrames
                             t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
@@ -346,7 +378,7 @@ class LldbDriver(threading.Thread):
 
                                         if filespec:
                                             entry = (filespec.GetDirectory(), filespec.GetFilename(), \
-                                                     entry.GetLine(), entry.GetColumn())
+                                                     entry.GetLine())
                                             break
                                         else:
                                             entry = None
@@ -354,9 +386,7 @@ class LldbDriver(threading.Thread):
                     scope = 'bookmark'
                     if state == lldb.eStateCrashed:
                         scope = 'invalid'
-                    debug('updating marker')
-                    scope
-                    # marker_update('pc', (entry, scope))
+                    marker_update('pc', (entry, scope))
 
     def update_selected_thread(self):
         debugger = self.debugger
@@ -365,7 +395,7 @@ class LldbDriver(threading.Thread):
             curr_thread = proc.GetSelectedThread()
             current_thread_stop_reason = curr_thread.GetStopReason()
 
-            debug('thread stop reason: ' + str(current_thread_stop_reason))
+            debug('thread stop reason: ' + lldbutil.stop_reason_to_str(current_thread_stop_reason))
             other_thread = lldb.SBThread()
             plan_thread = lldb.SBThread()
             if not curr_thread.IsValid() \
@@ -446,7 +476,7 @@ class IOChannel(threading.Thread):
 
     def __init__(self, driver, out_write, err_write=None):
         super(IOChannel, self).__init__()
-        self.name = 'IOChannel'
+        self.name = 'sublime.lldb.io-channel'
 
         if err_write is None:
             err_write = out_write
@@ -523,7 +553,7 @@ class IOChannel(threading.Thread):
 
         self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadDidExit)
         self.__driver = None
-        debug('leaving IOChannel')
+        debug('leaving')
 
 
 def interpret_command(debugger, cmd, add_to_history=False):
@@ -573,3 +603,8 @@ def is_return_failed(r):
 
 def is_return_invalid(r):
     return r == lldb.eReturnStatusInvalid
+
+
+from root_objects import set_driver_instance, lldb_view_send
+from monitors import marker_update
+from utilities import stderr_msg, stdout_msg
