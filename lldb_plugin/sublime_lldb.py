@@ -13,7 +13,7 @@ import lldb
 
 from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
-                         lldb_view_write, lldb_view_send,               \
+                         lldb_view_write,                               \
                          thread_created, window_ref, set_window_ref,    \
                          show_lldb_panel, set_got_input_function
                          # lldb_input_fh,  set_lldb_input_fh,     \
