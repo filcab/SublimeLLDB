@@ -126,32 +126,6 @@ class LldbDriver(threading.Thread):
         else:
             return None
 
-    @property
-    def first_line_entry_with_source(self):
-        entry = self.line_entry
-        if entry:
-            return entry
-        else:
-            # Get ALL the SBStackFrames
-            debug('going through stackframes')
-            t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
-            n = t.GetNumFrames()
-            for i in xrange(0, n):
-                f = t.GetFrameAtIndex(i)
-                if f:
-                    entry = f.line_entry
-                    if entry and entry.GetFileSpec():
-                        filespec = entry.GetFileSpec()
-
-                        if filespec:
-                            return (filespec.GetDirectory(), filespec.GetFilename(), \
-                                    entry.GetLine(), entry.GetColumn())
-                        else:
-                            return None
-            debug('not touching stackframes any more')
-
-            return None
-
     def run(self):
         thread_created('<' + self.name + '>')
 
@@ -167,6 +141,13 @@ class LldbDriver(threading.Thread):
         listener.StartListeningForEventClass(self._debugger,
                      lldb.SBTarget.GetBroadcasterClassName(),
                      lldb.SBTarget.eBroadcastBitBreakpointChanged)
+        # This isn't in Driver.cpp. Check why it listens to those events
+        listener.StartListeningForEventClass(self._debugger,
+                     lldb.SBProcess.GetBroadcasterClassName(),
+                     lldb.SBProcess.eBroadcastBitStateChanged |     \
+                     lldb.SBProcess.eBroadcastBitInterrupt |        \
+                     lldb.SBProcess.eBroadcastBitSTDOUT |           \
+                     lldb.SBProcess.eBroadcastBitSTDERR)
 
         if listener.IsValid():
             iochannel_thread_exited = False
@@ -289,6 +270,8 @@ class LldbDriver(threading.Thread):
             self.get_process_stdout()
         elif type & lldb.SBProcess.eBroadcastBitSTDOUT:
             self.get_process_stderr()
+        elif type & lldb.SBProcess.eBroadcastBitInterrupt:
+            debug('Got an interrupt event')
         elif type & lldb.SBProcess.eBroadcastBitStateChanged:
             self.get_process_stdout()
             self.get_process_stderr()
@@ -346,7 +329,24 @@ class LldbDriver(threading.Thread):
                         r = interpret_command(debugger, 'process status')
                         lldb_view_send(stdout_msg(r[0].GetOutput()))
                         lldb_view_send(stderr_msg(r[0].GetError()))
-                        entry = self.first_line_entry_with_source
+                        entry = self.line_entry
+                        if not entry:
+                            # Get ALL the SBFrames
+                            t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
+                            n = t.GetNumFrames()
+                            for i in xrange(0, n):
+                                f = t.GetFrameAtIndex(i)
+                                if f:
+                                    entry = f.GetLineEntry()
+                                    if entry and entry.GetFileSpec():
+                                        filespec = entry.GetFileSpec()
+
+                                        if filespec:
+                                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
+                                                     entry.GetLine(), entry.GetColumn())
+                                            break
+                                        else:
+                                            entry = None
 
                     scope = 'bookmark'
                     if state == lldb.eStateCrashed:
