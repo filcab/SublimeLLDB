@@ -216,7 +216,7 @@ def unload_handler():
 def initialize_lldb():
     set_got_input_function(lldb_in_panel_on_done)
 
-    driver = LldbDriver()
+    driver = LldbDriver(lldb_view_send)
     event = lldb.SBEvent()
     listener = lldb.SBListener('Wait for lldb initialization')
     listener.StartListeningForEvents(driver.broadcaster,

@@ -47,13 +47,16 @@ class LldbDriver(threading.Thread):
     __debug_mode = False
     __waiting_for_command = False
 
-    def __init__(self):
+    def __init__(self, log_callback=None):
         super(LldbDriver, self).__init__()  # name='Driver')
-        self.name = 'Driver'
+        self.name = 'sublime.lldb.driver'
         lldb.SBDebugger.Initialize()
-        debug('Initting LldbDriver')
         self.__broadcaster = lldb.SBBroadcaster('Driver')
-        self._debugger = lldb.SBDebugger.Create(False)
+
+        if log_callback:
+            self._debugger = lldb.SBDebugger.Create(False, log_callback)
+        else:
+            self._debugger = lldb.SBDebugger.Create(False)
         set_driver_instance(self)
         self.__io_channel = IOChannel(self, lldb_view_send)
         # self._debugger.SetCloseInputOnEOF(False)
