@@ -32,7 +32,6 @@ __os_not_supported = False
 __macosx_is_too_old = False
 __did_not_find_debugserver = False
 
-# import traceback
 def debug_thr(string=None):
     if string:
         print ('thread id: ' + threading.current_thread().name + ' ' + string)
@@ -81,8 +80,6 @@ def debug_prologue(driver):
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
     debugger = driver.debugger
-    lldb_view_write('(lldb) log enable lldb events\n')
-    interpret_command(debugger, 'log enable lldb events')
     lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
     interpret_command(debugger, 'target create ~/dev/softek/lldb-plugin/tests')
     lldb_view_write('(lldb) b main\n')
@@ -90,29 +87,11 @@ def debug_prologue(driver):
 
 
 def lldb_greeting():
-    return datetime.date.today().__str__() + \
-           '\nWelcome to the LLDB plugin for Sublime Text 2\n' + \
+    return datetime.date.today().__str__() +                        \
+           '\nWelcome to the LLDB plugin for Sublime Text 2\n' +    \
            lldb_wrappers.version() + '\n'
 
 
-lldb_view_name = 'lldb i/o'
-lldb_prog_view_name = 'program i/o'
-lldb_prompt = '(lldb) '
-
-# driver_instance = None
-# lldb_out_view = None
-
-# To hold on to the pipes. Otherwise GC takes them
-# pipe_in = None
-# pipe_out = None
-# pipe_err = None
-
-broadcaster = None
-
-lldb_prog_view = None
-lldb_prog_input = None
-lldb_prog_output = None
-lldb_prog_error = None
 lldb_window_layout = {
                         "cols": [0.0, 1.0],  # start, end
                         "rows": [0.0, 0.75, 1.0],  # start1, start2, end
@@ -123,7 +102,6 @@ basic_layout = {  # 1 group
                     "rows": [0.0, 1.0],
                     "cells": [[0, 0, 1, 1]]
                }
-# backup_layout = None
 
 
 def good_lldb_layout(window=window_ref()):
@@ -260,6 +238,7 @@ def start_debugging():
     if __is_debugging:
         cleanup(window_ref())
 
+    # Check for error conditions before starting the debugger
     if __did_not_find_debugserver:
         sublime.error_message("Couldn't find the debugserver binary.\n" +  \
                     'Is XCode.app or the command line tools installed?')
@@ -301,8 +280,6 @@ class LldbCommand(WindowCommand):
     def run(self):
         self.setup()
 
-        global lldb_view_name
-
         if driver_instance() is None:
             # if should_clear_lldb_view:
             clear_lldb_out_view()
@@ -343,8 +320,5 @@ class LldbClearOutputView(WindowCommand):
 
         clear_lldb_out_view()
 
-# class LldbNext(sublime_plugin.WindowCommand):
-#     def run(self):
-#         debugger.
 
 initialize_plugin()
