@@ -23,11 +23,13 @@ from root_objects import driver_instance, set_driver_instance,          \
 from monitors import start_markers_monitor, stop_markers_monitor
 
 
-# import this specific name without the prefix
+# import this specific names without the prefix
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 import lldb_wrappers
 
-is_debugging = False
+__is_debugging = False
+__macosx_is_not_good = False
+__os_not_supported = False
 
 # import traceback
 def debug_thr(string=None):
@@ -46,6 +48,21 @@ def initialize_plugin():
     debug('Loading LLDB Sublime Text 2 plugin')
     debug('python version: %s' % (sys.version_info,))
     debug('cwd: %s' % os.getcwd())
+
+    uname = os.uname()
+    if uname[0] == 'Darwin':
+        if uname[2] == '11.3.0':  # Lion (XCode has to be installed)
+            os.environ['LLDB_DEBUGSERVER_PATH'] \
+                = '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver'
+        else:  # Snow Leopard
+            # This will only work with XCode 4+ (that includes lldb) which is a paid software for OS X < 10.7
+            # I suppose most people with Snow Leopard won't have it.
+            # This boolean will be used when trying to initialize lldb.
+            global __macosx_is_not_good
+            __macosx_is_not_good = True
+    else:
+        global __os_not_supported
+        __os_not_supported = True
 
 
 def debug_prologue(driver):
@@ -188,7 +205,8 @@ def lldb_in_panel_on_done(cmd):
 
 
 def cleanup(w=None):
-    is_debugging = False
+    global __is_debugging
+    __is_debugging = False
 
     stop_markers_monitor()
     driver = driver_instance()
@@ -228,50 +246,32 @@ def initialize_lldb():
 
 
 def start_debugging():
-    global is_debugging
-    if is_debugging:
+    global __is_debugging
+    if __is_debugging:
         cleanup(window_ref())
 
-    is_debugging = True
+    if __macosx_is_not_good:
+        sublime.error_message('You Mac OS X version is not supported.\n' +  \
+                    'Supported versions: Lion and more recent\n\n' +        \
+                    'If you think it should be supported, please contact the author.')
+        return False
+    if __os_not_supported:
+        sublime.error_message('Your operating system is not supported by this plugin yet.\n' +          \
+                    'If there is a stable version of lldb for your operating system and you would ' +   \
+                    'like to have the plugin support it, please contact the author.')
+        return False
+
+    __is_debugging = True
 
     # Really start the debugger
     initialize_lldb()
-    # debug('setting file handles')
+
     driver_instance().debugger.SetInputFileHandle(sys.__stdin__, False)
     start_markers_monitor(window_ref(), driver_instance())
-    # lldb_.SetErrorFileHandle(sys.__stderr__, False)
-    # lldb_.SetOutputFileHandle(sys.__stdout__, False)
-
-    # launch_i_o_monitor(broadcaster)
 
     # We may also need to change the width upon window resize
     # debugger.SetTerminalWidth()
-
-    # Setup the input, output, and error file descriptors
-    # for the debugger
-    # global pipe_in, pipe_out, pipe_err
-
-    # pipe_in, lldb_debugger_pipe_in = os.pipe()
-    # lldb_debugger_pipe_out, pipe_out = os.pipe()
-    # lldb_debugger_pipe_err, pipe_err = os.pipe()
-    # debug('in: %d, %d' % (pipe_in, lldb_debugger_pipe_in))
-    # debug('out: %d, %d' % (lldb_debugger_pipe_out, pipe_out))
-    # debug('err: %d, %d' % (lldb_debugger_pipe_err, pipe_err))
-
-    # pipe_in = os.fdopen(pipe_in, 'r', 0)
-    # set_lldb_input_fh(os.fdopen(lldb_debugger_pipe_in, 'w', 0))
-    # set_lldb_output_fh(os.fdopen(lldb_debugger_pipe_out, 'r', 0))
-    # pipe_out = os.fdopen(pipe_out, 'w', 0)
-    # set_lldb_error_fh(os.fdopen(lldb_debugger_pipe_err, 'r', 0))
-    # pipe_err = os.fdopen(pipe_err, 'w', 0)
-
-    # debug('in: %s, %s' % (str(pipe_in), str(lldb_debugger_pipe_in)))
-    # debug('out: %s, %s' % (str(lldb_debugger_pipe_out), str(pipe_out)))
-    # debug('err: %s, %s' % (str(lldb_debugger_pipe_err), str(pipe_err)))
-
-    # driver_instance().SetInputFileHandle(pipe_in, True)
-    # driver_instance().SetOutputFileHandle(pipe_out, True)
-    # driver_instance().SetErrorFileHandle(pipe_err, True)
+    return True
 
 
 class WindowCommand(sublime_plugin.WindowCommand):
@@ -294,7 +294,8 @@ class LldbCommand(WindowCommand):
             clear_lldb_out_view()
             set_window_ref(self.window)
 
-            start_debugging()
+            if not start_debugging():
+                return
 
             g = lldb_greeting()
             if lldb_out_view().size() > 0:
