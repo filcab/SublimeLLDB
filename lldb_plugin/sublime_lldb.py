@@ -31,6 +31,7 @@ __macosx_is_too_old = False
 __use_bundled_debugserver = False
 __did_not_find_debugserver = False
 
+
 def debug_thr(string=None):
     if string:
         print ('thread id: ' + threading.current_thread().name + ' ' + string)
