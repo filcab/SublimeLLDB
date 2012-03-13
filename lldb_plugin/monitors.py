@@ -123,8 +123,6 @@ def update_code_view(window, entry=None, scope='entity.name.class'):
 
 def update_breakpoints(w, entry=None, remove=False):
     if entry:
-        bps = breakpoint_dict()
-
         (directory, file, line) = entry
         filename = directory + '/' + file
 
@@ -140,7 +138,7 @@ def update_breakpoints(w, entry=None, remove=False):
             for v in w.views():
                 if v.file_name() == filename:
                     v.erase_regions("lldb-breakpoint")
-                    regions = map(lambda line: v.full_line(v.text_point(line-1, 0)), bps_for_file(filename))
+                    regions = map(lambda line: v.full_line(v.text_point(line - 1, 0)), bps_for_file(filename))
                     v.add_regions("lldb-breakpoint", regions,   \
                                      "string", "circle",        \
                                      sublime.HIDDEN)
