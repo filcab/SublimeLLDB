@@ -15,9 +15,11 @@ Features:
 * Event-driven to avoid any editing slow-downs due to the plugin
 
 Known bugs:
-* stdin to the debugged program has to be passed using the console (yes,
-  to use stdin in your program, you have to either redirect it using the
-  debugger or start Sublime Text 2 using the console
+* stdin to the debugged program (or debugger queries) has to be passed using
+  the console (yes, to use stdin in your program, you have to either redirect
+  it using the debugger or start Sublime Text 2 using the console). Executing
+  the `process launch` command while the program is running will hang lldb
+  until you reply with `y` or `n` to the stdin (usually the Terminal).
 * ...
 
 Please feel free to ask for additional functionalities either in the
