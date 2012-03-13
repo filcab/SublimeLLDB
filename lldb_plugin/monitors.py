@@ -163,14 +163,14 @@ def mark_code_loc(view, show_panel, loc):
 
 class MarkersListener(sublime_plugin.EventListener):
     def on_load(self, v):
-        global lldb_last_location_view
-        if lldb_current_location and v.file_name() == lldb_current_location[0]:
-            lldb_last_location_view = v
-            mark_code_loc(v, True, lldb_current_location)
-
         bps = breakpoint_dict()
         if v.file_name() in bps:
             regions = map(lambda line: v.full_line(v.text_point(line - 1, 0)), bps_for_file(v.file_name()))
             v.add_regions("lldb-breakpoint", regions,
                              "string", "circle",
                              sublime.HIDDEN)
+
+        global lldb_last_location_view
+        if lldb_current_location and v.file_name() == lldb_current_location[0]:
+            lldb_last_location_view = v
+            mark_code_loc(v, True, lldb_current_location)
