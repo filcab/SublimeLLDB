@@ -15,10 +15,8 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
-                         show_lldb_panel, set_got_input_function
-                         # lldb_input_fh,  set_lldb_input_fh,     \
-                         # lldb_output_fh, set_lldb_output_fh,    \
-                         # lldb_error_fh,  set_lldb_error_fh,     \
+                         show_lldb_panel, set_got_input_function,       \
+                         get_lldb_output_view, lldb_view_name, lldb_prompt
 
 from monitors import start_markers_monitor, stop_markers_monitor
 
@@ -116,24 +114,6 @@ def set_lldb_window_layout(window=window_ref()):
 
 def set_regular_window_layout(window=window_ref()):
     window.run_command("set_layout", basic_layout)
-
-
-def get_lldb_output_view(window, name):
-    # Search for the lldb_view view first.
-    f = None
-    for v in window.views():
-        if v.name() == name:
-            f = v
-            break
-
-    if f is None:
-        f = window.new_file()
-        f.set_name(name)
-
-    f.set_scratch(True)
-    f.set_read_only(True)
-    # f.set_syntax_file('…')  # lldb output syntax
-    return f
 
 
 def lldb_toggle_output_view(window, show=False, hide=False):

@@ -2,6 +2,9 @@
 
 import sublime
 
+lldb_view_name = 'lldb i/o'
+lldb_prompt = '(lldb) '
+
 __driver = None
 __out_view = None
 __got_input_function = None
@@ -151,13 +154,38 @@ def lldb_view_send(string):
 
 
 def lldb_view_write(string):
-    if __out_view is not None:
-        __out_view.set_read_only(False)
-        edit = __out_view.begin_edit('lldb-panel-write')
-        __out_view.insert(edit, __out_view.size(), string)
-        __out_view.end_edit(edit)
-        __out_view.set_read_only(True)
-        __out_view.show(__out_view.size())
+    global __out_view
+    if not __out_view and __window_ref:
+        __out_view = get_lldb_output_view(__window_ref, lldb_view_name)
+
+    __out_view.set_read_only(False)
+    edit = __out_view.begin_edit('lldb-panel-write')
+    __out_view.insert(edit, __out_view.size(), string)
+    __out_view.end_edit(edit)
+    __out_view.set_read_only(True)
+    __out_view.show(__out_view.size())
+
+
+def get_lldb_output_view(window, name=None):
+    # Search for the lldb_view view first.
+    if not name:
+        name = lldb_view_name
+
+    f = None
+    for v in window.views():
+        if v.name() == name:
+            f = v
+            break
+
+    if f is None:
+        f = window.new_file()
+        f.set_name(name)
+
+    f.set_scratch(True)
+    f.set_read_only(True)
+    # f.set_syntax_file('…')  # lldb output syntax
+    return f
+
 
 import lldb_wrappers
 
