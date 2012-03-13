@@ -154,9 +154,14 @@ def lldb_view_send(string):
 
 
 def lldb_view_write(string):
-    global __out_view
-    if not __out_view and __window_ref:
+    global __out_view, __window_ref
+    if not (__out_view and __window_ref and __out_view.window()):
         __out_view = get_lldb_output_view(__window_ref, lldb_view_name)
+        if not __window_ref:
+            # Bail out and just set the first window
+            __window_ref = sublime.windows()[0]
+
+        __window_ref.set_view_index(__out_view, 1, 0)
 
     __out_view.set_read_only(False)
     edit = __out_view.begin_edit('lldb-panel-write')
