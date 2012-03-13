@@ -28,6 +28,7 @@ import lldb_wrappers
 __is_debugging = False
 __os_not_supported = False
 __macosx_is_too_old = False
+__use_bundled_debugserver = False
 __did_not_find_debugserver = False
 
 def debug_thr(string=None):
@@ -47,29 +48,30 @@ def initialize_plugin():
     debug('python version: %s' % (sys.version_info,))
     debug('cwd: %s' % os.getcwd())
 
-    debugserver_paths = ['/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver',
-                         '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver']
-    uname = os.uname()
-    if uname[0] == 'Darwin':
-        if uname[2] == '11.3.0':  # OS X Lion
-            found = False
-            for path in debugserver_paths:
-                if os.access(path, os.X_OK):
-                    os.environ['LLDB_DEBUGSERVER_PATH'] = path
-                    found = True
-                    break
-            if not found:  # XCode has to be installed
-                global __did_not_find_debugserver
-                __did_not_find_debugserver = True
-        else:  # Snow Leopard, etc...
-            # This will only work with XCode 4+ (that includes lldb) which is a paid software for OS X < 10.7
-            # I suppose most people with Snow Leopard won't have it.
-            # This boolean will be used when trying to initialize lldb.
-            global __macosx_is_too_old
-            __macosx_is_too_old = True
-    else:
-        global __os_not_supported
-        __os_not_supported = True
+    if not __use_bundled_debugserver:
+        debugserver_paths = ['/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver',
+                             '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver']
+        uname = os.uname()
+        if uname[0] == 'Darwin':
+            if uname[2] == '11.3.0':  # OS X Lion
+                found = False
+                for path in debugserver_paths:
+                    if os.access(path, os.X_OK):
+                        os.environ['LLDB_DEBUGSERVER_PATH'] = path
+                        found = True
+                        break
+                if not found:  # XCode has to be installed
+                    global __did_not_find_debugserver
+                    __did_not_find_debugserver = True
+            else:  # Snow Leopard, etc...
+                # This will only work with XCode 4+ (that includes lldb) which is a paid software for OS X < 10.7
+                # I suppose most people with Snow Leopard won't have it.
+                # This boolean will be used when trying to initialize lldb.
+                global __macosx_is_too_old
+                __macosx_is_too_old = True
+        else:
+            global __os_not_supported
+            __os_not_supported = True
 
 
 def debug_prologue(driver):

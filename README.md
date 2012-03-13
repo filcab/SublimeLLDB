@@ -23,3 +23,13 @@ Known bugs:
 Please feel free to ask for additional functionalities either in the
 forums or through github.
 
+*** `debugserver` binary
+
+The default `debugserver` binary that is used is the system one (when XCode
+or the command line tools are installed).
+If the bundled `debugserver` is to be used (e.g: newer `debugserver` with
+protocol enhancements), change the variable `__use_bundled_debugserver` in
+`sublime_lldb.py` to `True` and sign the
+`<plugin folder>/lldb_plugin/LLDB.framework/Resources/debugserver` binary
+as instructed in the `docs/code-signing.txt` file in lldb's sources.
+
