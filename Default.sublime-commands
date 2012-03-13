@@ -1,12 +1,17 @@
 [
 	{
-		"caption": "LLDB: Show LLDB prompt (starting it if needed)",
+		"caption": "LLDB: Show LLDB prompt (starting LLDB if needed)",
 		"command": "lldb",
 		"args": {}
 	},
 	{
 		"caption": "LLDB: Toggle LLDB output view",
 		"command": "lldb_toggle_output_view",
+		"args": {}
+	}
+	{
+		"caption": "LLDB: Clear LLDB output view",
+		"command": "lldb_clear_output_view",
 		"args": {}
 	}
 ]
