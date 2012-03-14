@@ -1,0 +1,55 @@
+{
+    /*
+        Array of lldb commands to run at debugger start-up.
+     */
+    "lldb.prologue": [],
+
+    /*
+        Should we use the bundled debugserver (it has to be signed and trusted)?
+        Otherwise, use the system debugserver (XCode or CLI tools have to be installed).
+     */
+    "lldb.use_bundled_debugserver": false,
+
+    /*
+        Name to be used for the lldb i/o view.
+     */
+    "lldb.i/o.view.name": "lldb i/o",
+
+    /*
+        Should we clear the lldb i/o view on startup?
+     */
+    "lldb.i/o.view.clear_on_startup": true,
+
+    /*
+        Window layout to be used for the debugger. If you change this, please
+        double-check that every group listed below still exists.
+     */
+     "lldb.layout": {
+                        "cols": [0.0, 1.0],  // start, end
+                        "rows": [0.0, 0.75, 1.0],  // start1, start2, end
+                        "cells": [[0, 0, 1, 1], [0, 1, 1, 2]]
+                     },
+    /*
+        Window layout to revert to when hiding lldb's buffers.
+     */
+    "lldb.layout.basic": {  // 1 group
+                            "cols": [0.0, 1.0],
+                            "rows": [0.0, 1.0],
+                            "cells": [[0, 0, 1, 1]]
+                         },
+
+    "lldb.layout.group.source_file": 0,
+    "lldb.layout.group.i/o": 1,
+
+    "lldb.markers.current_line.region_name": "lldb-location",
+    "lldb.markers.current_line.scope": "bookmark",
+    "lldb.markers.current_line.scope.crashed": "invalid",
+    "lldb.markers.current_line.type": "bookmark",
+
+    "lldb.markers.breakpoint.region_name": "lldb-breakpoint",
+    "lldb.markers.breakpoint.scope": "string",  // Good color for the breakpoints on this color scheme. TODO: Create new scopes
+    "lldb.markers.breakpoint.type": "circle",
+
+
+    "lldb.last.setting": "None"
+}
