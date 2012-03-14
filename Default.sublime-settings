@@ -21,15 +21,6 @@
     "lldb.i/o.view.clear_on_startup": true,
 
     /*
-        Window layout to be used for the debugger. If you change this, please
-        double-check that every group listed below still exists.
-     */
-     "lldb.layout": {
-                        "cols": [0.0, 1.0],  // start, end
-                        "rows": [0.0, 0.75, 1.0],  // start1, start2, end
-                        "cells": [[0, 0, 1, 1], [0, 1, 1, 2]]
-                     },
-    /*
         Window layout to revert to when hiding lldb's buffers.
      */
     "lldb.layout.basic": {  // 1 group
@@ -38,9 +29,22 @@
                             "cells": [[0, 0, 1, 1]]
                          },
 
+    /*
+        Window layout to be used for the debugger. If you change this, please
+        double-check that every group listed below still exists.
+     */
+     "lldb.layout": {
+                        "cols": [0.0, 1.0],  // start, end
+                        "rows": [0.0, 0.75, 1.0],  // start1, start2, end
+                        "cells": [[0, 0, 1, 1], [0, 1, 1, 2]]
+                    },
+
     "lldb.layout.group.source_file": 0,
     "lldb.layout.group.i/o": 1,
 
+    /*
+        Configuration for breakpoint and program counter markers.
+     */
     "lldb.markers.current_line.region_name": "lldb-location",
     "lldb.markers.current_line.scope": "bookmark",
     "lldb.markers.current_line.scope.crashed": "invalid",
@@ -51,5 +55,5 @@
     "lldb.markers.breakpoint.type": "circle",
 
 
-    "lldb.last.setting": "None"
+    "lldb.last.setting": null
 }
