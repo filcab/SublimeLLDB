@@ -107,11 +107,11 @@ basic_layout = {  # 1 group
 
 def good_lldb_layout(window=window_ref()):
     # if the user already has two groups, it's a good layout
-    return window.num_groups() == 2
+    return window.num_groups() == len(lldb_window_layout['cells'])
 
 
 def set_lldb_window_layout(window=window_ref()):
-    if lldb_out_view() != None and window.num_groups() != 2:
+    if lldb_out_view() != None and window.num_groups() != len(lldb_window_layout['cells']):
         window.run_command('set_layout', lldb_window_layout)
 
 
