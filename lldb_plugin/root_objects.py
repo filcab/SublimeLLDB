@@ -20,6 +20,11 @@ def debug(string):
     print string
 
 
+def set_lldb_view_name(name):
+    global lldb_view_name
+    lldb_view_name = name
+
+
 def breakpoint_dict():
     return __breakpoint_dict
 
@@ -190,6 +195,26 @@ def get_lldb_output_view(window, name=None):
     f.set_read_only(True)
     # f.set_syntax_file('…')  # lldb output syntax
     return f
+
+__settings_keys = ["lldb.prologue",
+                   "lldb.use_bundled_debugserver"
+                   "lldb.i/o.view.name"
+                   "lldb.i/o.view.clear_on_startup"
+                   "lldb.layout"
+                   "lldb.layout.basic"
+                   "lldb.layout.group.source_file"
+                   "lldb.layout.group.i/o"
+                   "lldb.markers.current_line.region_name"
+                   "lldb.markers.current_line.scope"
+                   "lldb.markers.current_line.scope.crashed"
+                   "lldb.markers.current_line.type"
+                   "lldb.markers.breakpoint.region_name"
+                   "lldb.markers.breakpoint.scope"
+                   "lldb.markers.breakpoint.type"]
+
+
+def get_settings_keys():
+    return __settings_keys
 
 
 import lldb_wrappers

@@ -16,7 +16,9 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
                          show_lldb_panel, set_got_input_function,       \
-                         get_lldb_output_view, lldb_view_name, lldb_prompt
+                         get_lldb_output_view, lldb_prompt,             \
+                         lldb_view_name, set_lldb_view_name,            \
+                         get_settings_keys
 
 from monitors import start_markers_monitor, stop_markers_monitor
 
@@ -25,11 +27,25 @@ from monitors import start_markers_monitor, stop_markers_monitor
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 import lldb_wrappers
 
+__settings = None
+__initialized = False
 __is_debugging = False
 __os_not_supported = False
 __macosx_is_too_old = False
 __use_bundled_debugserver = False
 __did_not_find_debugserver = False
+__clear_view_on_startup = True
+__lldb_window_layout = {
+                        "cols": [0.0, 1.0],  # start, end
+                        "rows": [0.0, 0.75, 1.0],  # start1, start2, end
+                        "cells": [[0, 0, 1, 1], [0, 1, 1, 2]]
+                       }
+__basic_layout = {  # 1 group
+                    "cols": [0.0, 1.0],
+                    "rows": [0.0, 1.0],
+                    "cells": [[0, 0, 1, 1]]
+                 }
+__prologue = []
 
 
 def debug_thr(string=None):
@@ -43,12 +59,38 @@ def debug(str):
     print str
 
 
+def setup_settings():
+    global __settings
+    __settings = sublime.load_settings("Default.sublime-settings")
+    for k in get_settings_keys():
+        __settings.add_on_change(k, reload_settings)
+
+    reload_settings()
+
+
+def reload_settings():
+    global __use_bundled_debugserver, __lldb_window_layout, __basic_layout
+    global __clear_view_on_startup, __prologue
+    __use_bundled_debugserver = __settings.get('lldb.use_bundled_debugserver')
+    __lldb_window_layout = __settings.get('lldb.layout')
+    __basic_layout = __settings.get('lldb.layout.basic')
+    __clear_view_on_startup = __settings.get('lldb.i/o.view.clear_on_startup')
+    set_lldb_view_name(__settings.get('lldb.i/o.view.name'))
+    __prologue = __settings.get('lldb.prologue')
+
+
 def initialize_plugin():
+    global __initialized
+    if __initialized:
+        return
+
     thread_created('<' + threading.current_thread().name + '>')
     debug('Loading LLDB Sublime Text 2 plugin')
     debug('python version: %s' % (sys.version_info,))
     debug('cwd: %s' % os.getcwd())
 
+    setup_settings()
+    global __use_bundled_debugserver
     if not __use_bundled_debugserver:
         debugserver_paths = ['/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver',
                              '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver']
@@ -74,6 +116,8 @@ def initialize_plugin():
             global __os_not_supported
             __os_not_supported = True
 
+    __initialized = True
+
 
 def debug_prologue(driver):
     """
@@ -81,28 +125,19 @@ def debug_prologue(driver):
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
     debugger = driver.debugger
-    lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
-    interpret_command(debugger, 'target create ~/dev/softek/lldb-plugin/tests')
-    lldb_view_write('(lldb) b main\n')
-    interpret_command(debugger, 'b main')
+    for c in __prologue:
+        lldb_view_write(lldb_prompt + c + '\n')
+        interpret_command(debugger, c)
+    # lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
+    # interpret_command(debugger, 'target create ~/dev/softek/lldb-plugin/tests')
+    # lldb_view_write('(lldb) b main\n')
+    # interpret_command(debugger, 'b main')
 
 
 def lldb_greeting():
     return datetime.date.today().__str__() +                        \
            '\nWelcome to the LLDB plugin for Sublime Text 2\n' +    \
            lldb_wrappers.version() + '\n'
-
-
-lldb_window_layout = {
-                        "cols": [0.0, 1.0],  # start, end
-                        "rows": [0.0, 0.75, 1.0],  # start1, start2, end
-                        "cells": [[0, 0, 1, 1], [0, 1, 1, 2]]
-                     }
-basic_layout = {  # 1 group
-                    "cols": [0.0, 1.0],
-                    "rows": [0.0, 1.0],
-                    "cells": [[0, 0, 1, 1]]
-               }
 
 
 def good_lldb_layout(window=window_ref()):
@@ -221,6 +256,9 @@ def start_debugging():
     if __is_debugging:
         cleanup(window_ref())
 
+    reload_settings()
+    initialize_plugin()
+
     # Check for error conditions before starting the debugger
     if __did_not_find_debugserver:
         sublime.error_message("Couldn't find the debugserver binary.\n" +  \
@@ -264,8 +302,8 @@ class LldbCommand(WindowCommand):
         self.setup()
 
         if driver_instance() is None:
-            # if should_clear_lldb_view:
-            clear_lldb_out_view()
+            if __clear_view_on_startup:
+                clear_lldb_out_view()
             set_window_ref(self.window)
 
             if not start_debugging():
