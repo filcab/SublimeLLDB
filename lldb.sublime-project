@@ -1,0 +1,13 @@
+{
+	"folders":
+	[
+		{
+			"path": "/Users/filcab/dev/softek/lldb-plugin"
+		}
+	],
+    "settings":
+    {
+        "lldb.exe": "/Users/filcab/dev/softek/lldb-plugin/tests",
+        "lldb.breakpoints": []
+    }
+}
