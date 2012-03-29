@@ -17,15 +17,15 @@
 	<key>CFBundlePackageType</key>
 	<string>FMWK</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.129</string>
+	<string>1.136</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>129</string>
+	<string>136</string>
 	<key>DTCompiler</key>
 	<string>com.apple.compilers.llvm.clang.1_0</string>
 	<key>DTPlatformBuild</key>
-	<string>4E1019</string>
+	<string>4E2002</string>
 	<key>DTPlatformVersion</key>
 	<string>GM</string>
 	<key>DTSDKBuild</key>
@@ -33,8 +33,8 @@
 	<key>DTSDKName</key>
 	<string></string>
 	<key>DTXcode</key>
-	<string>0431</string>
+	<string>0432</string>
 	<key>DTXcodeBuild</key>
-	<string>4E1019</string>
+	<string>4E2002</string>
 </dict>
 </plist>
