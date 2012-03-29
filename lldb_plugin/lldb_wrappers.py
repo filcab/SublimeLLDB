@@ -137,11 +137,11 @@ class LldbDriver(threading.Thread):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
 
         sb_interpreter = self._debugger.GetCommandInterpreter()
-        listener = lldb.SBListener(self._debugger.GetListener())
+        listener = lldb.SBListener('driver')  # self._debugger.GetListener())
         listener.StartListeningForEventClass(self._debugger,
                      lldb.SBTarget.GetBroadcasterClassName(),
                      lldb.SBTarget.eBroadcastBitBreakpointChanged)
-        # This isn't in Driver.cpp. Check why it listens to those events (SBDebugger is the answer)
+        # This isn't in Driver.cpp. Check why it listens to those events (it uses SBDebugger's listener)
         listener.StartListeningForEventClass(self._debugger,
                      lldb.SBProcess.GetBroadcasterClassName(),
                      lldb.SBProcess.eBroadcastBitStateChanged |     \
