@@ -164,7 +164,7 @@ def debug_prologue(driver):
 
 
 def lldb_greeting():
-    return datetime.date.today().__str__() +                        \
+    return str(datetime.date.today()) +                             \
            '\nWelcome to the LLDB plugin for Sublime Text 2\n' +    \
            lldb_wrappers.version() + '\n'
 
@@ -412,6 +412,3 @@ class LldbClearOutputView(WindowCommand):
         # TODO: Test variable to know if we should clear the view when starting a debug session
 
         clear_lldb_out_view()
-
-
-initialize_plugin()
