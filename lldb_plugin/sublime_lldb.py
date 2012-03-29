@@ -351,6 +351,55 @@ def ensure_lldb_is_running(w=None):
 
         debug_prologue(driver_instance())
 
+import re
+bp_re_file_line = re.compile('^(.*\S)\s*:\s*(\d+)\s*$')
+bp_re_address = re.compile('^(0x[0-9A-Fa-f]+)\s*$')
+# bp_re_abbrev = re.compile('^(-.*)$')
+bp_re_name = re.compile('^(.*\S)\s*$')
+# break_regex_cmd_ap->AddRegexCommand("^(.*\S)`(.*\S)\s*$", "breakpoint set --name '%2' --shlib '%1'") &&
+
+
+def create_default_bps_for_target(target):
+    n = 0
+    for bp in _default_bps:
+        if type(bp) is str or type(bp) is unicode:
+            bp = str(bp)
+            m = bp_re_file_line.match(bp)
+            if m:
+                # debug('breaking at: %s:%d' % (m.group(1), m.group(2)))
+                target.BreakpointCreateByLocation(m.group(1), m.group(2))
+                ++n
+                continue
+
+            m = bp_re_address.match(bp)
+            if m:
+                # debug('breaking at: %x' % m.group(1))
+                target.BreakpointCreateByAddress(m.group(1))
+                ++n
+                continue
+
+            m = bp_re_name.match(bp)
+            if m:
+                # debug('breaking at: %s' % m.group(1))
+                target.BreakpointCreateByName(m.group(1))
+                ++n
+                continue
+
+            debug("couldn't tell where the bp spec '" + bp + "' should break.")
+
+        # bp isn't an str. It should be a dict
+        elif 'file' in bp and 'line' in bp:
+            # debug('breaking at: %s:%d' % (str(bp['file']), bp['line']))
+            target.BreakpointCreateByLocation(str(bp['file']), bp['line'])
+            ++n
+        elif 'address' in bp:
+            # debug('breaking at: %x' % bp['address'])
+            target.BreakpointCreateByAddress(bp['address'])
+            ++n
+        else:
+            debug('unrecognized breakpoint type: ' + str(bp))
+    # debug('%d breakpoints created' % n)
+
 
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
@@ -385,8 +434,9 @@ class LldbDebugProgram(WindowCommand):
             t = driver_instance().debugger.CreateTargetWithFileAndArch(str(exe), str(arch))
             debug('got a target: ' + str(t))
             driver_instance().debugger.SetSelectedTarget(t)
-            main_bp = t.BreakpointCreateByName('main', t.GetExecutable().GetFilename())
-            debug('main bp: ' + str(main_bp))
+            create_default_bps_for_target(t)
+            # main_bp = t.BreakpointCreateByName('main', t.GetExecutable().GetFilename())
+            # debug('main bp: ' + str(main_bp))
             p = t.LaunchSimple(_default_args, [], os.getcwd())
             debug('got a process: ' + str(p))
 
