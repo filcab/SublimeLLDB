@@ -125,8 +125,9 @@ def debug_prologue(driver):
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
     debugger = driver.debugger
-    for c in __prologue:
-        lldb_view_write(lldb_prompt + c + '\n')
+    global _prologue
+    for c in _prologue:
+        lldb_view_write(lldb_prompt() + c + '\n')
         interpret_command(debugger, c)
     # lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
     # interpret_command(debugger, 'target create ~/dev/softek/lldb-plugin/tests')
@@ -198,7 +199,7 @@ def lldb_in_panel_on_done(cmd):
         cmd = ''
 
     if driver_instance():
-        lldb_view_write(lldb_prompt + cmd + '\n')
+        lldb_view_write(lldb_prompt() + cmd + '\n')
         driver_instance().send_command(cmd)
 
         # We don't have a window, so let's re-use the one active on lldb launch
@@ -294,7 +295,7 @@ class WindowCommand(sublime_plugin.WindowCommand):
 
         # global lldb_out_view
         if lldb_out_view() is None:
-            set_lldb_out_view(get_lldb_output_view(self.window, lldb_view_name))  # for lldb output
+            set_lldb_out_view(get_lldb_output_view(self.window, lldb_view_name()))  # for lldb output
 
 
 class LldbCommand(WindowCommand):

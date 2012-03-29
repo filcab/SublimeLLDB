@@ -2,8 +2,8 @@
 
 import sublime
 
-lldb_view_name = 'lldb i/o'
-lldb_prompt = '(lldb) '
+__lldb_view_name = 'lldb i/o'
+__lldb_prompt = '(lldb) '
 
 __driver = None
 __out_view = None
@@ -20,9 +20,17 @@ def debug(string):
     print string
 
 
+def lldb_prompt():
+    return __lldb_prompt
+
+
+def lldb_view_name():
+    return __lldb_view_name
+
+
 def set_lldb_view_name(name):
-    global lldb_view_name
-    lldb_view_name = name
+    global __lldb_view_name
+    __lldb_view_name = name
 
 
 def breakpoint_dict():
@@ -161,7 +169,7 @@ def lldb_view_send(string):
 def lldb_view_write(string):
     global __out_view, __window_ref
     if not (__out_view and __window_ref and __out_view.window()):
-        __out_view = get_lldb_output_view(__window_ref, lldb_view_name)
+        __out_view = get_lldb_output_view(__window_ref, lldb_view_name())
         if not __window_ref:
             # Bail out and just set the first window
             __window_ref = sublime.windows()[0]
@@ -179,7 +187,7 @@ def lldb_view_write(string):
 def get_lldb_output_view(window, name=None):
     # Search for the lldb_view view first.
     if not name:
-        name = lldb_view_name
+        name = lldb_view_name()
 
     f = None
     for v in window.views():
