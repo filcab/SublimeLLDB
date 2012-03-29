@@ -8,6 +8,32 @@
     "settings":
     {
         "lldb.exe": "/Users/filcab/dev/softek/lldb-plugin/tests",
-        "lldb.breakpoints": []
+        "lldb.breakpoints": ["main", {"file": "tests.c", "line": 42}]
+        /*
+            Other lldb.breakpoints possibilities:
+            "tests.c:42"
+            //{"address": 0xdeadbeef}
+            //{"exception": // lldb::LanguageType, "catch": bool, "throw": bool}
+        */
+        /*
+            BreakpointCreateByLocation (const char *file, uint32_t line);
+            BreakpointCreateByLocation (const lldb::SBFileSpec &file_spec, uint32_t line);
+            BreakpointCreateByName (const char *symbol_name, const char *module_name = NULL);
+            BreakpointCreateByName (const char *symbol_name,
+                                    uint32_t func_name_type,           // Logical OR one or more FunctionNameType enum bits
+                                    const SBFileSpecList &module_list, 
+                                    const SBFileSpecList &comp_unit_list);
+            BreakpointCreateByNames (const char *symbol_name[],
+                                     uint32_t num_names,
+                                     uint32_t name_type_mask,           // Logical OR one or more FunctionNameType enum bits
+                                     const SBFileSpecList &module_list,
+                                     const SBFileSpecList &comp_unit_list);
+            BreakpointCreateByRegex (const char *symbol_name_regex, const char *module_name = NULL);
+            BreakpointCreateBySourceRegex (const char *source_regex, const lldb::SBFileSpec &source_file, const char *module_name = NULL);
+            BreakpointCreateForException  (lldb::LanguageType language,
+                                           bool catch_bp,
+                                           bool throw_bp);
+            BreakpointCreateByAddress (addr_t address);
+        */
     }
 }
