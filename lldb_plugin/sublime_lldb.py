@@ -176,7 +176,6 @@ def good_lldb_layout(window=window_ref()):
 
 def set_lldb_window_layout(window=window_ref()):
     global _lldb_window_layout
-    debug('setting layout: ' + str(_lldb_window_layout))
     if lldb_out_view() != None and window.num_groups() != len(_lldb_window_layout['cells']):
         window.run_command('set_layout', _lldb_window_layout)
 
@@ -199,7 +198,7 @@ def lldb_toggle_output_view(window, show=False, hide=False):
     # Just show the window.
     v = lldb_out_view()
     if v:
-        if show:
+        if show and not good_lldb_layout(window=window):
             set_lldb_window_layout(window=window)
             window.set_view_index(v, 1, 0)
         elif hide:
