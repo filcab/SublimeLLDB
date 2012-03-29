@@ -354,8 +354,9 @@ class LldbDriver(threading.Thread):
                 else:
                     self.update_selected_thread()
                     debugger = self.debugger
-                    entry = self.line_entry
-                    if entry:
+                    entry = None
+                    line_entry = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame().GetLineEntry()
+                    if line_entry:
                         # We don't need to run 'process status' like Driver.cpp
                         # Since we open the file and show the source line.
                         r = interpret_command(debugger, 'thread list')
@@ -364,28 +365,32 @@ class LldbDriver(threading.Thread):
                         r = interpret_command(debugger, 'frame info')
                         lldb_view_send(stdout_msg(r[0].GetOutput()))
                         lldb_view_send(stderr_msg(r[0].GetError()))
+
+                        filespec = line_entry.GetFileSpec()
+
+                        if filespec:
+                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
+                                     line_entry.GetLine())
                     else:
                         # Give us some assembly to check the crash/stop
                         r = interpret_command(debugger, 'process status')
                         lldb_view_send(stdout_msg(r[0].GetOutput()))
                         lldb_view_send(stderr_msg(r[0].GetError()))
-                        if not entry:
+                        if not line_entry:
                             # Get ALL the SBFrames
                             t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
                             n = t.GetNumFrames()
                             for i in xrange(0, n):
                                 f = t.GetFrameAtIndex(i)
                                 if f:
-                                    entry = f.GetLineEntry()
-                                    if entry and entry.GetFileSpec():
-                                        filespec = entry.GetFileSpec()
+                                    line_entry = f.GetLineEntry()
+                                    if line_entry and line_entry.GetFileSpec():
+                                        filespec = line_entry.GetFileSpec()
 
                                         if filespec:
                                             entry = (filespec.GetDirectory(), filespec.GetFilename(), \
-                                                     entry.GetLine())
+                                                     line_entry.GetLine())
                                             break
-                                        else:
-                                            entry = None
 
                     scope = 'bookmark'
                     if state == lldb.eStateCrashed:
