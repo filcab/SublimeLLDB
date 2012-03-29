@@ -320,6 +320,39 @@ def start_debugging():
     return True
 
 
+# TODO: Search current directory for a project file or an executable
+def search_for_executable():
+    return _default_exe
+
+
+def ensure_lldb_is_running(w=None):
+    # Ensure we reflect any changes to saved settings (including project settings)
+    reload_settings()
+
+    if not w and window_ref():
+        w = window_ref()
+    else:
+        # We're redefining the default window.
+        set_window_ref(w)
+
+    if driver_instance() is None:
+        global _clear_view_on_startup
+        if _clear_view_on_startup:
+            clear_lldb_out_view()
+
+        if not start_debugging():
+            return
+
+        g = lldb_greeting()
+        if lldb_out_view().size() > 0:
+            g = '\n\n' + lldb_greeting()
+        lldb_view_write(g)
+        lldb_view_write('cwd: ' + os.getcwd() + '\n')
+        w.set_view_index(lldb_out_view(), 1, 0)
+
+        debug_prologue(driver_instance())
+
+
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
         debug_thr('starting command')
