@@ -62,29 +62,34 @@ def lldb_markers_monitor(w, driver):
 
     done = False
     while not done:
-        v = lldb_file_markers_queue.get(True)
-        m = v['marks']
+        # Create a new scope, so the 'f' variable isn't changed before running it.
+        def aaaa():
+            global done
+            v = lldb_file_markers_queue.get(True)
+            m = v['marks']
 
-        debug('got: ' + str(v))
-        if 'pc' == m:
-            args = v['args']
-            f = lambda: update_code_view(w, *args)
-        elif 'bp' == m:
-            args = v['args']
-            f = lambda: update_breakpoints(w, *args)
-        # elif 'all' == m:
-        #     args = v['args']
-        #     f = lambda: (update_breakpoints(w, *args), update_code_view(w, *args))
-        elif 'quit' == m:
-            done = True
-            args = v['args']
-            f = lambda: (update_code_view(w, *args), remove_all_bps())
+            debug('got: ' + str(v))
+            if 'pc' == m:
+                args = v['args']
+                f = lambda: update_code_view(w, *args)
+            elif 'bp' == m:
+                args = v['args']
+                debug('breaking for: ' + str(args))
+                f = lambda: update_breakpoints(w, *args)
+            # elif 'all' == m:
+            #     args = v['args']
+            #     f = lambda: (update_breakpoints(w, *args), update_code_view(w, *args))
+            elif 'quit' == m:
+                done = True
+                args = v['args']
+                f = lambda: (update_code_view(w, *args), remove_all_bps())
 
-        after = v['after']
-        if after:
-            sublime.set_timeout(lambda: (f(), after()), 0)
-        else:
-            sublime.set_timeout(f, 0)
+            after = v['after']
+            if after:
+                sublime.set_timeout(lambda: (f[0](), after()), 0)
+            else:
+                sublime.set_timeout(f, 0)
+        aaaa()
 
     debug('stopped')
 
