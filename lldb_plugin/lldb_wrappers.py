@@ -236,6 +236,10 @@ class LldbDriver(threading.Thread):
                     if not event:
                         self.io_channel.stop()
 
+                # Ensure the listener (and everything else, really) is destroyed BEFORE the SBDebugger
+                # Otherwise lldb will try to lock a destroyed mutex.
+                # TODO: Track that bug!
+                listener = None
                 lldb.SBDebugger.Destroy(self.debugger)
 
         debug('leaving')
