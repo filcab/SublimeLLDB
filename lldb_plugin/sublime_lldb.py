@@ -27,25 +27,31 @@ from monitors import start_markers_monitor, stop_markers_monitor
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 import lldb_wrappers
 
-__settings = None
-__initialized = False
-__is_debugging = False
-__os_not_supported = False
-__macosx_is_too_old = False
-__use_bundled_debugserver = False
-__did_not_find_debugserver = False
-__clear_view_on_startup = True
-__lldb_window_layout = {
+_settings = None
+# _setting_prefix = 'lldb.'
+_setting_prefix = ''
+_initialized = False
+_is_debugging = False
+_os_not_supported = False
+_macosx_is_too_old = False
+_use_bundled_debugserver = False
+_did_not_find_debugserver = False
+_clear_view_on_startup = True
+_lldb_window_layout = {
                         "cols": [0.0, 1.0],  # start, end
                         "rows": [0.0, 0.75, 1.0],  # start1, start2, end
                         "cells": [[0, 0, 1, 1], [0, 1, 1, 2]]
                        }
-__basic_layout = {  # 1 group
+_basic_layout = {  # 1 group
                     "cols": [0.0, 1.0],
                     "rows": [0.0, 1.0],
                     "cells": [[0, 0, 1, 1]]
                  }
-__prologue = []
+_default_exe = None
+_default_bps = []
+_default_args = []
+_default_arch = lldb.LLDB_ARCH_DEFAULT
+_prologue = []
 
 
 def debug_thr(string=None):
@@ -60,28 +66,48 @@ def debug(str):
 
 
 def setup_settings():
-    global __settings
-    __settings = sublime.load_settings("Default.sublime-settings")
+    global _settings
+    _settings = sublime.load_settings('lldb.sublime-settings')
     for k in get_settings_keys():
-        __settings.add_on_change(k, reload_settings)
+        _settings.add_on_change(k, reload_settings)
 
-    reload_settings()
+    # reload_settings()
+
+
+def get_setting(name):
+    setting_name = _setting_prefix + name
+    if not _settings:
+        setup_settings()
+
+    setting = None
+    if sublime.active_window() and sublime.active_window().active_view():
+        setting = sublime.active_window().active_view().settings().get(setting_name)
+
+    return setting or _settings.get(setting_name)
 
 
 def reload_settings():
-    global __use_bundled_debugserver, __lldb_window_layout, __basic_layout
-    global __clear_view_on_startup, __prologue
-    __use_bundled_debugserver = __settings.get('lldb.use_bundled_debugserver')
-    __lldb_window_layout = __settings.get('lldb.layout')
-    __basic_layout = __settings.get('lldb.layout.basic')
-    __clear_view_on_startup = __settings.get('lldb.i/o.view.clear_on_startup')
-    set_lldb_view_name(__settings.get('lldb.i/o.view.name'))
-    __prologue = __settings.get('lldb.prologue')
+    debug('reloading settings')
+
+    global _use_bundled_debugserver, _lldb_window_layout, _basic_layout
+    global _clear_view_on_startup, _prologue
+    global _default_exe, _default_bps, _default_args, _default_arch
+    _use_bundled_debugserver = get_setting('lldb.use_bundled_debugserver')
+    _lldb_window_layout = get_setting('lldb.layout')
+    _basic_layout = get_setting('lldb.layout.basic')
+    _clear_view_on_startup = get_setting('lldb.i/o.view.clear_on_startup')
+    set_lldb_view_name(get_setting('lldb.i/o.view.name'))
+    _prologue = get_setting('lldb.prologue')
+
+    _default_exe = get_setting('lldb.exe')
+    _default_args = get_setting('lldb.arch') or []
+    _default_arch = get_setting('lldb.arch') or lldb.LLDB_ARCH_DEFAULT
+    _default_bps = get_setting('lldb.breakpoints') or []
 
 
 def initialize_plugin():
-    global __initialized
-    if __initialized:
+    global _initialized
+    if _initialized:
         return
 
     thread_created('<' + threading.current_thread().name + '>')
@@ -90,8 +116,10 @@ def initialize_plugin():
     debug('cwd: %s' % os.getcwd())
 
     setup_settings()
-    global __use_bundled_debugserver
-    if not __use_bundled_debugserver:
+    reload_settings()
+
+    global _use_bundled_debugserver
+    if not _use_bundled_debugserver:
         debugserver_paths = ['/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver',
                              '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver']
         uname = os.uname()
@@ -104,19 +132,19 @@ def initialize_plugin():
                         found = True
                         break
                 if not found:  # XCode has to be installed
-                    global __did_not_find_debugserver
-                    __did_not_find_debugserver = True
+                    global _did_not_find_debugserver
+                    _did_not_find_debugserver = True
             else:  # Snow Leopard, etc...
                 # This will only work with XCode 4+ (that includes lldb) which is a paid software for OS X < 10.7
                 # I suppose most people with Snow Leopard won't have it.
                 # This boolean will be used when trying to initialize lldb.
-                global __macosx_is_too_old
-                __macosx_is_too_old = True
+                global _macosx_is_too_old
+                _macosx_is_too_old = True
         else:
-            global __os_not_supported
-            __os_not_supported = True
+            global _os_not_supported
+            _os_not_supported = True
 
-    __initialized = True
+    _initialized = True
 
 
 def debug_prologue(driver):
@@ -143,16 +171,19 @@ def lldb_greeting():
 
 def good_lldb_layout(window=window_ref()):
     # if the user already has two groups, it's a good layout
-    return window.num_groups() == len(lldb_window_layout['cells'])
+    return window.num_groups() == len(_lldb_window_layout['cells'])
 
 
 def set_lldb_window_layout(window=window_ref()):
-    if lldb_out_view() != None and window.num_groups() != len(lldb_window_layout['cells']):
-        window.run_command('set_layout', lldb_window_layout)
+    global _lldb_window_layout
+    debug('setting layout: ' + str(_lldb_window_layout))
+    if lldb_out_view() != None and window.num_groups() != len(_lldb_window_layout['cells']):
+        window.run_command('set_layout', _lldb_window_layout)
 
 
 def set_regular_window_layout(window=window_ref()):
-    window.run_command("set_layout", basic_layout)
+    global _basic_layout
+    window.run_command('set_layout', _basic_layout)
 
 
 def lldb_toggle_output_view(window, show=False, hide=False):
@@ -212,8 +243,8 @@ def lldb_in_panel_on_done(cmd):
 
 
 def cleanup(w=None):
-    global __is_debugging
-    __is_debugging = False
+    global _is_debugging
+    _is_debugging = False
 
     stop_markers_monitor()
     driver = driver_instance()
@@ -253,30 +284,30 @@ def initialize_lldb():
 
 
 def start_debugging():
-    global __is_debugging
-    if __is_debugging:
+    global _is_debugging
+    if _is_debugging:
         cleanup(window_ref())
 
-    reload_settings()
     initialize_plugin()
 
     # Check for error conditions before starting the debugger
-    if __did_not_find_debugserver:
+    global _did_not_find_debugserver, _macosx_is_too_old, _os_not_supported
+    if _did_not_find_debugserver:
         sublime.error_message("Couldn't find the debugserver binary.\n" +  \
                     'Is XCode.app or the command line tools installed?')
         return False
-    if __macosx_is_too_old:
+    if _macosx_is_too_old:
         sublime.error_message('Your Mac OS X version is not supported.\n' +  \
                     'Supported versions: Lion and more recent\n\n' +        \
                     'If you think it should be supported, please contact the author.')
         return False
-    if __os_not_supported:
+    if _os_not_supported:
         sublime.error_message('Your operating system is not supported by this plugin yet.\n' +          \
                     'If there is a stable version of lldb for your operating system and you would ' +   \
                     'like to have the plugin support it, please contact the author.')
         return False
 
-    __is_debugging = True
+    _is_debugging = True
 
     # Really start the debugger
     initialize_lldb()
@@ -301,25 +332,31 @@ class WindowCommand(sublime_plugin.WindowCommand):
 class LldbCommand(WindowCommand):
     def run(self):
         self.setup()
-
-        if driver_instance() is None:
-            if __clear_view_on_startup:
-                clear_lldb_out_view()
-            set_window_ref(self.window)
-
-            if not start_debugging():
-                return
-
-            g = lldb_greeting()
-            if lldb_out_view().size() > 0:
-                g = '\n\n' + lldb_greeting()
-            lldb_view_write(g)
-            lldb_view_write('cwd: ' + os.getcwd() + '\n')
-            self.window.set_view_index(lldb_out_view(), 1, 0)
-
-            debug_prologue(driver_instance())
-
+        ensure_lldb_is_running(self.window)
+        lldb_toggle_output_view(self.window, show=True)
         show_lldb_panel(self.window)
+
+
+class LldbDebugProgram(WindowCommand):
+    def run(self):
+        self.setup()
+        ensure_lldb_is_running(self.window)
+        lldb_toggle_output_view(self.window, show=True)
+
+        exe = search_for_executable()
+        global _default_arch
+        arch = _default_arch
+
+        debug('os.getcwd(): ' + os.getcwd())
+        if exe:
+            debug('Launching program: ' + exe + ' (' + arch + '), with args: ' + str(_default_args))
+            t = driver_instance().debugger.CreateTargetWithFileAndArch(str(exe), str(arch))
+            debug('got a target: ' + str(t))
+            driver_instance().debugger.SetSelectedTarget(t)
+            main_bp = t.BreakpointCreateByName('main', t.GetExecutable().GetFilename())
+            debug('main bp: ' + str(main_bp))
+            p = t.LaunchSimple(_default_args, [], os.getcwd())
+            debug('got a process: ' + str(p))
 
 
 class LldbToggleOutputView(WindowCommand):
@@ -327,7 +364,8 @@ class LldbToggleOutputView(WindowCommand):
         self.setup()
 
         # debug('layout: ' + str(good_lldb_layout(window=self.window)))
-        if good_lldb_layout(window=self.window) and basic_layout != None:
+        global _basic_layout
+        if good_lldb_layout(window=self.window) and _basic_layout != None:
             # restore backup_layout (groups and views)
             lldb_toggle_output_view(self.window, hide=True)
         else:
