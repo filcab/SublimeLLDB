@@ -428,17 +428,14 @@ class LldbDebugProgram(WindowCommand):
         global _default_arch
         arch = _default_arch
 
-        debug('os.getcwd(): ' + os.getcwd())
         if exe:
             debug('Launching program: ' + exe + ' (' + arch + '), with args: ' + str(_default_args))
             t = driver_instance().debugger.CreateTargetWithFileAndArch(str(exe), str(arch))
-            debug('got a target: ' + str(t))
             driver_instance().debugger.SetSelectedTarget(t)
             create_default_bps_for_target(t)
-            # main_bp = t.BreakpointCreateByName('main', t.GetExecutable().GetFilename())
-            # debug('main bp: ' + str(main_bp))
-            p = t.LaunchSimple(_default_args, [], os.getcwd())
-            debug('got a process: ' + str(p))
+            t.LaunchSimple(_default_args, [], os.getcwd())
+
+        show_lldb_panel(self.window)
 
 
 class LldbToggleOutputView(WindowCommand):
