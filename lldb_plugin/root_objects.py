@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*-
 
 import sublime
+import lldb
 
 __lldb_view_name = 'lldb i/o'
 __lldb_prompt = '(lldb) '
@@ -9,6 +10,7 @@ __driver = None
 __out_view = None
 __got_input_function = None
 __window_ref = None
+_process_state = lldb.eStateInvalid
 __breakpoint_dict = {}
 
 __input_fh = None
@@ -31,6 +33,26 @@ def lldb_view_name():
 def set_lldb_view_name(name):
     global __lldb_view_name
     __lldb_view_name = name
+
+
+def process_state():
+    return _process_state
+
+
+def set_process_state(state):
+    _process_state = state
+
+
+def process_has_started():
+    pass
+
+
+def process_is_running():
+    pass
+
+
+def process_is_stopped():
+    pass
 
 
 def breakpoint_dict():

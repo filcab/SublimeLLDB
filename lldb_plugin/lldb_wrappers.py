@@ -320,6 +320,7 @@ class LldbDriver(threading.Thread):
 
             # only after printing the std* can we print our prompts
             state = lldb.SBProcess.GetStateFromEvent(ev)
+            set_process_state(state)
             debug('process state: ' + lldbutil.state_type_to_str(state))
             if state == lldb.eStateInvalid:
                 return
@@ -614,6 +615,6 @@ def is_return_invalid(r):
     return r == lldb.eReturnStatusInvalid
 
 
-from root_objects import set_driver_instance, lldb_view_send
+from root_objects import set_driver_instance, lldb_view_send, set_process_state
 from monitors import marker_update
 from utilities import stderr_msg, stdout_msg
