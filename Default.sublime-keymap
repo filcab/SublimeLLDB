@@ -10,6 +10,45 @@
     {
         "command": "lldb_clear_output_view",
         "keys": ["shift+alt+super+k"]
+    },
+    // Program ctrl keybindings
+    {
+        "command": "lldb_continue",
+        "keys": ["ctrl+super+y"]
+    },
+    // missing: Continue to current line
+    // missing: send signal
+
+    // Stepping
+    {
+        "command": "lldb_step_over",
+        "keys": ["f6"]
+    },
+    {
+        "command": "lldb_step_into",
+        "keys": ["f7"]
+    },
+    {
+        "command": "lldb_step_out",
+        "keys": ["f8"]
+    },
+
+    // Instruction level stepping
+    {
+        "command": "lldb_step_over_instruction",
+        "keys": ["ctrl+f6"]
+    },
+    {
+        "command": "lldb_step_over_thread",
+        "keys": ["ctrl+shift+f6"]
+    },
+    {
+        "command": "lldb_step_into_instruction",
+        "keys": ["ctrl+f7"]
+    },
+    {
+        "command": "lldb_step_into_thread",
+        "keys": ["ctrl+shift+f7"]
     }
     //,
     // {

@@ -401,6 +401,18 @@ def create_default_bps_for_target(target):
     # debug('%d breakpoints created' % n)
 
 
+class InputPanelDelegate(object):
+    def on_done(self, string):
+        pass
+
+    def on_change(self, string):
+        pass
+
+    def on_cancel(self):
+        pass
+
+
+# TODO: Check when each command should be enabled.
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
         debug_thr('starting command')
@@ -436,6 +448,130 @@ class LldbDebugProgram(WindowCommand):
             t.LaunchSimple(_default_args, [], os.getcwd())
 
         show_lldb_panel(self.window)
+
+
+class LldbStopDebugging(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        if driver:
+            cleanup(self.window)
+
+
+class LldbContinue(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        if driver:
+            target = driver.debugger.GetSelectedTarget()
+            if target:
+                process = target.GetProcess()
+                if process:
+                    process.Continue()
+        # TODO: Decide what to do in case of errors.
+        # e.g: Warn about no running program, etc.
+
+
+class LldbSendSignal(WindowCommand):
+    class SendSignalDelegate(InputPanelDelegate):
+        def __init__(self, owner, process):
+            self.__owner = owner
+            self.__process = process
+
+        def on_done(self, string):
+            if self.__process:  # Check if it's still valid
+                # TODO: Allow specification of signals by name.
+                error = self.__process.Signal(int(string))
+                if error.Fail():
+                    self.__owner.window.error_message(error.GetCString())
+
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        if driver:
+            target = driver.debugger.GetSelectedTarget()
+            if target:
+                process = target.GetProcess()
+                if process:
+                    delegate = self.SendSignalDelegate(self, process)
+                    self.window.show_input_panel('Signal number', '',
+                        delegate.on_done, delegate.on_change, delegate.on_cancel)
+                    # TODO check what happens. From our standpoint, it seems the process terminated successfully.
+
+
+def get_selected_thread(driver):
+    if driver:
+        debugger = driver.debugger
+        if debugger:
+            target = debugger.GetSelectedTarget()
+            if target:
+                process = target.GetProcess()
+                if process:
+                    return process.GetSelectedThread()
+    return None
+
+
+class LldbStepOver(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        thread = get_selected_thread(driver)
+        if thread:
+            thread.StepOver()
+
+
+class LldbStepInto(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        thread = get_selected_thread(driver)
+        if thread:
+            thread.StepInto()
+
+
+class LldbStepOut(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        thread = get_selected_thread(driver)
+        if thread:
+            thread.StepOut()
+
+
+class LldbStepOverInstruction(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        thread = get_selected_thread(driver)
+        if thread:
+            thread.StepInstruction(True)
+
+
+class LldbStepOverThread(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        thread = get_selected_thread(driver)
+        if thread:
+            thread.StepOver(lldb.eOnlyThisThread)
+
+
+class LldbStepIntoInstruction(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        thread = get_selected_thread(driver)
+        if thread:
+            thread.StepInstruction(False)
+
+
+class LldbStepIntoThread(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        thread = get_selected_thread(driver)
+        if thread:
+            thread.StepInto(lldb.eOnlyThisThread)
 
 
 class LldbToggleOutputView(WindowCommand):

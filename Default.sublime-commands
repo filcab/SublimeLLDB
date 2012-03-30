@@ -1,4 +1,5 @@
 [
+	// Starting/stopping lldb
 	{
 		"caption": "LLDB: Show LLDB prompt (starting LLDB if needed)",
 		"command": "lldb",
@@ -9,6 +10,21 @@
 		"command": "lldb_debug_program",
 		"args": {}
 	},
+    {
+        "caption": "LLDB: Stop debugging",
+        "command": "lldb_stop_debugging"
+    },
+
+    // Debugging commands
+    {
+        "caption": "LLDB: Continue",
+        "command": "lldb_continue"
+    },
+    {
+        "caption": "LLDB: Send Signal",
+        "command": "lldb_send_signal"
+    },
+    // Output view related commands
 	{
 		"caption": "LLDB: Toggle LLDB output view",
 		"command": "lldb_toggle_output_view",
