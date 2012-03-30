@@ -1,0 +1,106 @@
+[
+    {
+        "id": "tools",
+        "children":
+        [
+            {
+                "caption": "LLDB",
+                "mnemonic": "l",
+                "id": "lldb",
+                "children":
+                [
+                    // Starting the debugger
+                    {
+                        "caption": "Debug default program",
+                        "command": "lldb_debug_program"
+                    },
+                    {
+                        "caption": "Start LLDB REPL",
+                        "command": "lldb"
+                    },
+                    {
+                        "caption": "Stop debugging",
+                        "command": "lldb_stop_debugging"
+                    },
+                    {
+                        "caption": "-"
+                    },
+                    // Debugging commands (XCode order)
+                    {
+                        "caption": "Continue",
+                        "command": "lldb_continue"
+                    },
+                    // {
+                    //     "caption": "Continue to current line"
+                    // },
+                    {
+                        "caption": "Send Signal",
+                        "command": "lldb_send_signal"
+                    },
+                    {
+                        "caption": "-"
+                    },
+                    // Stepping
+                    {
+                        "caption": "Step Over",
+                        "command": "lldb_step_over"
+                    },
+                    {
+                        "caption": "Step Into",
+                        "command": "lldb_step_into"
+                    },
+                    {
+                        "caption": "Step Out",
+                        "command": "lldb_step_out"
+                    },
+                    {
+                        "caption": "-"
+                    },
+                    // Instruction level stepping
+                    {
+                        "caption": "Step Over Instruction",
+                        "command": "lldb_step_over_instruction"
+                    },
+                    {
+                        "caption": "Step Over Thread",
+                        "command": "lldb_step_over_thread"
+                    },
+                    {
+                        "caption": "Step Into Instruction",
+                        "command": "lldb_step_into_instruction"
+                    },
+                    {
+                        "caption": "Step Into Thread",
+                        "command": "lldb_step_into_thread"
+                    },
+                    {
+                        "caption": "-"
+                    },
+                    // Breakpoints
+                    {
+                        "caption": "Add a Breakpoint at Current Line"
+                    },
+                    {
+                        "caption": "Create Symbolic Breakpoint"
+                    },
+                    {
+                        "caption": "Deactivate Breakpoints"
+                    },
+                    {
+                        "caption": "-"
+                    },
+                    // Miscellaneous
+                    {
+                        "caption": "Shared Libraries"
+                    },
+                    {
+                        "caption": "View Memory"
+                    },
+                    {
+                        "caption": "Clear Console"
+                    }
+                ]
+            }
+        ]
+    }
+]
