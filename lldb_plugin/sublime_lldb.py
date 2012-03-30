@@ -10,6 +10,7 @@ import datetime
 import threading
 
 import lldb
+import lldbutil
 
 from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
@@ -574,6 +575,19 @@ class LldbStepIntoThread(WindowCommand):
             thread.StepInto(lldb.eOnlyThisThread)
 
 
+# Breakpoint related commands
+class LldbListBreakpoints(WindowCommand):
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        if driver:
+            target = driver.debugger.GetSelectedTarget()
+            for bp in target.breakpoint_iter():
+                # TODO: Generate a list to be fed to settings.lldb.breakpoints
+                debug(lldbutil.get_description(bp))
+
+
+# Output view related commands
 class LldbToggleOutputView(WindowCommand):
     def run(self):
         self.setup()
