@@ -198,9 +198,10 @@ def lldb_toggle_output_view(window, show=False, hide=False):
     # Just show the window.
     v = lldb_out_view()
     if v:
-        if show and not good_lldb_layout(window=window):
-            set_lldb_window_layout(window=window)
-            window.set_view_index(v, 1, 0)
+        if show:
+            if not good_lldb_layout(window=window):
+                set_lldb_window_layout(window=window)
+                window.set_view_index(v, 1, 0)
         elif hide:
             set_regular_window_layout(window=window)
         elif not good_lldb_layout(window=window):
@@ -227,13 +228,12 @@ def lldb_in_panel_on_done(cmd):
     # global prompt
     if cmd is None:
         cmd = ''
-
     if driver_instance():
         lldb_view_write(lldb_prompt() + cmd + '\n')
         driver_instance().send_command(cmd)
 
         # We don't have a window, so let's re-use the one active on lldb launch
-        lldb_toggle_output_view(window_ref(), show=True)
+        # lldb_toggle_output_view(window_ref(), show=True)
 
         v = lldb_out_view()
         v.show_at_center(v.size() + 1)

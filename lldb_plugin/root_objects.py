@@ -174,7 +174,7 @@ def lldb_view_write(string):
             # Bail out and just set the first window
             __window_ref = sublime.windows()[0]
 
-        __window_ref.set_view_index(__out_view, 1, 0)
+        # __window_ref.set_view_index(__out_view, 1, 0)
 
     __out_view.set_read_only(False)
     edit = __out_view.begin_edit('lldb-panel-write')
