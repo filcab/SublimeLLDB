@@ -57,7 +57,7 @@ def stop_markers_monitor():
 
 def lldb_markers_monitor(w, driver):
     thread_created(threading.current_thread().name)
-    debug_thr()
+    # debug_thr()
     debug('started')
 
     done = False
@@ -68,13 +68,12 @@ def lldb_markers_monitor(w, driver):
             v = lldb_file_markers_queue.get(True)
             m = v['marks']
 
-            debug('got: ' + str(v))
+            # debug('got: ' + str(v))
             if 'pc' == m:
                 args = v['args']
                 f = lambda: update_code_view(w, *args)
             elif 'bp' == m:
                 args = v['args']
-                debug('breaking for: ' + str(args))
                 f = lambda: update_breakpoints(w, *args)
             # elif 'all' == m:
             #     args = v['args']
@@ -154,7 +153,7 @@ def mark_code_loc(view, show_panel, loc):
     line = loc[1]
     scope = loc[2]
 
-    debug('marking loc at: ' + str(view))
+    # debug('marking loc at: ' + str(view))
     region = [view.full_line(
                 view.text_point(line - 1, 0))]
     view.add_regions("lldb-location",

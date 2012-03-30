@@ -224,7 +224,7 @@ def clear_lldb_out_view():
 
 
 def lldb_in_panel_on_done(cmd):
-    debug_thr()
+    # debug_thr()
 
     # global prompt
     if cmd is None:
@@ -416,8 +416,6 @@ class InputPanelDelegate(object):
 # TODO: Check when each command should be enabled.
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
-        debug_thr('starting command')
-
         # global lldb_out_view
         if lldb_out_view() is None:
             set_lldb_out_view(get_lldb_output_view(self.window, lldb_view_name()))  # for lldb output

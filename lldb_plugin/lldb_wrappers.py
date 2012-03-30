@@ -247,7 +247,7 @@ class LldbDriver(threading.Thread):
 
     def handle_breakpoint_event(self, ev):
         type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
-        debug('breakpoint event: ' + lldbutil.get_description(ev))
+        # debug('breakpoint event: ' + lldbutil.get_description(ev))
 
         if type & lldb.eBreakpointEventTypeCommandChanged       \
             or type & lldb.eBreakpointEventTypeConditionChanged:
@@ -257,7 +257,7 @@ class LldbDriver(threading.Thread):
             or type & lldb.eBreakpointEventTypeLocationsResolved:
             # TODO: show disabled bps
             bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
-            debug(lldbutil.get_description(bp))
+            # debug('bp: ' + lldbutil.get_description(bp))
             for loc in bp:
                 entry = None
                 if loc and loc.GetAddress():
@@ -305,7 +305,7 @@ class LldbDriver(threading.Thread):
 
     def handle_process_event(self, ev):
         type = ev.GetType()
-        debug('process event: ' + lldbutil.get_description(ev))
+        # debug('process event: ' + lldbutil.get_description(ev))
 
         if type & lldb.SBProcess.eBroadcastBitSTDOUT:
             self.get_process_stdout()
@@ -321,7 +321,6 @@ class LldbDriver(threading.Thread):
             # only after printing the std* can we print our prompts
             state = lldb.SBProcess.GetStateFromEvent(ev)
             set_process_state(state)
-            debug('process state: ' + lldbutil.state_type_to_str(state))
             if state == lldb.eStateInvalid:
                 return
 
@@ -341,6 +340,7 @@ class LldbDriver(threading.Thread):
             elif state == lldb.eStateRunning:
                 None  # Don't be too chatty
             elif state == lldb.eStateExited:
+                debug('process state: ' + lldbutil.state_type_to_str(state))
                 r = interpret_command(self.debugger, 'process status')
                 lldb_view_send(stdout_msg(r[0].GetOutput()))
                 lldb_view_send(stderr_msg(r[0].GetError()))
@@ -349,6 +349,8 @@ class LldbDriver(threading.Thread):
             elif state == lldb.eStateStopped     \
                 or state == lldb.eStateCrashed   \
                 or state == lldb.eStateSuspended:
+                debug('process state: ' + lldbutil.state_type_to_str(state)) if state != lldb.eStateStopped else None
+
                 if lldb.SBProcess.GetRestartedFromEvent(ev):
                     lldb_view_send('Process %llu stopped and was programmatically restarted.' %
                         process.GetProcessID())
@@ -405,7 +407,6 @@ class LldbDriver(threading.Thread):
             curr_thread = proc.GetSelectedThread()
             current_thread_stop_reason = curr_thread.GetStopReason()
 
-            debug('thread stop reason: ' + lldbutil.stop_reason_to_str(current_thread_stop_reason))
             other_thread = lldb.SBThread()
             plan_thread = lldb.SBThread()
             if not curr_thread.IsValid() \
@@ -421,6 +422,7 @@ class LldbDriver(threading.Thread):
                         or t_stop_reason == lldb.eStopReasonWatchpoint \
                         or t_stop_reason == lldb.eStopReasonSignal \
                         or t_stop_reason == lldb.eStopReasonException:
+                        debug('thread stop reason: ' + lldbutil.stop_reason_to_str(current_thread_stop_reason))
                         if not other_thread:
                             other_thread = t
                         elif t_stop_reason == lldb.eStopReasonPlanComplete:
