@@ -363,6 +363,9 @@ bp_re_name = re.compile('^(.*\S)\s*$')
 def create_default_bps_for_target(target):
     n = 0
     for bp in _default_bps:
+        if not bp:
+            continue
+
         if type(bp) is str or type(bp) is unicode:
             bp = str(bp)
             m = bp_re_file_line.match(bp)
