@@ -578,14 +578,74 @@ class LldbStepIntoThread(WindowCommand):
 
 # Breakpoint related commands
 class LldbListBreakpoints(WindowCommand):
+    bp_desc_re_addr = re.compile('address = ([^,]+)')
+    bp_desc_re_name = re.compile("name = '(([^'\\\\]|\\\\.)+)'")
+    bp_desc_re_file_line = re.compile("file =\\s*'(([^'\\\\]|\\\\.)+)', line = (\\d+)")
+    bp_desc_re_regex = re.compile('source regex = "(([^"\\\\]|\\\\.)*)"')
+
+    def parse_description(self, bp_desc):
+        """
+        Parse breakpoint descriptions from lldb, outputting JSON for putting in the lldb.breakpoints setting.
+        TODO: Support breakpoint conditions (and maybe callbacks/commands)
+
+        Example descriptions:
+
+        Current breakpoints:
+        1: name = 'main', locations = 1
+          1.1: where = tests`main + 36 at tests.c:15, address = tests[0x0000000100000824], unresolved, hit count = 0
+
+        2: name = 'atoi', locations = 2
+          2.1: where = tests`atoi + 13 at atoi.c:10, address = tests[0x000000010000154d], unresolved, hit count = 0
+          2.2: where = libsystem_c.dylib`atoi, address = libsystem_c.dylib[0x0000000000080bba], unresolved, hit count = 0
+
+        3: name = 'itoa', locations = 1
+          3.1: where = tests`itoa + 11 at atoi.c:56, address = tests[0x000000010000175b], unresolved, hit count = 0
+
+        4: file ='tests.c', line = 42, locations = 1
+          4.1: where = tests`main + 1786 at tests.c:43, address = tests[0x0000000100000efa], unresolved, hit count = 0
+
+        """
+        m = self.bp_desc_re_addr.search(bp_desc)
+        if m:
+            json = '{ "address": %s }' % m.group(1)
+            return json
+
+        m = self.bp_desc_re_name.search(bp_desc)
+        if m:
+            json = '{ "name": "%s" }' % m.group(1)
+            return json
+
+        m = self.bp_desc_re_file_line.search(bp_desc)
+        if m:
+            json = '{ "file": "%s", "line": %s }' % (m.group(1), m.group(2))
+            return json
+
+        m = self.bp_desc_re_regex.search(bp_desc)
+        if m:
+            json = '{ "regex": "%s" }' % m.group(1)
+            return json
+
     def run(self):
         self.setup()
         driver = driver_instance()
         if driver:
             target = driver.debugger.GetSelectedTarget()
+            bp_list = []
             for bp in target.breakpoint_iter():
-                # TODO: Generate a list to be fed to settings.lldb.breakpoints
-                debug(lldbutil.get_description(bp))
+                # We're going to have to parse the description to know which kind
+                # of breakpoint we have, since lldb doesn't reify that information.
+                bp_list.append(self.parse_description(lldbutil.get_description(bp)))
+
+            string = ', '.join(bp_list)
+            v = self.window.get_output_panel('breakpoint list')
+
+            v.set_read_only(False)
+            edit = v.begin_edit('bp-list-view-clear')
+            v.replace(edit, sublime.Region(0, v.size()), string)
+            v.end_edit(edit)
+            v.set_read_only(True)
+
+            self.window.run_command('show_panel', {"panel": 'output.breakpoint list'})
 
 
 # Output view related commands
