@@ -434,6 +434,15 @@ class LldbCommand(WindowCommand):
 
 
 class LldbDebugProgram(WindowCommand):
+    def is_enabled(self):
+        if not _default_exe:
+            setup_settings()
+            reload_settings()
+
+        exe = search_for_executable()
+
+        return exe is not None
+
     def run(self):
         self.setup()
         ensure_lldb_is_running(self.window)
@@ -454,6 +463,10 @@ class LldbDebugProgram(WindowCommand):
 
 
 class LldbStopDebugging(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -462,6 +475,10 @@ class LldbStopDebugging(WindowCommand):
 
 
 class LldbContinue(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -476,6 +493,10 @@ class LldbContinue(WindowCommand):
 
 
 class LldbSendSignal(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     class SendSignalDelegate(InputPanelDelegate):
         def __init__(self, owner, process):
             self.__owner = owner
@@ -503,6 +524,10 @@ class LldbSendSignal(WindowCommand):
 
 
 def get_selected_thread(driver):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     if driver:
         debugger = driver.debugger
         if debugger:
@@ -515,6 +540,10 @@ def get_selected_thread(driver):
 
 
 class LldbStepOver(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -524,6 +553,10 @@ class LldbStepOver(WindowCommand):
 
 
 class LldbStepInto(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -533,6 +566,10 @@ class LldbStepInto(WindowCommand):
 
 
 class LldbStepOut(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -542,6 +579,10 @@ class LldbStepOut(WindowCommand):
 
 
 class LldbStepOverInstruction(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -551,6 +592,10 @@ class LldbStepOverInstruction(WindowCommand):
 
 
 class LldbStepOverThread(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -560,6 +605,10 @@ class LldbStepOverThread(WindowCommand):
 
 
 class LldbStepIntoInstruction(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -569,6 +618,10 @@ class LldbStepIntoInstruction(WindowCommand):
 
 
 class LldbStepIntoThread(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
     def run(self):
         self.setup()
         driver = driver_instance()
@@ -583,6 +636,10 @@ class LldbListBreakpoints(WindowCommand):
     bp_desc_re_name = re.compile("name = '(([^'\\\\]|\\\\.)+)'")
     bp_desc_re_file_line = re.compile("file =\\s*'(([^'\\\\]|\\\\.)+)', line = (\\d+)")
     bp_desc_re_regex = re.compile('source regex = "(([^"\\\\]|\\\\.)*)"')
+
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None and driver.debugger.GetSelectedTarget()
 
     def parse_description(self, bp_desc):
         """
