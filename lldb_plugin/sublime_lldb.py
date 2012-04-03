@@ -212,9 +212,7 @@ def lldb_toggle_output_view(window, show=False, hide=False):
             set_regular_window_layout(window=window)
 
 
-def clear_lldb_out_view():
-    v = lldb_out_view()
-
+def clear_view(v):
     v.set_read_only(False)
     edit = v.begin_edit('lldb-view-clear')
     v.erase(edit, sublime.Region(0, v.size()))
@@ -338,7 +336,7 @@ def ensure_lldb_is_running(w=None):
     if driver_instance() is None:
         global _clear_view_on_startup
         if _clear_view_on_startup:
-            clear_lldb_out_view()
+            clear_view(lldb_out_view())
 
         if not start_debugging():
             return
@@ -639,6 +637,7 @@ class LldbListBreakpoints(WindowCommand):
             string = ', '.join(bp_list)
             v = self.window.get_output_panel('breakpoint list')
 
+            clear_view(v)
             v.set_read_only(False)
             edit = v.begin_edit('bp-list-view-clear')
             v.replace(edit, sublime.Region(0, v.size()), string)
@@ -668,4 +667,4 @@ class LldbClearOutputView(WindowCommand):
         # debug('clearing lldb view')
         # TODO: Test variable to know if we should clear the view when starting a debug session
 
-        clear_lldb_out_view()
+        clear_view(lldb_out_view())
