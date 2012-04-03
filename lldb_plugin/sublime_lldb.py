@@ -403,6 +403,10 @@ def create_default_bps_for_target(target):
 
 
 class InputPanelDelegate(object):
+    def show_on_window(self, window, title='', initial_text=''):
+        window.show_input_panel(title, initial_text,
+            self.on_done, self.on_change, self.on_cancel)
+
     def on_done(self, string):
         pass
 
@@ -493,9 +497,9 @@ class LldbSendSignal(WindowCommand):
                 process = target.GetProcess()
                 if process:
                     delegate = self.SendSignalDelegate(self, process)
-                    self.window.show_input_panel('Signal number', '',
-                        delegate.on_done, delegate.on_change, delegate.on_cancel)
-                    # TODO check what happens. From our standpoint, it seems the process terminated successfully.
+                    delegate.show_on_window(self.window, 'Signal number')
+                    # TODO: check what happens. From our standpoint, it seems the process terminated successfully.
+                    #       on the lldb CLI interface, we see the signal.
 
 
 def get_selected_thread(driver):
