@@ -21,6 +21,8 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_view_name, set_lldb_view_name,            \
                          get_settings_keys
 
+from utilities import generate_memory_view_for
+
 from monitors import start_markers_monitor, stop_markers_monitor
 
 
@@ -52,6 +54,10 @@ _default_exe = None
 _default_bps = []
 _default_args = []
 _default_arch = lldb.LLDB_ARCH_DEFAULT
+_default_view_mem_size = int(512)
+_default_view_mem_width = 32
+_default_view_mem_grouping = 8
+_layout_group_source_file = 0
 _prologue = []
 
 
@@ -93,6 +99,8 @@ def reload_settings():
     global _use_bundled_debugserver, _lldb_window_layout, _basic_layout
     global _clear_view_on_startup, _prologue
     global _default_exe, _default_bps, _default_args, _default_arch
+    global _default_view_mem_size, _default_view_mem_width, _default_view_mem_grouping
+    global _layout_group_source_file
     _use_bundled_debugserver = get_setting('lldb.use_bundled_debugserver')
     _lldb_window_layout = get_setting('lldb.layout')
     _basic_layout = get_setting('lldb.layout.basic')
@@ -104,6 +112,12 @@ def reload_settings():
     _default_args = get_setting('lldb.arch') or []
     _default_arch = get_setting('lldb.arch') or lldb.LLDB_ARCH_DEFAULT
     _default_bps = get_setting('lldb.breakpoints') or []
+
+    _default_view_mem_size = int(get_setting('lldb.view_memory.size'))
+    _default_view_mem_width = get_setting('lldb.view_memory.width')
+    _default_view_mem_grouping = get_setting('lldb.view_memory.grouping')
+
+    _layout_group_source_file = get_setting('lldb.layout.group.source_file')
 
 
 def initialize_plugin():
@@ -708,6 +722,120 @@ class LldbListBreakpoints(WindowCommand):
             v.set_read_only(True)
 
             self.window.run_command('show_panel', {"panel": 'output.breakpoint list'})
+
+
+class LldbBreakAtLine(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
+
+    def run(self):
+        self.setup()
+
+        driver = driver_instance()
+        v = self.window.active_view()
+        if driver and v:
+            file = v.file_name()
+            (line, col) = v.rowcol(v.sel()[0].begin())
+            driver.debugger.BreakpointCreateByLocation(str(file), line)
+
+
+# Miscellaneous commands
+class LldbViewSharedLibraries(WindowCommand):
+    _shared_libraries_view_name = 'Shared libraries'
+
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None and driver.debugger.GetSelectedTarget()
+
+    def run(self):
+        self.setup()
+
+        driver = driver_instance()
+        target = driver.debugger.GetSelectedTarget()
+        result = ''
+
+        if target:
+            for i in xrange(0, target.GetNumModules()):
+                result += debug(lldbutil.get_description(target.GetModuleAtIndex(i))) + '\n'
+
+            # Re-use a view, if we already have one.
+            v = None
+            for _v in self.window.views():
+                if _v.name() == self._shared_libraries_view_name:
+                    v = _v
+                    break
+
+            if v is None:
+                v = self.window.new_file()
+                v.set_name(self._shared_libraries_view_name)
+
+            clear_view(v)
+            v.set_scratch(True)
+            v.set_read_only(False)
+
+            edit = v.begin_edit('lldb-shared-libraries-list')
+            v.insert(edit, 0, result)
+            v.end_edit(edit)
+            v.set_read_only(True)
+
+
+class LldbViewMemory(WindowCommand):
+    _view_memory_view_prefix = 'View memory @ '
+
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None and driver.debugger.GetSelectedTarget()
+
+    class ViewMemoryDelegate(InputPanelDelegate):
+        def __init__(self, owner, process):
+            self.__owner = owner
+            self.__process = process
+
+        def on_done(self, string):
+            if self.__process:  # Check if it's still valid
+                addr = int(string, 0)
+                error = lldb.SBError()
+                content = self.__process.ReadMemory(addr, _default_view_mem_size, error)
+                if error.Fail():
+                    sublime.error_message(error.GetCString())
+                    return None
+
+                # Use 'ascii' encoding as each byte of 'content' is within [0..255].
+                new_bytes = bytearray(content, 'latin1')
+
+                result = generate_memory_view_for(addr, new_bytes, _default_view_mem_width, _default_view_mem_grouping)
+                # Re-use a view, if we already have one.
+                v = None
+                name = self.__owner._view_memory_view_prefix + hex(addr)
+                for _v in self.__owner.window.views():
+                    if _v.name() == name:
+                        v = _v
+                        break
+
+                if v is None:
+                    self.__owner.window.focus_group(_layout_group_source_file)
+                    v = self.__owner.window.new_file()
+                    v.set_name(name)
+
+                clear_view(v)
+                v.set_scratch(True)
+                v.set_read_only(False)
+
+                edit = v.begin_edit('lldb-view-memory-' + hex(addr))
+                v.insert(edit, 0, result)
+                v.end_edit(edit)
+                v.set_read_only(True)
+
+    def run(self):
+        driver = driver_instance()
+        if driver:
+            target = driver.debugger.GetSelectedTarget()
+            if target:
+                process = target.GetProcess()
+                if process:
+                    delegate = self.ViewMemoryDelegate(self, process)
+                    delegate.show_on_window(self.window, 'Address to inspect')
 
 
 # Output view related commands
