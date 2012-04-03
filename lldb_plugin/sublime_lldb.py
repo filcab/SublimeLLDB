@@ -486,7 +486,7 @@ class LldbSendSignal(WindowCommand):
                 # TODO: Allow specification of signals by name.
                 error = self.__process.Signal(int(string))
                 if error.Fail():
-                    self.__owner.window.error_message(error.GetCString())
+                    sublime.error_message(error.GetCString())
 
     def run(self):
         self.setup()
