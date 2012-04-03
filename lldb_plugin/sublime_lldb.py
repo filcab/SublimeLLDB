@@ -688,6 +688,9 @@ class LldbListBreakpoints(WindowCommand):
         driver = driver_instance()
         if driver:
             target = driver.debugger.GetSelectedTarget()
+            if not target:
+                return
+
             bp_list = []
             for bp in target.breakpoint_iter():
                 # We're going to have to parse the description to know which kind
