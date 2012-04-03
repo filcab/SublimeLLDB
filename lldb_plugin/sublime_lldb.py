@@ -132,7 +132,7 @@ def initialize_plugin():
                         os.environ['LLDB_DEBUGSERVER_PATH'] = path
                         found = True
                         break
-                if not found:  # XCode has to be installed
+                if not found:  # XCode has to be installed, signal the plugin.
                     global _did_not_find_debugserver
                     _did_not_find_debugserver = True
             else:  # Snow Leopard, etc...
@@ -355,7 +355,6 @@ bp_re_file_line = re.compile('^(.*\S)\s*:\s*(\d+)\s*$')
 bp_re_address = re.compile('^(0x[0-9A-Fa-f]+)\s*$')
 # bp_re_abbrev = re.compile('^(-.*)$')
 bp_re_name = re.compile('^(.*\S)\s*$')
-# break_regex_cmd_ap->AddRegexCommand("^(.*\S)`(.*\S)\s*$", "breakpoint set --name '%2' --shlib '%1'") &&
 
 
 def create_default_bps_for_target(target):
