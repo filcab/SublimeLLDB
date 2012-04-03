@@ -24,6 +24,29 @@
         "caption": "LLDB: Send Signal",
         "command": "lldb_send_signal"
     },
+
+    // Breakpoint commands
+    {
+        "caption": "LLDB: Add a Breakpoint at Current Line",
+        "command": "lldb_break_at_line"
+    },
+    {
+        "caption": "Create Symbolic Breakpoint"
+    },
+    {
+        "caption": "Deactivate Breakpoints"
+    },
+
+    // Miscellaneous commands
+    {
+        "caption": "Shared Libraries",
+        "command": "lldb_view_shared_libraries"
+    },
+    {
+        "caption": "View Memory",
+        "command": "lldb_view_memory"
+    },
+
     // Output view related commands
 	{
 		"caption": "LLDB: Toggle LLDB output view",

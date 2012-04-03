@@ -50,6 +50,13 @@
         "command": "lldb_step_into_thread",
         "keys": ["ctrl+shift+f7"]
     }
+    ,
+    // Miscellaneous commands
+    {
+        "caption": "View Memory",
+        "command": "lldb_view_memory",
+        "keys": ["shift+super+m"]
+    }
     //,
     // {
     //     "command": "gdb_edit_register",

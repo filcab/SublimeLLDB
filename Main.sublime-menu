@@ -78,7 +78,8 @@
                     },
                     // Breakpoints
                     {
-                        "caption": "Add a Breakpoint at Current Line"
+                        "caption": "Add a Breakpoint at Current Line",
+                        "command": "lldb_break_at_line"
                     },
                     {
                         "caption": "Create Symbolic Breakpoint"
@@ -91,13 +92,16 @@
                     },
                     // Miscellaneous
                     {
-                        "caption": "Shared Libraries"
+                        "caption": "Shared Libraries",
+                        "command": "lldb_view_shared_libraries"
                     },
                     {
-                        "caption": "View Memory"
+                        "caption": "View Memory",
+                        "command": "lldb_view_memory"
                     },
                     {
-                        "caption": "Clear Console"
+                        "caption": "Clear Console",
+                        "command": "lldb_clear_output_view"
                     }
                 ]
             }

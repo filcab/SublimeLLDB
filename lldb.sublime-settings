@@ -54,6 +54,15 @@
     "lldb.markers.breakpoint.scope": "string",  // Good color for the breakpoints on this color scheme. TODO: Create new scopes
     "lldb.markers.breakpoint.type": "circle",
 
+    /*
+        Configurations for the view memory command.
+            size: total number of bytes to show
+            width: number of bytes to show in each line
+            grouping: number of bytes in each group
+     */
+    "lldb.view_memory.size": 512,
+    "lldb.view_memory.width": 32,
+    "lldb.view_memory.grouping": 8,
 
     "lldb.last.setting": null
 }
