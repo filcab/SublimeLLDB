@@ -442,6 +442,7 @@ class WindowCommand(sublime_plugin.WindowCommand):
 
 
 class LldbCommand(WindowCommand):
+    # Always enabled, since we want to start lldb if it's not running.
     def run(self):
         self.setup()
         ensure_lldb_is_running(self.window)
@@ -450,6 +451,7 @@ class LldbCommand(WindowCommand):
 
 
 class LldbDebugProgram(WindowCommand):
+    # Only enabled when we have a default program to run.
     def is_enabled(self):
         if not _default_exe:
             setup_settings()
