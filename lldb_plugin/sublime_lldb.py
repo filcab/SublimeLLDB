@@ -440,6 +440,9 @@ class WindowCommand(sublime_plugin.WindowCommand):
         if lldb_out_view() is None:
             set_lldb_out_view(get_lldb_output_view(self.window, lldb_view_name()))  # for lldb output
 
+    def status_message(self, string):
+        sublime.status_message(string)
+
 
 class LldbCommand(WindowCommand):
     # Always enabled, since we want to start lldb if it's not running.
