@@ -37,7 +37,7 @@ def thread_created(string):
 class LldbDriver(threading.Thread):
     eBroadcastBitThreadShouldExit = 1 << 0
     eBroadcastBitThreadDidStart = 1 << 1
-    # eBroadcastBitReadyForInput = 1 << 2
+    eBroadcastBitReadyForInput = 1 << 2
 
     __is_done = False
     __io_channel = None
@@ -113,7 +113,7 @@ class LldbDriver(threading.Thread):
         """Send an eBroadcastBitReadyForInput if the debugger wasn't ready before this call."""
         if not self.__waiting_for_command:
             self.__ready_for_command = True
-            # self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, True)
+            self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, True)
 
     @property
     def line_entry(self):
@@ -189,6 +189,7 @@ class LldbDriver(threading.Thread):
                     if event:
                         if event.GetBroadcaster():
                             ev_type = event.GetType()
+                            # TODO: Fix this! Only the driver should be listening to eBroadcastBitHasUserInput
                             if (event.BroadcasterMatchesRef(self.io_channel.broadcaster)):
                                 if ev_type & IOChannel.eBroadcastBitHasUserInput:
                                     command_string = lldb.SBEvent.GetCStringFromEvent(event)
@@ -550,7 +551,9 @@ class IOChannel(threading.Thread):
             event_type = event.GetType()
             if event.GetBroadcaster():
                 if event.BroadcasterMatchesRef(self.driver.broadcaster):
-                    # if event_type & LldbDriver.eBroadcastBitReadyForInput
+                    if event_type & LldbDriver.eBroadcastBitReadyForInput:
+                        from sublime_lldb import LldbInputDelegate
+                        LldbInputDelegate.get_input()
                     if event_type & LldbDriver.eBroadcastBitThreadShouldExit:
                         done = True
                         continue
@@ -620,3 +623,4 @@ def is_return_invalid(r):
 from root_objects import set_driver_instance, lldb_view_send, set_process_state
 from monitors import marker_update
 from utilities import stderr_msg, stdout_msg
+# from sublime_lldb import LldbInputDelegate
