@@ -110,7 +110,7 @@ def reload_settings():
     _prologue = get_setting('lldb.prologue')
 
     _default_exe = get_setting('lldb.exe')
-    _default_args = get_setting('lldb.arch') or []
+    _default_args = get_setting('lldb.args') or []
     _default_arch = get_setting('lldb.arch') or lldb.LLDB_ARCH_DEFAULT
     _default_bps = get_setting('lldb.breakpoints') or []
 
@@ -542,7 +542,6 @@ class LldbAttachProcess(WindowCommand):
 
             # How can we setup the default breakpoints?
             # We *could* start a new thread with a listener, just for that...
-
 
     def run(self):
         self.setup()
