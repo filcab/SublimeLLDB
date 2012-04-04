@@ -7,7 +7,11 @@
 	],
     "settings":
     {
+        /* project-specific settings for lldb */
         "lldb.exe": "/Users/filcab/dev/softek/lldb-plugin/tests",
+        // "lldb.args": [],
+        // "lldb.arch": lldb.LLDB_ARCH_DEFAULT
+        "lldb.attach.wait_for_launch": false,
         "lldb.breakpoints": ["main", {"file": "tests.c", "line": 42}]
         /*
             Other lldb.breakpoints possibilities:

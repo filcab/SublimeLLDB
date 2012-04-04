@@ -54,6 +54,7 @@ _default_exe = None
 _default_bps = []
 _default_args = []
 _default_arch = lldb.LLDB_ARCH_DEFAULT
+_default_wait_for_launch = False
 _default_view_mem_size = int(512)
 _default_view_mem_width = 32
 _default_view_mem_grouping = 8
@@ -100,7 +101,7 @@ def reload_settings():
     global _clear_view_on_startup, _prologue
     global _default_exe, _default_bps, _default_args, _default_arch
     global _default_view_mem_size, _default_view_mem_width, _default_view_mem_grouping
-    global _layout_group_source_file
+    global _layout_group_source_file, _default_wait_for_launch
     _use_bundled_debugserver = get_setting('lldb.use_bundled_debugserver')
     _lldb_window_layout = get_setting('lldb.layout')
     _basic_layout = get_setting('lldb.layout.basic')
@@ -118,6 +119,7 @@ def reload_settings():
     _default_view_mem_grouping = get_setting('lldb.view_memory.grouping')
 
     _layout_group_source_file = get_setting('lldb.layout.group.source_file')
+    _default_wait_for_launch = get_setting('lldb.attach.wait_for_launch') or False
 
 
 def initialize_plugin():
@@ -474,6 +476,83 @@ class LldbDebugProgram(WindowCommand):
             t.LaunchSimple(_default_args, [], os.getcwd())
 
         show_lldb_panel(self.window)
+
+
+class LldbAttachProcess(WindowCommand):
+    # Always enabled, since we want to start lldb if it's not running.
+    class AttachProcessDelegate(InputPanelDelegate):
+        def on_done(self, string):
+            driver = driver_instance()
+
+            # Check if we have a previously running program
+            target = driver.debugger.GetSelectedTarget()
+
+            if not target:
+                target = driver.debugger.CreateTarget('')
+                if not target:
+                    sublime.error_message('Error attaching to process')
+                driver.debugger.SetSelectedTarget(target)
+
+            old_exec_module = target.GetExecutable()
+            old_triple = target.GetTriple()
+
+            # attach_info = lldb.SBAttachInfo()
+            # If the user didn't specify anything, attach to the program from
+            # the current target, if it exists
+            # if string is '':
+            #     if old_exec_module:
+            #         attach_info.SetExecutable(old_exec_module)
+            #     else:
+            #         # Bail out
+            #         sublime.error_message('No process name/ID specified and no current target.')
+            #         return
+            # else:
+            error = lldb.SBError()
+            try:
+                pid = int(string)
+                # attach_info.SetProcessID(pid)
+                debug('Attaching to pid: %d' % pid)
+                process = target.AttachToProcessWithID(lldb.SBListener(), pid, error)
+            except ValueError:
+                # We have a process name, not a pid.
+                # pid = lldb.LLDB_INVALID_PROCESS_ID
+                # attach_info.SetExecutable(str(string))
+                name = str(string) if string != '' else old_exec_module
+                debug('Attaching to process: %s (wait=%s)' % (name, str(_default_wait_for_launch)))
+                process = target.AttachToProcessWithName(lldb.SBListener(), name, _default_wait_for_launch, error)
+
+            # attach_info.SetWaitForLaunch(_default_wait_for_launch)
+
+            # error = lldb.SBError()
+            # debug(attach_info)
+            # process = target.Attach(attach_info, error)
+
+            debug(process)
+            if error.Fail():
+                sublime.error_message("Attach failed: %s" % error.AsCString())
+
+            new_exec_module = target.GetExecutable()
+            if new_exec_module != old_exec_module:
+                debug('Executable module changed from "%s" to "%s".' % \
+                    (old_exec_module, new_exec_module))
+
+            new_triple = target.GetTriple()
+            if new_triple != old_triple:
+                debug('Target triple changed from "%s" to "%s".' % (old_triple, new_triple))
+
+            # How can we setup the default breakpoints?
+            # We *could* start a new thread with a listener, just for that...
+
+
+    def run(self):
+        self.setup()
+        ensure_lldb_is_running(self.window)
+        lldb_toggle_output_view(self.window, show=True)
+
+        driver = driver_instance()
+        if driver:
+            delegate = self.AttachProcessDelegate()
+            delegate.show_on_window(self.window, 'Process ID')
 
 
 class LldbStopDebugging(WindowCommand):

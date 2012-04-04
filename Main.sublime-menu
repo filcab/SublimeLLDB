@@ -19,6 +19,10 @@
                         "command": "lldb"
                     },
                     {
+                        "caption": "Attach to process",
+                        "command": "lldb_attach_process"
+                    },
+                    {
                         "caption": "Stop debugging",
                         "command": "lldb_stop_debugging"
                     },
