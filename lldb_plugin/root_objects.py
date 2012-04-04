@@ -41,6 +41,7 @@ def process_state():
 
 
 def set_process_state(state):
+    global _process_state
     _process_state = state
 
 
@@ -237,21 +238,30 @@ def set_disabled_bps(bps):
     _disabled_bps = bps
 
 
-__settings_keys = ["lldb.prologue",
-                   "lldb.use_bundled_debugserver"
-                   "lldb.i/o.view.name"
-                   "lldb.i/o.view.clear_on_startup"
-                   "lldb.layout"
-                   "lldb.layout.basic"
-                   "lldb.layout.group.source_file"
-                   "lldb.layout.group.i/o"
-                   "lldb.markers.current_line.region_name"
-                   "lldb.markers.current_line.scope"
-                   "lldb.markers.current_line.scope.crashed"
-                   "lldb.markers.current_line.type"
-                   "lldb.markers.breakpoint.region_name"
-                   "lldb.markers.breakpoint.scope"
-                   "lldb.markers.breakpoint.type"]
+__settings_keys = ['lldb.prologue'
+                   'lldb.use_bundled_debugserver'
+                   'lldb.i/o.view.name'
+                   'lldb.i/o.view.clear_on_startup'
+                   'lldb.layout'
+                   'lldb.layout.basic'
+                   'lldb.layout.group.source_file'
+                   'lldb.layout.group.i/o'
+                   'lldb.markers.current_line.region_name'
+                   'lldb.markers.current_line.scope'
+                   'lldb.markers.current_line.scope.crashed'
+                   'lldb.markers.current_line.type'
+                   'lldb.markers.breakpoint.region_name'
+                   'lldb.markers.breakpoint.scope'
+                   'lldb.markers.breakpoint.type'
+                   'lldb.exe'
+                   'lldb.args'
+                   'lldb.arch'
+                   'lldb.breakpoints'
+                   'lldb.view_memory.size'
+                   'lldb.view_memory.width'
+                   'lldb.view_memory.grouping'
+                   'lldb.layout.group.source_file'
+                   'lldb.attach.wait_for_launch']
 
 
 def get_settings_keys():
