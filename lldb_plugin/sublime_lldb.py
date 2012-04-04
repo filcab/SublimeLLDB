@@ -19,7 +19,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          show_lldb_panel, set_got_input_function,       \
                          get_lldb_output_view, lldb_prompt,             \
                          lldb_view_name, set_lldb_view_name,            \
-                         get_settings_keys
+                         get_settings_keys, disabled_bps, set_disabled_bps
 
 from utilities import generate_memory_view_for
 
@@ -260,6 +260,7 @@ def cleanup(w=None):
     global _is_debugging
     _is_debugging = False
 
+    set_disabled_bps([])
     stop_markers_monitor()
     driver = driver_instance()
     if driver:
@@ -825,10 +826,6 @@ class LldbBreakAtLine(WindowCommand):
 
 
 class LldbToggleEnableBreakpoints(WindowCommand):
-    # Class variables, since we want to toggle breakpoints everywhere
-    _are_bps_disabled = False
-    _disabled_bps = []
-
     def is_enabled(self):
         driver = driver_instance()
         return driver is not None and driver.debugger.GetSelectedTarget()
@@ -836,13 +833,12 @@ class LldbToggleEnableBreakpoints(WindowCommand):
     def run(self):
         self.setup()
 
-        if LldbToggleEnableBreakpoints._are_bps_disabled:
-            LldbToggleEnableBreakpoints._are_bps_disabled = False
-            for bp in LldbToggleEnableBreakpoints._disabled_bps:
+        if len(disabled_bps()) > 0:
+            for bp in disabled_bps():
                 if bp:
                     bp.SetEnabled(True)
 
-            LldbToggleEnableBreakpoints._disabled_bps = []
+            set_disabled_bps([])
 
         else:
             # bps are enabled. Disable them
@@ -850,14 +846,13 @@ class LldbToggleEnableBreakpoints(WindowCommand):
             if driver:
                 target = driver.debugger.GetSelectedTarget()
                 if target:
-                    LldbToggleEnableBreakpoints._are_bps_disabled = True
-                    assert(len(LldbToggleEnableBreakpoints._disabled_bps) == 0)
+                    assert(len(disabled_bps()) == 0)
                     for bp in target.breakpoint_iter():
                         if bp and bp.IsEnabled():
                             LldbToggleEnableBreakpoints._disabled_bps.append(bp)
                             bp.SetEnabled(False)
 
-        if LldbToggleEnableBreakpoints._are_bps_disabled:
+        if len(disabled_bps()) == 0:
             msg = 'Breakpoints disabled.'
         else:
             msg = 'Breakpoints enabled.'

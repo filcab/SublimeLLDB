@@ -12,6 +12,7 @@ __got_input_function = None
 __window_ref = None
 _process_state = lldb.eStateInvalid
 __breakpoint_dict = {}
+_disabled_bps = []
 
 __input_fh = None
 __output_fh = None
@@ -225,6 +226,16 @@ def get_lldb_output_view(window, name=None):
     f.set_read_only(True)
     # f.set_syntax_file('…')  # lldb output syntax
     return f
+
+
+def disabled_bps():
+    return _disabled_bps
+
+
+def set_disabled_bps(bps):
+    global _disabled_bps
+    _disabled_bps = bps
+
 
 __settings_keys = ["lldb.prologue",
                    "lldb.use_bundled_debugserver"
