@@ -479,6 +479,7 @@ class LldbDebugProgram(WindowCommand):
             driver_instance().debugger.SetSelectedTarget(t)
             create_default_bps_for_target(t)
             t.LaunchSimple(_default_args, [], os.getcwd())
+            driver_instance().debugger.SetSelectedTarget(t)
 
         show_lldb_panel(self.window)
 
@@ -821,6 +822,47 @@ class LldbBreakAtLine(WindowCommand):
             file = v.file_name()
             (line, col) = v.rowcol(v.sel()[0].begin())
             driver.debugger.BreakpointCreateByLocation(str(file), line)
+
+
+class LldbToggleEnableBreakpoints(WindowCommand):
+    # Class variables, since we want to toggle breakpoints everywhere
+    _are_bps_disabled = False
+    _disabled_bps = []
+
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None and driver.debugger.GetSelectedTarget()
+
+    def run(self):
+        self.setup()
+
+        if LldbToggleEnableBreakpoints._are_bps_disabled:
+            LldbToggleEnableBreakpoints._are_bps_disabled = False
+            for bp in LldbToggleEnableBreakpoints._disabled_bps:
+                if bp:
+                    bp.SetEnabled(True)
+
+            LldbToggleEnableBreakpoints._disabled_bps = []
+
+        else:
+            # bps are enabled. Disable them
+            driver = driver_instance()
+            if driver:
+                target = driver.debugger.GetSelectedTarget()
+                if target:
+                    LldbToggleEnableBreakpoints._are_bps_disabled = True
+                    assert(len(LldbToggleEnableBreakpoints._disabled_bps) == 0)
+                    for bp in target.breakpoint_iter():
+                        if bp and bp.IsEnabled():
+                            LldbToggleEnableBreakpoints._disabled_bps.append(bp)
+                            bp.SetEnabled(False)
+
+        if LldbToggleEnableBreakpoints._are_bps_disabled:
+            msg = 'Breakpoints disabled.'
+        else:
+            msg = 'Breakpoints enabled.'
+
+        self.status_message(msg)
 
 
 # Miscellaneous commands
