@@ -196,8 +196,6 @@ class LldbDriver(threading.Thread):
                             event)
 
                 while not self.is_done:
-                    if self.process_is_stopped():
-                        self.ready_for_command()
                     listener.WaitForEvent(BIG_TIMEOUT, event)
                     if event:
                         if event.GetBroadcaster():
@@ -240,6 +238,8 @@ class LldbDriver(threading.Thread):
                                     data = lldb.SBEvent.GetCStringFromEvent(event)
                                     self.io_channel.out_write(data, IOChannel.ASYNC)
                                     lldb_view_send(stdout_msg(data))
+                    if self.process_is_stopped():
+                        self.ready_for_command()
 
                 if not iochannel_thread_exited:
                     event.Clear()

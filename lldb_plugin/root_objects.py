@@ -292,7 +292,7 @@ class LldbInputDelegate(InputPanelDelegate):
             window = window_ref()
 
         # Don't show the panel if we're running a process
-        if not lldb.SBDebugger.StateIsRunningState(process_state()):
+        if not LldbInputDelegate._lldb_input_panel_is_active:
             LldbInputDelegate().show_on_window(window, title, *args)
 
     def show_on_window(self, window, *args):

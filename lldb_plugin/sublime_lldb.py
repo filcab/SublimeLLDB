@@ -428,15 +428,7 @@ class WindowCommand(sublime_plugin.WindowCommand):
 
 
 class LldbCommand(WindowCommand):
-    # This command is only disabled if the process exists and is running.
-    def is_enabled(self):
-        driver = driver_instance()
-        if driver:
-            return driver.process_is_stopped()
-
-        # This command starts lldb if needed.
-        return True
-
+    # This command is always enabled.
     def run(self):
         self.setup()
         ensure_lldb_is_running(self.window)
