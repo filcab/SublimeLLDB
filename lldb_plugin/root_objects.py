@@ -268,6 +268,57 @@ def get_settings_keys():
     return __settings_keys
 
 
-import lldb_wrappers
+class InputPanelDelegate(object):
+    def show_on_window(self, window, title='', initial_text=''):
+        sublime.set_timeout(lambda: window.show_input_panel(title, initial_text,
+            self.on_done, self.on_change, self.on_cancel), 0)
 
+    def on_done(self, string):
+        pass
+
+    def on_change(self, string):
+        pass
+
+    def on_cancel(self):
+        pass
+
+
+class LldbInputDelegate(InputPanelDelegate):
+    _lldb_input_panel_is_active = False
+
+    @staticmethod
+    def get_input(window=None, title='lldb', *args):
+        if window is None:
+            window = window_ref()
+
+        # Don't show the panel if we're running a process
+        if not lldb.SBDebugger.StateIsRunningState(process_state()):
+            LldbInputDelegate().show_on_window(window, title, *args)
+
+    def show_on_window(self, window, *args):
+        LldbInputDelegate._lldb_input_panel_is_active = True
+        super(LldbInputDelegate, self).show_on_window(window, *args)
+
+    def on_done(self, cmd):
+        LldbInputDelegate._lldb_input_panel_is_active = False
+        # global prompt
+        if cmd is None:
+            cmd = ''
+
+        if driver_instance():
+            lldb_view_write(lldb_prompt() + cmd + '\n')
+            driver_instance().send_command(cmd)
+
+            # We don't have a window, so let's re-use the one active on lldb launch
+            # lldb_toggle_output_view(window_ref(), show=True)
+
+            v = lldb_out_view()
+            v.show_at_center(v.size() + 1)
+
+    def on_cancel(self):
+        LldbInputDelegate._lldb_input_panel_is_active = False
+        debug('canceled input panel')
+
+
+import lldb_wrappers
 thread_created = lldb_wrappers.thread_created

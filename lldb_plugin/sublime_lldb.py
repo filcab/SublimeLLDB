@@ -12,14 +12,15 @@ import threading
 import lldb
 import lldbutil
 
-from root_objects import driver_instance, set_driver_instance,              \
-                         lldb_out_view, set_lldb_out_view,                  \
-                         lldb_view_write, lldb_view_send,                   \
-                         thread_created, window_ref, set_window_ref,        \
-                         get_lldb_output_view, lldb_prompt,                 \
-                         lldb_view_name, set_lldb_view_name,                \
-                         get_settings_keys, disabled_bps, set_disabled_bps, \
-                         process_state
+from root_objects import driver_instance, set_driver_instance,          \
+                         lldb_out_view, set_lldb_out_view,              \
+                         lldb_view_write, lldb_view_send,               \
+                         thread_created, window_ref, set_window_ref,    \
+                         get_lldb_output_view, lldb_prompt,             \
+                         lldb_view_name, set_lldb_view_name,            \
+                         disabled_bps, set_disabled_bps,                \
+                         get_settings_keys, process_state,              \
+                         InputPanelDelegate, LldbInputDelegate
 
 from utilities import generate_memory_view_for
 
@@ -412,21 +413,6 @@ def create_default_bps_for_target(target):
         else:
             debug('unrecognized breakpoint type: ' + str(bp))
     # debug('%d breakpoints created' % n)
-
-
-class InputPanelDelegate(object):
-    def show_on_window(self, window, title='', initial_text=''):
-        window.show_input_panel(title, initial_text,
-            self.on_done, self.on_change, self.on_cancel)
-
-    def on_done(self, string):
-        pass
-
-    def on_change(self, string):
-        pass
-
-    def on_cancel(self):
-        pass
 
 
 # TODO: Check when each command should be enabled.
@@ -976,42 +962,6 @@ class LldbClearOutputView(WindowCommand):
         # TODO: Test variable to know if we should clear the view when starting a debug session
 
         clear_view(lldb_out_view())
-
-
-class LldbInputDelegate(InputPanelDelegate):
-    _lldb_input_panel_is_active = False
-
-    @staticmethod
-    def get_input(window=None, *args):
-        if window is None:
-            window = window_ref()
-
-        # Don't show the panel if we're running a process
-        if not LldbInputDelegate._lldb_input_panel_is_active and not lldb.SBDebugger.StateIsRunningState(process_state()):
-            LldbInputDelegate().show_on_window(window, *args)
-
-    def show_on_window(self, window, *args):
-        LldbInputDelegate._lldb_input_panel_is_active = True
-        super(LldbInputDelegate, self).show_on_window(window, *args)
-
-    def on_done(self, cmd):
-        # global prompt
-        if cmd is None:
-            cmd = ''
-
-        if driver_instance():
-            lldb_view_write(lldb_prompt() + cmd + '\n')
-            driver_instance().send_command(cmd)
-
-            # We don't have a window, so let's re-use the one active on lldb launch
-            # lldb_toggle_output_view(window_ref(), show=True)
-
-            v = lldb_out_view()
-            v.show_at_center(v.size() + 1)
-
-    def on_cancel(self):
-        LldbInputDelegate._lldb_input_panel_is_active = False
-        debug('canceled input panel')
 
 
 # import this specific names without the prefix

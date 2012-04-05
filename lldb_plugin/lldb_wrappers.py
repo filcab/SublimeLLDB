@@ -109,11 +109,24 @@ class LldbDriver(threading.Thread):
         event = lldb.SBEvent(IOChannel.eBroadcastBitHasUserInput, str(cmd))
         self.io_channel.broadcaster.BroadcastEvent(event)
 
+    def process_is_stopped(self):
+        target = self.debugger.GetSelectedTarget()
+        if target:
+            process = target.GetProcess()
+            if process:
+                state = process.GetState()
+                if lldb.SBDebugger.StateIsRunningState(state):
+                    return False
+        return True
+
+    def is_ready_for_command(self):
+        return self.process_is_stopped()
+
     def ready_for_command(self):
         """Send an eBroadcastBitReadyForInput if the debugger wasn't ready before this call."""
         if not self.__waiting_for_command:
-            self.__ready_for_command = True
-            self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, True)
+            # self.__waiting_for_command = True
+            self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, False)
 
     @property
     def line_entry(self):
@@ -182,14 +195,13 @@ class LldbDriver(threading.Thread):
                             IOChannel.eBroadcastBitThreadDidStart,
                             event)
 
-                self.ready_for_command()
-
                 while not self.is_done:
+                    if self.process_is_stopped():
+                        self.ready_for_command()
                     listener.WaitForEvent(BIG_TIMEOUT, event)
                     if event:
                         if event.GetBroadcaster():
                             ev_type = event.GetType()
-                            # TODO: Fix this! Only the driver should be listening to eBroadcastBitHasUserInput
                             if (event.BroadcasterMatchesRef(self.io_channel.broadcaster)):
                                 if ev_type & IOChannel.eBroadcastBitHasUserInput:
                                     command_string = lldb.SBEvent.GetCStringFromEvent(event)
@@ -537,6 +549,7 @@ class IOChannel(threading.Thread):
                     IOChannel.eBroadcastBitThreadShouldExit)
 
         listener.StartListeningForEvents(self.driver.broadcaster,
+                    LldbDriver.eBroadcastBitReadyForInput |     \
                     LldbDriver.eBroadcastBitThreadShouldExit)
 
         self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadDidStart)
@@ -552,7 +565,6 @@ class IOChannel(threading.Thread):
             if event.GetBroadcaster():
                 if event.BroadcasterMatchesRef(self.driver.broadcaster):
                     if event_type & LldbDriver.eBroadcastBitReadyForInput:
-                        from sublime_lldb import LldbInputDelegate
                         LldbInputDelegate.get_input()
                     if event_type & LldbDriver.eBroadcastBitThreadShouldExit:
                         done = True
@@ -620,7 +632,6 @@ def is_return_invalid(r):
     return r == lldb.eReturnStatusInvalid
 
 
-from root_objects import set_driver_instance, lldb_view_send, set_process_state
+from root_objects import set_driver_instance, lldb_view_send, set_process_state, LldbInputDelegate, process_state
 from monitors import marker_update
 from utilities import stderr_msg, stdout_msg
-# from sublime_lldb import LldbInputDelegate
