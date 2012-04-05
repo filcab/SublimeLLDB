@@ -597,7 +597,9 @@ class LldbSendSignal(WindowCommand):
 
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            target = driver.debugger.GetSelectedTarget()
+            return target and target.GetProcess()
 
     def run(self):
         self.setup()
