@@ -19,7 +19,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          get_lldb_output_view, lldb_prompt,             \
                          lldb_view_name, set_lldb_view_name,            \
                          disabled_bps, set_disabled_bps,                \
-                         get_settings_keys, process_state,              \
+                         get_settings_keys,                             \
                          InputPanelDelegate, LldbInputDelegate
 
 from utilities import generate_memory_view_for
