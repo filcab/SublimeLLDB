@@ -6,9 +6,24 @@ using lldb.
 
 Usage
 -----
-* cmd+shift+l: Open lldb prompt (maybe starting lldb)
-* cmd+shift+k: Show/hide the lldb i/o view
-* cmd+shift+alt+k: Clear the lldb i/o view
+* Menu items in Tools->LLDB
+* Quick access commands using Sublime Text 2's Command Pallette (all commands
+  start with “LLDB: ”
+* super+shift+l: Open lldb prompt (maybe starting lldb)
+
+* super+shift+k: Show/hide the lldb i/o view
+* super+shift+alt+k: Clear the lldb i/o view
+
+* Xcode-like commands:
+ * super+ctrl+y: Continue
+ * F6: Step over
+ * F7: Step into
+ * F8: Step out
+ * ctrl+F6: Step over instruction
+ * ctrl+shift+F6: Step over thread
+ * ctrl+F7: Step into instruction
+ * ctrl+shift+F7: Step into thread
+ * super+shift+m: View process memory
 
 Features
 --------
@@ -16,14 +31,19 @@ Features
 * Line-level markers for the program counter and breakpoints
 * Event-driven to avoid any editing slow-downs due to the plugin
 
+Installation
+------------
+* Clone github repository to Sublime Text 2's “Packages” directory
+* Restart Sublime Text 2
+
 Known bugs
 ----------
-* stdin to the debugged program (or debugger queries) has to be passed using
-  the console (yes, to use stdin in your program, you have to either redirect
+* `stdin` to the debugged program (or debugger queries) has to be passed using
+  the console (yes, to use `stdin` in your program, you have to either redirect
   it using the debugger or start Sublime Text 2 using the console). Executing
   the `process launch` command while the program is running will hang lldb
-  until you reply with `y` or `n` to the stdin (usually the Terminal).
-* The plugin is very new and doesn't export a lot of functionality. But CLI
+  until you reply with `y` or `n` to the `stdin` (usually the Terminal).
+* The plugin is very new and doesn't export a lot of functionality. But simple
   usage shold be fine.
 * ...
 
