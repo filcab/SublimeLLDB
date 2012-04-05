@@ -2,11 +2,11 @@
 	// Starting/stopping lldb
 	{
 		"caption": "LLDB: Show LLDB prompt (starting LLDB if needed)",
-		"command": "lldb",
+		"command": "lldb"
 	},
 	{
 		"caption": "LLDB: Start debugging default program.",
-		"command": "lldb_debug_program",
+		"command": "lldb_debug_program"
 	},
     {
         "caption": "Attach to process",
@@ -53,10 +53,10 @@
     // Output view related commands
 	{
 		"caption": "LLDB: Toggle LLDB output view",
-		"command": "lldb_toggle_output_view",
+		"command": "lldb_toggle_output_view"
 	},
 	{
 		"caption": "LLDB: Clear LLDB output view",
-		"command": "lldb_clear_output_view",
+		"command": "lldb_clear_output_view"
 	}
 ]
