@@ -15,7 +15,7 @@
                         "command": "lldb_debug_program"
                     },
                     {
-                        "caption": "Start LLDB REPL",
+                        "caption": "LLDB REPL",
                         "command": "lldb"
                     },
                     {

@@ -446,7 +446,15 @@ class WindowCommand(sublime_plugin.WindowCommand):
 
 
 class LldbCommand(WindowCommand):
-    # Always enabled, since we want to start lldb if it's not running.
+    # This command is only disabled if the process exists and is running.
+    def is_enabled(self):
+        driver = driver_instance()
+        if driver:
+            return driver.process_is_stopped()
+
+        # This command starts lldb if needed.
+        return True
+
     def run(self):
         self.setup()
         ensure_lldb_is_running(self.window)
@@ -576,7 +584,9 @@ class LldbStopDebugging(WindowCommand):
 class LldbContinue(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         self.setup()
@@ -592,10 +602,6 @@ class LldbContinue(WindowCommand):
 
 
 class LldbSendSignal(WindowCommand):
-    def is_enabled(self):
-        driver = driver_instance()
-        return driver is not None
-
     class SendSignalDelegate(InputPanelDelegate):
         def __init__(self, owner, process):
             self.__owner = owner
@@ -607,6 +613,10 @@ class LldbSendSignal(WindowCommand):
                 error = self.__process.Signal(int(string))
                 if error.Fail():
                     sublime.error_message(error.GetCString())
+
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None
 
     def run(self):
         self.setup()
@@ -623,10 +633,6 @@ class LldbSendSignal(WindowCommand):
 
 
 def get_selected_thread(driver):
-    def is_enabled(self):
-        driver = driver_instance()
-        return driver is not None
-
     if driver:
         debugger = driver.debugger
         if debugger:
@@ -641,7 +647,9 @@ def get_selected_thread(driver):
 class LldbStepOver(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         self.setup()
@@ -654,7 +662,9 @@ class LldbStepOver(WindowCommand):
 class LldbStepInto(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         self.setup()
@@ -667,7 +677,9 @@ class LldbStepInto(WindowCommand):
 class LldbStepOut(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         self.setup()
@@ -680,7 +692,9 @@ class LldbStepOut(WindowCommand):
 class LldbStepOverInstruction(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         self.setup()
@@ -693,7 +707,9 @@ class LldbStepOverInstruction(WindowCommand):
 class LldbStepOverThread(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         self.setup()
@@ -706,7 +722,9 @@ class LldbStepOverThread(WindowCommand):
 class LldbStepIntoInstruction(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         self.setup()
@@ -719,7 +737,9 @@ class LldbStepIntoInstruction(WindowCommand):
 class LldbStepIntoThread(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        if driver:
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         self.setup()
@@ -812,7 +832,7 @@ class LldbListBreakpoints(WindowCommand):
 class LldbBreakAtLine(WindowCommand):
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None
+        return driver is not None and driver.debugger.GetSelectedTarget()
 
     def run(self):
         self.setup()
@@ -903,10 +923,6 @@ class LldbViewSharedLibraries(WindowCommand):
 class LldbViewMemory(WindowCommand):
     _view_memory_view_prefix = 'View memory @ '
 
-    def is_enabled(self):
-        driver = driver_instance()
-        return driver is not None and driver.debugger.GetSelectedTarget()
-
     class ViewMemoryDelegate(InputPanelDelegate):
         def __init__(self, owner, process):
             self.__owner = owner
@@ -946,6 +962,12 @@ class LldbViewMemory(WindowCommand):
                 v.insert(edit, 0, result)
                 v.end_edit(edit)
                 v.set_read_only(True)
+
+    def is_enabled(self):
+        driver = driver_instance()
+        if driver and driver.debugger.GetSelectedTarget():
+            return driver.process_is_stopped()
+        return False
 
     def run(self):
         driver = driver_instance()
