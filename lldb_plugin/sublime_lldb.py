@@ -16,19 +16,15 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
-                         show_lldb_panel, set_got_input_function,       \
                          get_lldb_output_view, lldb_prompt,             \
                          lldb_view_name, set_lldb_view_name,            \
-                         get_settings_keys, disabled_bps, set_disabled_bps
+                         disabled_bps, set_disabled_bps,                \
+                         get_settings_keys, process_state,              \
+                         InputPanelDelegate, LldbInputDelegate
 
 from utilities import generate_memory_view_for
 
 from monitors import start_markers_monitor, stop_markers_monitor
-
-
-# import this specific names without the prefix
-from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
-import lldb_wrappers
 
 _settings = None
 # _setting_prefix = 'lldb.'
@@ -237,23 +233,23 @@ def clear_view(v):
     v.show(v.size())
 
 
-def lldb_in_panel_on_done(cmd):
-    # debug_thr()
+# def lldb_in_panel_on_done(cmd):
+#     # debug_thr()
 
-    # global prompt
-    if cmd is None:
-        cmd = ''
-    if driver_instance():
-        lldb_view_write(lldb_prompt() + cmd + '\n')
-        driver_instance().send_command(cmd)
+#     # global prompt
+#     if cmd is None:
+#         cmd = ''
+#     if driver_instance():
+#         lldb_view_write(lldb_prompt() + cmd + '\n')
+#         driver_instance().send_command(cmd)
 
-        # We don't have a window, so let's re-use the one active on lldb launch
-        # lldb_toggle_output_view(window_ref(), show=True)
+#         # We don't have a window, so let's re-use the one active on lldb launch
+#         # lldb_toggle_output_view(window_ref(), show=True)
 
-        v = lldb_out_view()
-        v.show_at_center(v.size() + 1)
+#         v = lldb_out_view()
+#         v.show_at_center(v.size() + 1)
 
-        show_lldb_panel()
+#         show_lldb_panel()
 
 
 def cleanup(w=None):
@@ -280,7 +276,7 @@ def unload_handler():
 
 
 def initialize_lldb():
-    set_got_input_function(lldb_in_panel_on_done)
+    # set_got_input_function(lldb_in_panel_on_done)
 
     driver = LldbDriver(lldb_view_send)
     event = lldb.SBEvent()
@@ -419,21 +415,6 @@ def create_default_bps_for_target(target):
     # debug('%d breakpoints created' % n)
 
 
-class InputPanelDelegate(object):
-    def show_on_window(self, window, title='', initial_text=''):
-        window.show_input_panel(title, initial_text,
-            self.on_done, self.on_change, self.on_cancel)
-
-    def on_done(self, string):
-        pass
-
-    def on_change(self, string):
-        pass
-
-    def on_cancel(self):
-        pass
-
-
 # TODO: Check when each command should be enabled.
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
@@ -459,7 +440,7 @@ class LldbCommand(WindowCommand):
         self.setup()
         ensure_lldb_is_running(self.window)
         lldb_toggle_output_view(self.window, show=True)
-        show_lldb_panel(self.window)
+        LldbInputDelegate.get_input()
 
 
 class LldbDebugProgram(WindowCommand):
@@ -490,7 +471,7 @@ class LldbDebugProgram(WindowCommand):
             t.LaunchSimple(_default_args, [], os.getcwd())
             driver_instance().debugger.SetSelectedTarget(t)
 
-        show_lldb_panel(self.window)
+        LldbInputDelegate.get_input()
 
 
 class LldbAttachProcess(WindowCommand):
@@ -1001,3 +982,8 @@ class LldbClearOutputView(WindowCommand):
         # TODO: Test variable to know if we should clear the view when starting a debug session
 
         clear_view(lldb_out_view())
+
+
+# import this specific names without the prefix
+from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
+import lldb_wrappers
