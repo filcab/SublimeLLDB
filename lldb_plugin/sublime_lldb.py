@@ -823,7 +823,31 @@ class LldbBreakAtLine(WindowCommand):
         if driver and v:
             file = v.file_name()
             (line, col) = v.rowcol(v.sel()[0].begin())
-            driver.debugger.BreakpointCreateByLocation(str(file), line)
+            driver.debugger.GetSelectedTarget().BreakpointCreateByLocation(str(file), line + 1)
+
+
+class LldbBreakAtSymbol(WindowCommand):
+    class BreakAtSymbolDelegate(InputPanelDelegate):
+        def __init__(self, owner, target):
+            self.__owner = owner
+            self.__target = target
+
+        def on_done(self, string):
+            if self.__target:  # Check if it's still valid
+                self.__target.BreakpointCreateByName(str(string))
+
+    def is_enabled(self):
+        driver = driver_instance()
+        return driver is not None and driver.debugger.GetSelectedTarget()
+
+    def run(self):
+        self.setup()
+        driver = driver_instance()
+        if driver:
+            target = driver.debugger.GetSelectedTarget()
+            if target:
+                delegate = self.BreakAtSymbolDelegate(self, target)
+                delegate.show_on_window(self.window, 'Symbol to break at')
 
 
 class LldbToggleEnableBreakpoints(WindowCommand):
