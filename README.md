@@ -8,7 +8,7 @@ Usage
 -----
 * Menu items in Tools->LLDB
 * Quick access commands using Sublime Text 2's Command Pallette (all commands
-  start with “LLDB: ”
+  start with “LLDB: ”)
 * super+shift+l: Open lldb prompt (maybe starting lldb)
 
 * super+shift+k: Show/hide the lldb i/o view
