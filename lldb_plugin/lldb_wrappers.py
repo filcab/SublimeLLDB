@@ -41,8 +41,8 @@ class LldbDriver(threading.Thread):
 
     __is_done = False
     __io_channel = None
-    __broadcaster = None
     __debug_mode = False
+    __broadcaster = None
     __waiting_for_command = False
 
     def __init__(self, log_callback=None):
