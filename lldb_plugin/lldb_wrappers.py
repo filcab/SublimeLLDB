@@ -632,6 +632,6 @@ def is_return_invalid(r):
     return r == lldb.eReturnStatusInvalid
 
 
-from root_objects import set_driver_instance, lldb_view_send, set_process_state, LldbInputDelegate, process_state
+from root_objects import set_driver_instance, lldb_view_send, set_process_state, LldbInputDelegate
 from monitors import marker_update
 from utilities import stderr_msg, stdout_msg
