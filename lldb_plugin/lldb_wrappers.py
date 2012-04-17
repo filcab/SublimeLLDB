@@ -4,6 +4,7 @@
 
 import lldb
 import lldbutil
+import sublime
 import threading
 # import traceback
 
@@ -43,6 +44,7 @@ class LldbDriver(threading.Thread):
     __io_channel = None
     __debug_mode = False
     __broadcaster = None
+    __input_reader = None
     __waiting_for_command = False
 
     def __init__(self, log_callback=None):
@@ -58,12 +60,16 @@ class LldbDriver(threading.Thread):
         set_driver_instance(self)
         self.__io_channel = IOChannel(self, lldb_view_send)
         # self._debugger.SetCloseInputOnEOF(False)
+        self.__input_reader = lldb.SBInputReader()
 
     def __del__(self):
         del self.__io_channel
         del self.__broadcaster
         del self._debugger
         lldb.SBDebugger.Terminate()
+
+    def input_reader_callback(self, *args):
+        debug('yaaay, input reader callback' + str(*args))
 
     def stop(self):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
@@ -149,6 +155,21 @@ class LldbDriver(threading.Thread):
         # Warn whoever started us that we can start working
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
 
+        error = lldb.SBError(self.__input_reader.Initialize(self.debugger,
+                                                            self.input_reader_callback,
+                                                            self,  # baton
+                                                            lldb.eInputReaderGranularityByte,
+                                                            None,  # end token (NULL == never done)
+                                                            None,  # Prompt (NULL == taken care of elsewhere)
+                                                            False))  # echo input (we'll take care of this elsewhere)
+
+        if error.Fail():
+            # Fail now... We can't have any input reader
+            sublime.error_message('error: ' + error.GetCString())
+            return
+
+        self.debugger.PushInputReader(self.__input_reader)
+
         sb_interpreter = self._debugger.GetCommandInterpreter()
         listener = lldb.SBListener('driver')  # self._debugger.GetListener())
         listener.StartListeningForEventClass(self._debugger,
@@ -220,6 +241,7 @@ class LldbDriver(threading.Thread):
                                     if ev_type & IOChannel.eBroadcastBitThreadDidExit:
                                         iochannel_thread_exited = True
                                     else:
+                                        # TODO: handle_io_event is not implemented
                                         if self.handle_io_event(event):
                                             self.is_done = True
                             elif lldb.SBProcess.EventIsProcessEvent(event):
