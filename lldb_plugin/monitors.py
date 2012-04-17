@@ -62,7 +62,8 @@ def lldb_markers_monitor(w, driver):
 
     done = False
     while not done:
-        # Create a new scope, so the 'f' variable isn't changed before running it.
+        # Create a new scope, so the 'f' variable isn't changed before running
+        # the function, when the timeout expires.
         def aaaa():
             global done
             v = lldb_file_markers_queue.get(True)
