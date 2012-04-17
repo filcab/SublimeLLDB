@@ -1037,6 +1037,13 @@ class LldbClearOutputView(WindowCommand):
         clear_view(lldb_out_view())
 
 
+class LldbBogusCommand(WindowCommand):
+    def run(self):
+        self.setup()
+        ensure_lldb_is_running()
+        driver_instance().debugger.GetInputFileHandle().write('ola!\n')
+
+
 # import this specific names without the prefix
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 import lldb_wrappers
