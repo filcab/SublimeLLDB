@@ -11,6 +11,7 @@ import ctypes
 import objc_runtime
 import metrics
 import NSURL
+import Logger
 
 statistics = metrics.Metrics()
 statistics.add_metric('invalid_isa')
@@ -26,6 +27,7 @@ class NSBundleKnown_SummaryProvider:
 		pass
 
 	def __init__(self, valobj, params):
+		logger = Logger.Logger()
 		self.valobj = valobj;
 		self.sys_params = params
 		if not(self.sys_params.types_cache.NSString):
@@ -33,22 +35,25 @@ class NSBundleKnown_SummaryProvider:
 		self.update();
 
 	def update(self):
+		logger = Logger.Logger()
 		self.adjust_for_architecture();
 
 	# we need to skip the ISA, plus four other values
 	# that are luckily each a pointer in size
 	# which makes our computation trivial :-)
 	def offset(self):
+		logger = Logger.Logger()
 		return 5 * self.sys_params.pointer_size
 
 	def url_text(self):
+		logger = Logger.Logger()
 		global statistics
 		text = self.valobj.CreateChildAtOffset("text",
 							self.offset(),
 							self.sys_params.types_cache.NSString)
 		my_string = text.GetSummary()
 		if (my_string == None) or (my_string == ''):
-			statistics.metric_hit('unknown_class',str(self.valobj) + " triggered unkown pointer location")
+			statistics.metric_hit('unknown_class',str(self.valobj.GetName()) + " triggered unkown pointer location")
 			return NSBundleUnknown_SummaryProvider(self.valobj, self.sys_params).url_text()
 		else:
 			statistics.metric_hit('code_notrun',self.valobj)
@@ -60,14 +65,17 @@ class NSBundleUnknown_SummaryProvider:
 		pass
 
 	def __init__(self, valobj, params):
+		logger = Logger.Logger()
 		self.valobj = valobj;
 		self.sys_params = params
 		self.update()
 
 	def update(self):
+		logger = Logger.Logger()
 		self.adjust_for_architecture();
 
 	def url_text(self):
+		logger = Logger.Logger()
 		stream = lldb.SBStream()
 		self.valobj.GetExpressionPath(stream)
 		expr = "(NSString*)[" + stream.GetData() + " bundlePath]"
@@ -78,12 +86,15 @@ class NSBundleUnknown_SummaryProvider:
 
 
 def GetSummary_Impl(valobj):
+	logger = Logger.Logger()
 	global statistics
 	class_data,wrapper = objc_runtime.Utilities.prepare_class_detection(valobj,statistics)
 	if wrapper:
 		return wrapper
 	
 	name_string = class_data.class_name()
+	logger >> "class name is: " + str(name_string)
+	
 	if name_string == 'NSBundle':
 		wrapper = NSBundleKnown_SummaryProvider(valobj, class_data.sys_params)
 		# [NSBundle mainBundle] does return an object that is
@@ -92,10 +103,11 @@ def GetSummary_Impl(valobj):
 		#statistics.metric_hit('code_notrun',valobj)
 	else:
 		wrapper = NSBundleUnknown_SummaryProvider(valobj, class_data.sys_params)
-		statistics.metric_hit('unknown_class',str(valobj) + " seen as " + name_string)
+		statistics.metric_hit('unknown_class',valobj.GetName() + " seen as " + name_string)
 	return wrapper;
 
 def NSBundle_SummaryProvider (valobj,dict):
+	logger = Logger.Logger()
 	provider = GetSummary_Impl(valobj);
 	if provider != None:
 		if isinstance(provider,objc_runtime.SpecialSituation_Description):
@@ -104,6 +116,7 @@ def NSBundle_SummaryProvider (valobj,dict):
 			summary = provider.url_text();
 		except:
 			summary = None
+		logger >> "got summary " + str(summary)
 		if summary == None or summary == '':
 			summary = '<variable is not NSBundle>'
 		return summary

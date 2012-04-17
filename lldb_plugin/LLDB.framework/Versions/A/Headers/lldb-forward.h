@@ -17,7 +17,7 @@
 #ifdef _LIBCPP_VERSION
 #include <memory>
 #define STD_SHARED_PTR(T) std::shared_ptr<T>
-#define STD_WEAK_PTR(T) std::shared_ptr<T>
+#define STD_WEAK_PTR(T) std::weak_ptr<T>
 #define STD_ENABLE_SHARED_FROM_THIS(T) std::enable_shared_from_this<T>
 #define STD_STATIC_POINTER_CAST(T,V) std::static_pointer_cast<T>(V)
 #else
@@ -176,7 +176,7 @@ template <unsigned N> class StreamBuffer;
 class   StreamFile;
 class   StreamString;
 class   StringList;
-class   StringSummaryFormat;
+struct  StringSummaryFormat;
 class   TypeSummaryImpl;
 class   Symbol;
 class   SymbolContext;
@@ -223,7 +223,7 @@ class   UnwindTable;
 class   UserSettingsController;
 class   VMRange;
 class   Value;
-struct  TypeFormatImpl;
+class   TypeFormatImpl;
 class   ValueList;
 class   ValueObject;
 class   ValueObjectChild;
@@ -267,6 +267,7 @@ namespace lldb {
     typedef STD_SHARED_PTR(lldb_private::Disassembler) DisassemblerSP;
     typedef STD_SHARED_PTR(lldb_private::DynamicLoader) DynamicLoaderSP;
     typedef STD_SHARED_PTR(lldb_private::Event) EventSP;
+    typedef STD_SHARED_PTR(lldb_private::ExecutionContextRef) ExecutionContextRefSP;
     typedef STD_SHARED_PTR(lldb_private::TypeCategoryImpl) TypeCategoryImplSP;
     typedef STD_SHARED_PTR(lldb_private::Function) FunctionSP;
     typedef STD_SHARED_PTR(lldb_private::InlineFunctionInfo) InlineFunctionInfoSP;
