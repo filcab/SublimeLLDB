@@ -151,7 +151,6 @@ class LldbDriver(threading.Thread):
 
         error = lldb.SBError(self.__input_reader.Initialize(self.debugger,
                                                             self.input_reader_callback,
-                                                            self,  # baton
                                                             lldb.eInputReaderGranularityByte,
                                                             None,  # end token (NULL == never done)
                                                             None,  # Prompt (NULL == taken care of elsewhere)
