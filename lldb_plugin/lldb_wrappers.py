@@ -60,8 +60,10 @@ class LldbDriver(threading.Thread):
         del self._debugger
         lldb.SBDebugger.Terminate()
 
-    def input_reader_callback(self, *args):
-        debug('yaaay, input reader callback' + str(*args))
+    def input_reader_callback(self, *args, **kwargs):
+        import pdb
+        pdb.set_trace()
+        debug('yaaay, input reader callback' + str(*args) + ', ' + str(**kwargs))
 
     def stop(self):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)

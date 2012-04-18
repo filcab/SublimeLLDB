@@ -1037,11 +1037,11 @@ class LldbClearOutputView(WindowCommand):
         clear_view(lldb_out_view())
 
 
-class LldbBogusCommand(WindowCommand):
+class LldbBogus(WindowCommand):
     def run(self):
         self.setup()
-        ensure_lldb_is_running()
-        driver_instance().debugger.GetInputFileHandle().write('ola!\n')
+        ensure_lldb_is_running(self.window)
+        driver_instance().debugger.DispatchInput(str('ola!\n'))
 
 
 # import this specific names without the prefix
