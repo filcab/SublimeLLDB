@@ -1,7 +1,7 @@
 [
     // Test command
     {
-        "caption": "LLDB: Surprise me!",
+        "caption": "LLDB: Surprise me! (Bogus test command)",
         "command": "lldb_bogus"
     },
 	// Starting/stopping lldb
