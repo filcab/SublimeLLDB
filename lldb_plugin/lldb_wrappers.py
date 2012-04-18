@@ -23,14 +23,6 @@ def version():
     return lldb.SBDebugger.GetVersionString()
 
 
-def initialize():
-    lldb.SBDebugger.Initialize()
-
-
-def terminate():
-    lldb.SBDebugger.Terminate()
-
-
 def thread_created(string):
     lldb.SBHostOS.ThreadCreated(string)
 
