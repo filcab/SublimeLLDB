@@ -60,10 +60,38 @@ class LldbDriver(threading.Thread):
         del self._debugger
         lldb.SBDebugger.Terminate()
 
-    def input_reader_callback(self, *args, **kwargs):
-        import pdb
-        pdb.set_trace()
-        debug('yaaay, input reader callback' + str(*args) + ', ' + str(**kwargs))
+    def input_reader_callback(self, input_reader, notification, bytes):
+        if (notification == lldb.eInputReaderReactivate):
+            self.ready_for_command()
+        elif (notification == lldb.eInputReaderGotToken):
+            pass
+            # write_to_input_channel(bytes)
+        elif (notification == lldb.eInputReaderAsynchronousOutputWritten):
+            io_channel = self.io_channel
+            if io_channel:
+                pass
+                # io_channel.refresh_prompt()
+        elif (notification == lldb.eInputReaderInterrupt):
+            io_channel = self.io_channel
+            if io_channel:
+                io_channel.out_write("^C\n", io_channel.NO_ASYNC)
+                # io_channel.refresh_prompt()
+        elif (notification == lldb.eInputReaderEndOfFile):
+            io_channel = self.io_channel
+            if io_channel:
+                io_channel.out_write("^D\n", io_channel.NO_ASYNC)
+                # io_channel.refresh_prompt()
+            pass
+            # write_to_input_channel("quit\n")
+        elif (notification == lldb.eInputReaderActivate):
+            pass
+        elif (notification == lldb.eInputReaderDeactivate):
+            pass
+        elif (notification == lldb.eInputReaderDone):
+            pass
+
+        debug('yaaay, input reader callback. "' + str(bytes) + '"')
+        return len(bytes)
 
     def stop(self):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
