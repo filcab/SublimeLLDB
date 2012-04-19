@@ -153,7 +153,7 @@ class LldbDriver(threading.Thread):
     def ready_for_command(self):
         """Send an eBroadcastBitReadyForInput if the debugger wasn't ready before this call."""
         if not self.__waiting_for_command:
-            # self.__waiting_for_command = True
+            self.__waiting_for_command = True
             self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, False)
 
     @property
