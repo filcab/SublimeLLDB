@@ -95,13 +95,6 @@ import uuid
 import re
 import os
 
-
-def LLDBSwigPythonCallSBInputReaderCallback(*args):
-  """
-    LLDBSwigPythonCallSBInputReaderCallback(char str, void baton, SBInputReader reader, InputReaderAction notification, 
-        char bytes, size_t bytes_len)
-    """
-  return _lldb.LLDBSwigPythonCallSBInputReaderCallback(*args)
 __WORDSIZE = _lldb.__WORDSIZE
 INT8_MAX = _lldb.INT8_MAX
 INT16_MAX = _lldb.INT16_MAX
@@ -852,6 +845,7 @@ class SBAddress(_object):
 
 SBAddress_swigregister = _lldb.SBAddress_swigregister
 SBAddress_swigregister(SBAddress)
+cvar = _lldb.cvar
 
 class SBBlock(_object):
     """Represents a lexical block. SBFunction contains SBBlock(s)."""
@@ -2648,7 +2642,7 @@ class SBDebugger(_object):
         return _lldb.SBDebugger_EnableLog(self, *args)
 
     def DispatchInput(self, *args):
-        """DispatchInput(self, void baton, void data, size_t data_len)"""
+        """DispatchInput(self, void data)"""
         return _lldb.SBDebugger_DispatchInput(self, *args)
 
     def DispatchInputInterrupt(self):
@@ -3876,9 +3870,9 @@ class SBInputReader(_object):
     __del__ = lambda self : None;
     def Initialize(self, *args):
         """
-        Initialize(self, SBDebugger debugger, Callback callback, void callback_baton, 
-            InputReaderGranularity granularity, 
-            str end_token, str prompt, bool echo) -> SBError
+        Initialize(self, SBDebugger debugger, Callback callback, InputReaderGranularity granularity, 
+            str end_token, str prompt, 
+            bool echo) -> SBError
         """
         return _lldb.SBInputReader_Initialize(self, *args)
 
