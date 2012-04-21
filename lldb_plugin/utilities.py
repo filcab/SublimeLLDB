@@ -91,7 +91,7 @@ class PseudoTerminal(object):
     def __init__(self):
         self._master = self.invalid_fd
         self._slave = self.invalid_fd
-        raise NotImplementedError("Pseudo-terminal support is only available on Mac OS X")
+        # raise NotImplementedError("Pseudo-terminal support is only available on Mac OS X")
 
     def __del__(self):
         self.close_master_file_descriptor()
