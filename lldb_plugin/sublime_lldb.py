@@ -20,7 +20,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_view_name, set_lldb_view_name,            \
                          disabled_bps, set_disabled_bps,                \
                          get_settings_keys,                             \
-                         InputPanelDelegate, LldbInputDelegate
+                         InputPanelDelegate
 
 from utilities import generate_memory_view_for
 
@@ -241,7 +241,7 @@ def clear_view(v):
 #         cmd = ''
 #     if driver_instance():
 #         lldb_view_write(lldb_prompt() + cmd + '\n')
-#         driver_instance().send_command(cmd)
+#         driver_instance().send_input(cmd)
 
 #         # We don't have a window, so let's re-use the one active on lldb launch
 #         # lldb_toggle_output_view(window_ref(), show=True)
@@ -275,10 +275,10 @@ def unload_handler():
     cleanup(window_ref())
 
 
-def initialize_lldb():
+def initialize_lldb(w):
     # set_got_input_function(lldb_in_panel_on_done)
 
-    driver = LldbDriver(lldb_view_send)
+    driver = LldbDriver(w, lldb_view_send)
     event = lldb.SBEvent()
     listener = lldb.SBListener('Wait for lldb initialization')
     listener.StartListeningForEvents(driver.broadcaster,
@@ -294,7 +294,7 @@ def initialize_lldb():
     return driver
 
 
-def start_debugging():
+def start_debugging(w):
     global _is_debugging
     if _is_debugging:
         cleanup(window_ref())
@@ -321,7 +321,7 @@ def start_debugging():
     _is_debugging = True
 
     # Really start the debugger
-    initialize_lldb()
+    initialize_lldb(w)
 
     driver_instance().debugger.SetInputFileHandle(sys.__stdin__, False)
     start_markers_monitor(window_ref(), driver_instance())
@@ -351,7 +351,7 @@ def ensure_lldb_is_running(w=None):
         if _clear_view_on_startup:
             clear_view(lldb_out_view())
 
-        if not start_debugging():
+        if not start_debugging(w):
             return
 
         g = lldb_greeting()
@@ -433,7 +433,7 @@ class LldbCommand(WindowCommand):
         self.setup()
         ensure_lldb_is_running(self.window)
         lldb_toggle_output_view(self.window, show=True)
-        LldbInputDelegate.get_input()
+        driver_instance().maybe_get_input()
 
 
 class LldbDebugProgram(WindowCommand):
@@ -464,7 +464,7 @@ class LldbDebugProgram(WindowCommand):
             t.LaunchSimple(_default_args, [], os.getcwd())
             driver_instance().debugger.SetSelectedTarget(t)
 
-        LldbInputDelegate.get_input()
+        driver_instance().maybe_get_input()
 
 
 class LldbAttachProcess(WindowCommand):
@@ -1035,6 +1035,13 @@ class LldbClearOutputView(WindowCommand):
         # TODO: Test variable to know if we should clear the view when starting a debug session
 
         clear_view(lldb_out_view())
+
+
+class LldbBogus(WindowCommand):
+    def run(self):
+        self.setup()
+        ensure_lldb_is_running(self.window)
+        driver_instance().debugger.DispatchInput(str('ola!\n'))
 
 
 # import this specific names without the prefix

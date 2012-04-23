@@ -63,8 +63,8 @@ class SBTypeCategory;
 class SBTypeFilter;
 class SBTypeFormat;
 class SBTypeNameSpecifier;
-#ifndef LLDB_DISABLE_PYTHON
 class SBTypeSummary;
+#ifndef LLDB_DISABLE_PYTHON
 class SBTypeSynthetic;    
 #endif
 class SBTypeList;

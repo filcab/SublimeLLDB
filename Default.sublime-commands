@@ -1,4 +1,9 @@
 [
+    // Test command
+    {
+        "caption": "LLDB: Surprise me! (Bogus test command)",
+        "command": "lldb_bogus"
+    },
 	// Starting/stopping lldb
 	{
 		"caption": "LLDB: Show LLDB prompt (starting LLDB if needed)",

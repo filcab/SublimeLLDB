@@ -95,10 +95,6 @@ import uuid
 import re
 import os
 
-
-def LLDBSwigPythonCallPythonLogOutputCallback(*args):
-  """LLDBSwigPythonCallPythonLogOutputCallback(str str, void baton)"""
-  return _lldb.LLDBSwigPythonCallPythonLogOutputCallback(*args)
 __WORDSIZE = _lldb.__WORDSIZE
 INT8_MAX = _lldb.INT8_MAX
 INT16_MAX = _lldb.INT16_MAX
@@ -592,6 +588,13 @@ eFrameCompareUnknown = _lldb.eFrameCompareUnknown
 eFrameCompareEqual = _lldb.eFrameCompareEqual
 eFrameCompareYounger = _lldb.eFrameCompareYounger
 eFrameCompareOlder = _lldb.eFrameCompareOlder
+eAddressClassInvalid = _lldb.eAddressClassInvalid
+eAddressClassUnknown = _lldb.eAddressClassUnknown
+eAddressClassCode = _lldb.eAddressClassCode
+eAddressClassCodeAlternateISA = _lldb.eAddressClassCodeAlternateISA
+eAddressClassData = _lldb.eAddressClassData
+eAddressClassDebug = _lldb.eAddressClassDebug
+eAddressClassRuntime = _lldb.eAddressClassRuntime
 
 # ==================================
 # Helper function for SBModule class
@@ -730,6 +733,10 @@ class SBAddress(_object):
         """SetAddress(self, SBSection section, addr_t offset)"""
         return _lldb.SBAddress_SetAddress(self, *args)
 
+    def GetAddressClass(self):
+        """GetAddressClass(self) -> AddressClass"""
+        return _lldb.SBAddress_GetAddressClass(self)
+
     def GetSymbolContext(self, *args):
         """
         GetSymbolContext(self, uint32_t resolve_scope) -> SBSymbolContext
@@ -838,6 +845,7 @@ class SBAddress(_object):
 
 SBAddress_swigregister = _lldb.SBAddress_swigregister
 SBAddress_swigregister(SBAddress)
+cvar = _lldb.cvar
 
 class SBBlock(_object):
     """Represents a lexical block. SBFunction contains SBBlock(s)."""
@@ -2431,7 +2439,6 @@ class SBDebugger(_object):
         """
         Create() -> SBDebugger
         Create(bool source_init_files) -> SBDebugger
-        Create(bool source_init_files, LogOutputCallback callback) -> SBDebugger
         """
         return _lldb.SBDebugger_Create(*args)
 
@@ -2635,7 +2642,7 @@ class SBDebugger(_object):
         return _lldb.SBDebugger_EnableLog(self, *args)
 
     def DispatchInput(self, *args):
-        """DispatchInput(self, void baton, void data, size_t data_len)"""
+        """DispatchInput(self, void data)"""
         return _lldb.SBDebugger_DispatchInput(self, *args)
 
     def DispatchInputInterrupt(self):
@@ -2778,8 +2785,7 @@ def SBDebugger_Terminate():
 def SBDebugger_Create(*args):
   """
     Create() -> SBDebugger
-    Create(bool source_init_files) -> SBDebugger
-    SBDebugger_Create(bool source_init_files, LogOutputCallback callback) -> SBDebugger
+    SBDebugger_Create(bool source_init_files) -> SBDebugger
     """
   return _lldb.SBDebugger_Create(*args)
 
@@ -3864,9 +3870,9 @@ class SBInputReader(_object):
     __del__ = lambda self : None;
     def Initialize(self, *args):
         """
-        Initialize(self, SBDebugger debugger, Callback callback, void callback_baton, 
-            InputReaderGranularity granularity, 
-            str end_token, str prompt, bool echo) -> SBError
+        Initialize(self, SBDebugger debugger, Callback callback, InputReaderGranularity granularity, 
+            str end_token, str prompt, 
+            bool echo) -> SBError
         """
         return _lldb.SBInputReader_Initialize(self, *args)
 
@@ -3919,6 +3925,10 @@ class SBInstruction(_object):
     def GetAddress(self):
         """GetAddress(self) -> SBAddress"""
         return _lldb.SBInstruction_GetAddress(self)
+
+    def GetAddressClass(self):
+        """GetAddressClass(self) -> AddressClass"""
+        return _lldb.SBInstruction_GetAddressClass(self)
 
     def GetMnemonic(self, *args):
         """GetMnemonic(self, SBTarget target) -> str"""
@@ -5549,6 +5559,14 @@ class SBSymbol(_object):
         """GetDescription(self, SBStream description) -> bool"""
         return _lldb.SBSymbol_GetDescription(self, *args)
 
+    def IsExternal(self):
+        """IsExternal(self) -> bool"""
+        return _lldb.SBSymbol_IsExternal(self)
+
+    def IsSynthetic(self):
+        """IsSynthetic(self) -> bool"""
+        return _lldb.SBSymbol_IsSynthetic(self)
+
     def get_instructions_from_current_target (self):
         return self.GetInstructions (target)
 
@@ -5572,6 +5590,13 @@ class SBSymbol(_object):
 
     __swig_getmethods__["instructions"] = get_instructions_from_current_target
     if _newclass: x = property(get_instructions_from_current_target, None)
+
+    __swig_getmethods__["external"] = IsExternal
+    if _newclass: x = property(IsExternal, None)
+
+    __swig_getmethods__["synthetic"] = IsSynthetic
+    if _newclass: x = property(IsSynthetic, None)
+
 
 
     def __str__(self):
@@ -7507,15 +7532,14 @@ class SBTypeCategory(_object):
         """DeleteTypeSynthetic(self, SBTypeNameSpecifier arg0) -> bool"""
         return _lldb.SBTypeCategory_DeleteTypeSynthetic(self, *args)
 
-    __swig_getmethods__["num_synthetics"] = GetNumSynthetics
-    if _newclass: x = property(GetNumSynthetics, None)
-
     __swig_getmethods__["num_formats"] = GetNumFormats
     if _newclass: x = property(GetNumFormats, None)
     __swig_getmethods__["num_summaries"] = GetNumSummaries
     if _newclass: x = property(GetNumSummaries, None)
     __swig_getmethods__["num_filters"] = GetNumFilters
     if _newclass: x = property(GetNumFilters, None)
+    __swig_getmethods__["num_synthetics"] = GetNumSynthetics
+    if _newclass: x = property(GetNumSynthetics, None)
 
     __swig_getmethods__["name"] = GetName
     if _newclass: x = property(GetName, None)
@@ -8466,8 +8490,9 @@ class SBValue(_object):
         """
         return _lldb.SBValue_GetExpressionPath(self, *args)
 
-    __swig_getmethods__["summary"] = GetSummary
-    if _newclass: summary = property(GetSummary, None, doc='Returns the summary for this SBValue as a string')
+    def __get_dynamic__ (self):
+        '''Helper function for the "SBValue.dynamic" property.'''
+        return self.GetDynamicValue (eDynamicCanRunTarget)
 
     __swig_getmethods__["name"] = GetName
     if _newclass: name = property(GetName, None, doc='Returns the name of this SBValue as a string')
@@ -8513,8 +8538,14 @@ class SBValue(_object):
     __swig_getmethods__["error"] = GetError
     if _newclass: error = property(GetError, None, doc='Returns the SBError currently associated to this SBValue')
 
+    __swig_getmethods__["summary"] = GetSummary
+    if _newclass: summary = property(GetSummary, None, doc='Returns the summary for this SBValue as a string')
+
     __swig_getmethods__["description"] = GetObjectDescription
     if _newclass: description = property(GetObjectDescription, None, doc='Returns the language-specific description of this SBValue as a string')
+
+    __swig_getmethods__["dynamic"] = __get_dynamic__
+    if _newclass: description = property(__get_dynamic__, None, doc='Gets the dynamic type for a value')
 
     __swig_getmethods__["location"] = GetLocation
     if _newclass: location = property(GetLocation, None, doc='Returns the location of this SBValue as a string')

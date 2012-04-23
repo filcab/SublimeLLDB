@@ -11,6 +11,7 @@ import ctypes
 import objc_runtime
 import metrics
 import struct
+import Logger
 
 statistics = metrics.Metrics()
 statistics.add_metric('invalid_isa')
@@ -26,6 +27,7 @@ class NSTaggedNumber_SummaryProvider:
 		pass
 
 	def __init__(self, valobj, info_bits, data, params):
+		logger = Logger.Logger()
 		self.valobj = valobj;
 		self.sys_params = params
 		self.info_bits = info_bits
@@ -33,9 +35,11 @@ class NSTaggedNumber_SummaryProvider:
 		self.update();
 
 	def update(self):
+		logger = Logger.Logger()
 		self.adjust_for_architecture();
 
 	def value(self):
+		logger = Logger.Logger()
 		# in spite of the plenty of types made available by the public NSNumber API
 		# only a bunch of these are actually used in the internal implementation
 		# unfortunately, the original type information appears to be lost
@@ -57,6 +61,7 @@ class NSUntaggedNumber_SummaryProvider:
 		pass
 
 	def __init__(self, valobj, params):
+		logger = Logger.Logger()
 		self.valobj = valobj;
 		self.sys_params = params
 		if not(self.sys_params.types_cache.char):
@@ -82,9 +87,11 @@ class NSUntaggedNumber_SummaryProvider:
 		self.update();
 
 	def update(self):
+		logger = Logger.Logger()
 		self.adjust_for_architecture();
 
 	def value(self):
+		logger = Logger.Logger()
 		global statistics
 		# we need to skip the ISA, then the next byte tells us what to read
 		# we then skip one other full pointer worth of data and then fetch the contents
@@ -149,7 +156,7 @@ class NSUntaggedNumber_SummaryProvider:
 			data_double = struct.unpack('d', struct.pack('Q', data_plain))[0]
 			statistics.metric_hit('code_notrun',self.valobj)
 			return '(double)' + str(data_double)
-		statistics.metric_hit('unknown_class',str(self.valobj) + " had unknown data_type " + str(data_type))
+		statistics.metric_hit('unknown_class',str(valobj.GetName()) + " had unknown data_type " + str(data_type))
 		return 'absurd: dt = ' + str(data_type)
 
 
@@ -158,14 +165,17 @@ class NSUnknownNumber_SummaryProvider:
 		pass
 
 	def __init__(self, valobj, params):
+		logger = Logger.Logger()
 		self.valobj = valobj;
 		self.sys_params = params
 		self.update();
 
 	def update(self):
+		logger = Logger.Logger()
 		self.adjust_for_architecture();
 
 	def value(self):
+		logger = Logger.Logger()
 		stream = lldb.SBStream()
 		self.valobj.GetExpressionPath(stream)
 		expr = "(NSString*)[" + stream.GetData() + " stringValue]"
@@ -175,12 +185,15 @@ class NSUnknownNumber_SummaryProvider:
 		return '<variable is not NSNumber>'
 
 def GetSummary_Impl(valobj):
+	logger = Logger.Logger()
 	global statistics
 	class_data,wrapper = objc_runtime.Utilities.prepare_class_detection(valobj,statistics)
 	if wrapper:
 		return wrapper
 	
 	name_string = class_data.class_name()
+	logger >> "class name is: " + str(name_string)
+
 	if name_string == 'NSNumber' or name_string == '__NSCFNumber':
 		if class_data.is_tagged():
 			wrapper = NSTaggedNumber_SummaryProvider(valobj,class_data.info_bits(),class_data.value(), class_data.sys_params)
@@ -191,11 +204,12 @@ def GetSummary_Impl(valobj):
 			wrapper = NSUntaggedNumber_SummaryProvider(valobj, class_data.sys_params)
 	else:
 		wrapper = NSUnknownNumber_SummaryProvider(valobj, class_data.sys_params)
-		statistics.metric_hit('unknown_class',str(valobj) + " seen as " + name_string)
+		statistics.metric_hit('unknown_class',valobj.GetName() + " seen as " + name_string)
 	return wrapper;
 
 
 def NSNumber_SummaryProvider (valobj,dict):
+	logger = Logger.Logger()
 	provider = GetSummary_Impl(valobj);
 	if provider != None:
 		if isinstance(provider,objc_runtime.SpecialSituation_Description):
@@ -204,6 +218,7 @@ def NSNumber_SummaryProvider (valobj,dict):
 			summary = provider.value();
 		except:
 			summary = None
+		logger >> "got summary " + str(summary)
 		if summary == None:
 			summary = '<variable is not NSNumber>'
 		return str(summary)

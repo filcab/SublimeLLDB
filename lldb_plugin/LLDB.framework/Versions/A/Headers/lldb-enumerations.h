@@ -250,21 +250,21 @@ namespace lldb {
     //------------------------------------------------------------------
     typedef enum SymbolContextItem
     {
-        eSymbolContextTarget     = (1 << 0), ///< Set when \a target is requested from a query, or was located in query results
-        eSymbolContextModule     = (1 << 1), ///< Set when \a module is requested from a query, or was located in query results
-        eSymbolContextCompUnit   = (1 << 2), ///< Set when \a comp_unit is requested from a query, or was located in query results
-        eSymbolContextFunction   = (1 << 3), ///< Set when \a function is requested from a query, or was located in query results
-        eSymbolContextBlock      = (1 << 4), ///< Set when the deepest \a block is requested from a query, or was located in query results
-        eSymbolContextLineEntry  = (1 << 5), ///< Set when \a line_entry is requested from a query, or was located in query results
-        eSymbolContextSymbol     = (1 << 6), ///< Set when \a symbol is requested from a query, or was located in query results
-        eSymbolContextEverything = ((eSymbolContextSymbol << 1) - 1)  ///< Indicates to try and lookup everything up during a query.
+        eSymbolContextTarget     = (1u << 0), ///< Set when \a target is requested from a query, or was located in query results
+        eSymbolContextModule     = (1u << 1), ///< Set when \a module is requested from a query, or was located in query results
+        eSymbolContextCompUnit   = (1u << 2), ///< Set when \a comp_unit is requested from a query, or was located in query results
+        eSymbolContextFunction   = (1u << 3), ///< Set when \a function is requested from a query, or was located in query results
+        eSymbolContextBlock      = (1u << 4), ///< Set when the deepest \a block is requested from a query, or was located in query results
+        eSymbolContextLineEntry  = (1u << 5), ///< Set when \a line_entry is requested from a query, or was located in query results
+        eSymbolContextSymbol     = (1u << 6), ///< Set when \a symbol is requested from a query, or was located in query results
+        eSymbolContextEverything = ((eSymbolContextSymbol << 1) - 1u)  ///< Indicates to try and lookup everything up during a query.
     } SymbolContextItem;
 
     typedef enum Permissions
     {
-        ePermissionsWritable = (1 << 0),
-        ePermissionsReadable = (1 << 1),
-        ePermissionsExecutable = (1 << 2)
+        ePermissionsWritable    = (1u << 0),
+        ePermissionsReadable    = (1u << 1),
+        ePermissionsExecutable  = (1u << 2)
     } Permissions;
 
     typedef enum InputReaderAction
@@ -626,6 +626,27 @@ namespace lldb {
        eFrameCompareOlder
    } FrameComparison;
    
+    //----------------------------------------------------------------------
+    // Address Class
+    //
+    // A way of classifying an address used for disassembling and setting 
+    // breakpoints. Many object files can track exactly what parts of their
+    // object files are code, data and other information. This is of course
+    // above and beyond just looking at the section types. For example, code
+    // might contain PC relative data and the object file might be able to
+    // tell us that an address in code is data.
+    //----------------------------------------------------------------------
+    typedef enum AddressClass
+    {
+        eAddressClassInvalid,
+        eAddressClassUnknown,
+        eAddressClassCode,
+        eAddressClassCodeAlternateISA,
+        eAddressClassData,
+        eAddressClassDebug,
+        eAddressClassRuntime
+    } AddressClass;
+
 } // namespace lldb
 
 

@@ -100,6 +100,8 @@ public:
     lldb::SBLineEntry
     GetLineEntry ();
     
+    lldb::AddressClass
+    GetAddressClass ();
 
 protected:
 
@@ -139,7 +141,7 @@ protected:
 
 private:
 
-    std::auto_ptr<lldb_private::AddressImpl> m_opaque_ap;
+    std::auto_ptr<lldb_private::Address> m_opaque_ap;
 };
 
 

@@ -80,10 +80,8 @@ public:
     bool
     GetValueDidChange ();
 
-#ifndef LLDB_DISABLE_PYTHON
     const char *
     GetSummary ();
-#endif
     
     const char *
     GetObjectDescription ();
