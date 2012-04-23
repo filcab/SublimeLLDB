@@ -2,11 +2,12 @@
 
 # import time
 
+import os
 import lldb
 import lldbutil
 import sublime
 import threading
-# import traceback
+import utilities
 
 BIG_TIMEOUT = 42000000
 START_LLDB_TIMEOUT = 5
@@ -39,9 +40,10 @@ class LldbDriver(threading.Thread):
     __input_reader = None
     __waiting_for_command = False
 
-    def __init__(self, log_callback=None):
+    def __init__(self, window, log_callback=None):
         super(LldbDriver, self).__init__()  # name='Driver')
         self.name = 'sublime.lldb.driver'
+        self.__window = window
         lldb.SBDebugger.Initialize()
         self.__broadcaster = lldb.SBBroadcaster('Driver')
 
@@ -50,22 +52,29 @@ class LldbDriver(threading.Thread):
         # else:
         self._debugger = lldb.SBDebugger.Create(False)
         set_driver_instance(self)
-        self.__io_channel = IOChannel(self, lldb_view_send)
+        r, w = os.pipe()
+        self.__io_channel_r_fh = os.fdopen(r, 'r', 0)
+        self.__io_channel_w_fh = os.fdopen(w, 'w', 0)
+        self.__io_channel = IOChannel(self, self.__io_channel_r_fh, lldb_view_send)
         # self._debugger.SetCloseInputOnEOF(False)
         self.__input_reader = lldb.SBInputReader()
+        self.__input_pty = utilities.PseudoTerminal()
+        self.__output_pty = utilities.PseudoTerminal()
 
     def __del__(self):
-        del self.__io_channel
-        del self.__broadcaster
-        del self._debugger
+        # del self.__io_channel
+        # del self.__broadcaster
+        # del self._debugger
         lldb.SBDebugger.Terminate()
 
     def input_reader_callback(self, input_reader, notification, bytes):
         if (notification == lldb.eInputReaderReactivate):
             self.ready_for_command()
         elif (notification == lldb.eInputReaderGotToken):
-            pass
-            # write_to_input_channel(bytes)
+            # We're using a Line granularity. We don't receive the \n
+            debug('writing "' + bytes + '" to io_channel_w_fh (' + str(self.__io_channel_w_fh.fileno()) + ')')
+            self.__io_channel_w_fh.write(bytes + '\n')
+            self.__io_channel_w_fh.flush()
         elif (notification == lldb.eInputReaderAsynchronousOutputWritten):
             io_channel = self.io_channel
             if io_channel:
@@ -74,24 +83,42 @@ class LldbDriver(threading.Thread):
         elif (notification == lldb.eInputReaderInterrupt):
             io_channel = self.io_channel
             if io_channel:
-                io_channel.out_write("^C\n", io_channel.NO_ASYNC)
+                io_channel.out_write('^C\n', io_channel.NO_ASYNC)
                 # io_channel.refresh_prompt()
         elif (notification == lldb.eInputReaderEndOfFile):
             io_channel = self.io_channel
             if io_channel:
-                io_channel.out_write("^D\n", io_channel.NO_ASYNC)
+                io_channel.out_write('^D\n', io_channel.NO_ASYNC)
                 # io_channel.refresh_prompt()
+            self.__io_channel_w_fh.write(b'quit\n')
             pass
             # write_to_input_channel("quit\n")
         elif (notification == lldb.eInputReaderActivate):
-            pass
+            self.ready_for_command()
         elif (notification == lldb.eInputReaderDeactivate):
             pass
         elif (notification == lldb.eInputReaderDone):
             pass
 
-        debug('yaaay, input reader callback. "' + str(bytes) + '"')
+        def notif_str():
+            return [
+                    "eInputReaderActivate,   // reader is newly pushed onto the reader stack ",
+                    "eInputReaderAsynchronousOutputWritten, // an async output event occurred; the reader may want to do something",
+                    "eInputReaderReactivate, // reader is on top of the stack again after another reader was popped off ",
+                    "eInputReaderDeactivate, // another reader was pushed on the stack",
+                    "eInputReaderGotToken,   // reader got one of its tokens (granularity)",
+                    "eInputReaderInterrupt,  // reader received an interrupt signal (probably from a control-c)",
+                    "eInputReaderEndOfFile,  // reader received an EOF char (probably from a control-d)",
+                    "eInputReaderDone        // reader was just popped off the stack and is done"][notification]
+        debug('yaaay, input reader callback. "' + str(bytes) + '" ' + notif_str())
         return len(bytes)
+
+    def maybe_get_input(self):
+        if self.is_ready_for_command():
+            LldbInputDelegate.get_input(self.__window, 'lldb (driver)')
+
+    def master_thread_bytes_received(self, *args):
+        debug("MasterThreadBytesReceived(" + str(args) + ")")
 
     def stop(self):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
@@ -132,10 +159,13 @@ class LldbDriver(threading.Thread):
     def is_done(self, done):
         self.__is_done = done
 
-    def send_command(self, cmd):
+    def send_input(self, cmd):
         """Send a command asynchronously to the IO channel."""
-        event = lldb.SBEvent(IOChannel.eBroadcastBitHasUserInput, str(cmd))
-        self.io_channel.broadcaster.BroadcastEvent(event)
+        debug('sending input: ' + cmd + ' fd: ' + str(self.__to_debugger_fh_w.fileno()))
+        self.__to_debugger_fh_w.write(bytes(cmd) + '\n')
+        self.__to_debugger_fh_w.flush()
+        # event = lldb.SBEvent(IOChannel.eBroadcastBitHasUserInput, str(cmd))
+        # self.io_channel.broadcaster.BroadcastEvent(event)
 
     def process_is_stopped(self):
         target = self.debugger.GetSelectedTarget()
@@ -148,11 +178,13 @@ class LldbDriver(threading.Thread):
         return True
 
     def is_ready_for_command(self):
-        return self.process_is_stopped()
+        return self.__waiting_for_command
 
     def ready_for_command(self):
         """Send an eBroadcastBitReadyForInput if the debugger wasn't ready before this call."""
+        debug('ready for command')
         if not self.__waiting_for_command:
+            debug('waiting_for_command = True')
             self.__waiting_for_command = True
             self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, False)
 
@@ -171,15 +203,34 @@ class LldbDriver(threading.Thread):
     def run(self):
         thread_created('<' + self.name + '>')
 
-        # bool quit_success = sb_interpreter.SetCommandOverrideCallback ("quit", QuitCommandOverrideCallback, this);
-        # assert quit_success
-
         # Warn whoever started us that we can start working
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
 
+        # in_pty = self.__input_pty
+        # in_pty.open_first_available_master(os.O_RDWR | os.O_NOCTTY)
+
+        # out_pty = self.__output_pty
+        # out_pty.open_first_available_master(os.O_RDWR | os.O_NOCTTY)
+
+        # Create pipes for communicating with the debugger
+        in_pipe_fd, out_pipe_fd = os.pipe()
+        self.__from_debugger_fh_r = os.fdopen(in_pipe_fd, 'r', 0)
+        self.__from_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
+        debug('from debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
+        in_pipe_fd, out_pipe_fd = os.pipe()
+        self.__to_debugger_fh_r = os.fdopen(in_pipe_fd, 'r', 0)
+        self.__to_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
+        debug('to debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
+
+        self.debugger.SetOutputFileHandle(self.__from_debugger_fh_w, False)
+        self.debugger.SetErrorFileHandle(self.__from_debugger_fh_w, False)
+        self.debugger.SetInputFileHandle(self.__to_debugger_fh_r, False)
+
+        # m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
+
         error = lldb.SBError(self.__input_reader.Initialize(self.debugger,
                                                             self.input_reader_callback,
-                                                            lldb.eInputReaderGranularityByte,
+                                                            lldb.eInputReaderGranularityLine,
                                                             None,  # end token (NULL == never done)
                                                             None,  # Prompt (NULL == taken care of elsewhere)
                                                             False))  # echo input (we'll take care of this elsewhere)
@@ -237,6 +288,7 @@ class LldbDriver(threading.Thread):
                             IOChannel.eBroadcastBitThreadDidStart,
                             event)
 
+                self.ready_for_command()
                 while not self.is_done:
                     listener.WaitForEvent(BIG_TIMEOUT, event)
                     if event:
@@ -245,6 +297,7 @@ class LldbDriver(threading.Thread):
                             if (event.BroadcasterMatchesRef(self.io_channel.broadcaster)):
                                 if ev_type & IOChannel.eBroadcastBitHasUserInput:
                                     command_string = lldb.SBEvent.GetCStringFromEvent(event)
+                                    debug('got eBroadcastBitHasUserInput: ' + str(command_string))
                                     if command_string is None:
                                         command_string = ''
                                     result = lldb.SBCommandReturnObject()
@@ -255,6 +308,11 @@ class LldbDriver(threading.Thread):
 
                                     if result.GetErrorSize() > 0:
                                         self.io_channel.err_write(result.GetError(), IOChannel.NO_ASYNC)
+
+                                    debug('waiting_for_command = False')
+                                    self.__waiting_for_command = False
+                                    if self.__input_reader.IsActive():
+                                        self.ready_for_command()
 
                                 elif ev_type & IOChannel.eBroadcastBitThreadShouldExit \
                                     or ev_type & IOChannel.eBroadcastBitThreadDidExit:
@@ -281,8 +339,6 @@ class LldbDriver(threading.Thread):
                                     data = lldb.SBEvent.GetCStringFromEvent(event)
                                     self.io_channel.out_write(data, IOChannel.ASYNC)
                                     lldb_view_send(stdout_msg(data))
-                    if self.process_is_stopped():
-                        self.ready_for_command()
 
                 if not iochannel_thread_exited:
                     event.Clear()
@@ -542,7 +598,7 @@ class IOChannel(threading.Thread):
     __out_write = None
     __broadcaster = None
 
-    def __init__(self, driver, out_write, err_write=None):
+    def __init__(self, driver, pipe, out_write, err_write=None):
         super(IOChannel, self).__init__()
         self.name = 'sublime.lldb.io-channel'
 
@@ -553,6 +609,7 @@ class IOChannel(threading.Thread):
         self.__err_write = err_write
         self.__out_write = out_write
         self.__broadcaster = lldb.SBBroadcaster('IOChannel')
+        self.__io_channel_pipe = pipe
 
     @property
     def driver(self):
@@ -561,6 +618,27 @@ class IOChannel(threading.Thread):
     @property
     def broadcaster(self):
         return self.__broadcaster
+
+    # def output_bytes_received(self, bytes):
+    #     self.out_write(bytes, IOChannel.NO_ASYNC)
+    #     # IOChannel *io_channel = (IOChannel *) baton;
+    #     # IOLocker locker (io_channel->m_output_mutex);
+    #     # const char *bytes = (const char *) src;
+
+    #     # if self.is_getting_command() && self._expecting_prompt:
+    #     #     # io_channel->m_prompt_str.append (bytes, src_len);
+    #     #     # // Log this to make sure the prompt is really what you think it is.
+    #     #     # if self.m_prompt_str.find(el_prompt(io_channel->m_edit_line)) == 0
+    #     #     #     self._expecting_prompt = False;
+    #     #     #     self._refresh_request_pending = False;
+    #     #     #     self.out_write(str(self._prompt_str), NO_ASYNC);
+    #     # else
+    #     #     # if (io_channel->m_prompt_str.size() > 0)
+    #     #     #     io_channel->m_prompt_str.clear();
+    #     #     # std::string tmp_str (bytes, src_len);
+    #     #     # if (tmp_str.find (el_prompt (io_channel->m_edit_line)) == 0)
+    #     #     #     io_channel->m_refresh_request_pending = false;
+    #     #     # io_channel->OutWrite(bytes, src_len, NO_ASYNC);
 
     def stop(self):
         if self.is_alive():
@@ -601,6 +679,7 @@ class IOChannel(threading.Thread):
         while not done:
             event = lldb.SBEvent()
             listener.WaitForEvent(BIG_TIMEOUT, event)
+            debug('%s, %s' % (event, lldbutil.get_description(event)))
             if not event:
                 continue
 
@@ -608,7 +687,18 @@ class IOChannel(threading.Thread):
             if event.GetBroadcaster():
                 if event.BroadcasterMatchesRef(self.driver.broadcaster):
                     if event_type & LldbDriver.eBroadcastBitReadyForInput:
-                        LldbInputDelegate.get_input()
+                        # FIXME: continue
+                        self.driver.maybe_get_input()
+                        debug('iochannel reading from fd: ' + str(self.__io_channel_pipe.fileno()))
+                        line = self.__io_channel_pipe.readline()
+                        if line == '':
+                            done = True
+                            continue
+                        if line[-1] == '\n':
+                            line = line[:-1]
+                        debug('io channel broadcasting eBroadcastBitHasUserInput: + ' + str(line))
+                        event = lldb.SBEvent(self.eBroadcastBitHasUserInput, line)
+                        self.broadcaster.BroadcastEvent(event)
                     if event_type & LldbDriver.eBroadcastBitThreadShouldExit:
                         done = True
                         continue

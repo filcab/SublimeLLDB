@@ -307,7 +307,7 @@ class LldbInputDelegate(InputPanelDelegate):
 
         if driver_instance():
             lldb_view_write(lldb_prompt() + cmd + '\n')
-            driver_instance().send_command(cmd)
+            driver_instance().send_input(cmd)
 
             # We don't have a window, so let's re-use the one active on lldb launch
             # lldb_toggle_output_view(window_ref(), show=True)
