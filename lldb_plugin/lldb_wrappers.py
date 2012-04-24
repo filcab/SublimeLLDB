@@ -126,8 +126,8 @@ class LldbDriver(threading.Thread):
             return True
         return False
 
-    def master_thread_bytes_received(self, *args):
-        debug("MasterThreadBytesReceived(" + str(args) + ")")
+    def master_thread_bytes_received(self, string):
+        self.io_channel.out_write(string, IOChannel.ASYNC)
 
     def stop(self):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
@@ -231,6 +231,8 @@ class LldbDriver(threading.Thread):
         self.__to_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
         # debug('to debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
 
+        self.__file_monitor = FileMonitor(self.master_thread_bytes_received, self.__from_debugger_fh_r)
+        self.__file_monitor.start()
         self.debugger.SetOutputFileHandle(self.__from_debugger_fh_w, False)
         self.debugger.SetErrorFileHandle(self.__from_debugger_fh_w, False)
         self.debugger.SetInputFileHandle(self.__to_debugger_fh_r, False)
@@ -357,6 +359,7 @@ class LldbDriver(threading.Thread):
                     if not event:
                         self.io_channel.stop()
 
+                self.__file_monitor.setDone()
                 # Ensure the listener (and everything else, really) is destroyed BEFORE the SBDebugger
                 # Otherwise lldb will try to lock a destroyed mutex.
                 # TODO: Track that bug!
@@ -754,5 +757,5 @@ def is_return_invalid(r):
 
 
 from root_objects import set_driver_instance, lldb_view_send, set_process_state, LldbInputDelegate
-from monitors import marker_update
+from monitors import marker_update, FileMonitor
 from utilities import stderr_msg, stdout_msg

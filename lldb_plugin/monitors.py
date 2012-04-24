@@ -3,12 +3,16 @@
 import sublime
 import sublime_plugin
 
+import os
+import fcntl
+
 import Queue
+import select
 import threading
 
 
 from lldb_wrappers import thread_created
-from root_objects import show_lldb_panel, breakpoint_dict, reset_breakpoint_dict,   \
+from root_objects import breakpoint_dict, reset_breakpoint_dict,   \
                          bps_for_file, add_bp_loc, del_bp_loc
 
 
@@ -25,6 +29,50 @@ lldb_markers_thread = None
 lldb_last_location_view = None
 lldb_current_location = None
 lldb_file_markers_queue = Queue.Queue()
+
+
+class FileMonitor(threading.Thread):
+    TIMEOUT = 10
+
+    def __init__(self, callback, *files):
+        self._callback = callback
+        self._files = list(files)
+        self._done = False
+        super(FileMonitor, self).__init__(name='lldb.debugger.out.monitor')
+
+    def isDone(self):
+        return self._done
+
+    def setDone(self, done=True):
+        self._done = done
+
+    def run(self):
+        thread_created('<' + self.name + '>')
+
+        def fun(file):
+            # make stdin a non-blocking file
+            fd = file.fileno()
+            fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+        rlist = self._files
+        map(fun, rlist)
+
+        while not self.isDone() and rlist is not []:
+            debug('selecting')
+            r, w, x = select.select(rlist, [], [], FileMonitor.TIMEOUT)
+            if r is []:
+                continue
+            for f in r:
+                debug('file ' + str(f))
+                # MAKE THE FILES NON-BLOCKING!!!
+                data = f.read()
+                debug('data: ' + data)
+                if data is '':
+                    rlist.remove(f)
+                self._callback(data)
+
+        self.setDone(True)
 
 
 def marker_update(marks, args=(), after=None):
