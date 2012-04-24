@@ -433,7 +433,8 @@ class LldbCommand(WindowCommand):
         self.setup()
         ensure_lldb_is_running(self.window)
         lldb_toggle_output_view(self.window, show=True)
-        driver_instance().maybe_get_input()
+        if not driver_instance().maybe_get_input():
+            sublime.status_message('Unable to send commands to the debugger')
 
 
 class LldbDebugProgram(WindowCommand):
@@ -464,7 +465,7 @@ class LldbDebugProgram(WindowCommand):
             t.LaunchSimple(_default_args, [], os.getcwd())
             driver_instance().debugger.SetSelectedTarget(t)
 
-        driver_instance().maybe_get_input()
+        # driver_instance().maybe_get_input()
 
 
 class LldbAttachProcess(WindowCommand):

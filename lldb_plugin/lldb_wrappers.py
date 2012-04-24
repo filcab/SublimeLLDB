@@ -116,6 +116,8 @@ class LldbDriver(threading.Thread):
     def maybe_get_input(self):
         if self.is_ready_for_command():
             LldbInputDelegate.get_input(self.__window, 'lldb (driver)')
+            return True
+        return False
 
     def master_thread_bytes_received(self, *args):
         debug("MasterThreadBytesReceived(" + str(args) + ")")
@@ -687,7 +689,6 @@ class IOChannel(threading.Thread):
             if event.GetBroadcaster():
                 if event.BroadcasterMatchesRef(self.driver.broadcaster):
                     if event_type & LldbDriver.eBroadcastBitReadyForInput:
-                        # FIXME: continue
                         self.driver.maybe_get_input()
                         debug('iochannel reading from fd: ' + str(self.__io_channel_pipe.fileno()))
                         line = self.__io_channel_pipe.readline()
