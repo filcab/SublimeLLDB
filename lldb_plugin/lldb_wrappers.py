@@ -170,13 +170,13 @@ class LldbDriver(threading.Thread):
         # self.io_channel.broadcaster.BroadcastEvent(event)
 
     def process_is_stopped(self):
-        target = self.debugger.GetSelectedTarget()
-        if target:
-            process = target.GetProcess()
-            if process:
-                state = process.GetState()
-                if lldb.SBDebugger.StateIsRunningState(state):
-                    return False
+    #     target = self.debugger.GetSelectedTarget()
+    #     if target:
+    #         process = target.GetProcess()
+    #         if process:
+    #             state = process.GetState()
+    #             if lldb.SBDebugger.StateIsRunningState(state):
+    #                 return False
         return True
 
     def is_ready_for_command(self):
