@@ -433,10 +433,11 @@ class LldbCommand(WindowCommand):
     # This command is always enabled.
     def run(self):
         self.setup()
-        ensure_lldb_is_running(self.window)
         lldb_toggle_output_view(self.window, show=True)
-        if not driver_instance().maybe_get_input():
-            sublime.status_message('Unable to send commands to the debugger')
+        if not ensure_lldb_is_running(self.window):
+            # lldb wasn't started by us. show the input panel if possible
+            if not driver_instance().maybe_get_input():
+                sublime.status_message('Unable to send commands to the debugger')
 
 
 class LldbDebugProgram(WindowCommand):
