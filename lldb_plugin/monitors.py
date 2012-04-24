@@ -21,8 +21,6 @@ def debug(string):
     print threading.current_thread().name + ' ' + str(string)
 
 
-lldb_i_o_thread = None
-lldb_event_monitor_thread = None
 lldb_markers_thread = None
 lldb_last_location_view = None
 lldb_current_location = None
@@ -162,8 +160,8 @@ def mark_code_loc(view, show_panel, loc):
                      scope, "bookmark",
                      sublime.HIDDEN)
 
-    if show_panel:
-        show_lldb_panel()
+    # if show_panel:
+    #     show_lldb_panel()
 
 
 class MarkersListener(sublime_plugin.EventListener):

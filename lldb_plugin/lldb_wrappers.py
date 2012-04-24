@@ -184,7 +184,7 @@ class LldbDriver(threading.Thread):
 
     def ready_for_command(self):
         """Send an eBroadcastBitReadyForInput if the debugger wasn't ready before this call."""
-        debug('ready for command')
+        debug('ready for command. was waiting: ' + str(self.__waiting_for_command))
         if not self.__waiting_for_command:
             debug('waiting_for_command = True')
             self.__waiting_for_command = True
@@ -218,11 +218,11 @@ class LldbDriver(threading.Thread):
         in_pipe_fd, out_pipe_fd = os.pipe()
         self.__from_debugger_fh_r = os.fdopen(in_pipe_fd, 'r', 0)
         self.__from_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
-        debug('from debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
+        # debug('from debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
         in_pipe_fd, out_pipe_fd = os.pipe()
         self.__to_debugger_fh_r = os.fdopen(in_pipe_fd, 'r', 0)
         self.__to_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
-        debug('to debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
+        # debug('to debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
 
         self.debugger.SetOutputFileHandle(self.__from_debugger_fh_w, False)
         self.debugger.SetErrorFileHandle(self.__from_debugger_fh_w, False)
@@ -621,27 +621,6 @@ class IOChannel(threading.Thread):
     def broadcaster(self):
         return self.__broadcaster
 
-    # def output_bytes_received(self, bytes):
-    #     self.out_write(bytes, IOChannel.NO_ASYNC)
-    #     # IOChannel *io_channel = (IOChannel *) baton;
-    #     # IOLocker locker (io_channel->m_output_mutex);
-    #     # const char *bytes = (const char *) src;
-
-    #     # if self.is_getting_command() && self._expecting_prompt:
-    #     #     # io_channel->m_prompt_str.append (bytes, src_len);
-    #     #     # // Log this to make sure the prompt is really what you think it is.
-    #     #     # if self.m_prompt_str.find(el_prompt(io_channel->m_edit_line)) == 0
-    #     #     #     self._expecting_prompt = False;
-    #     #     #     self._refresh_request_pending = False;
-    #     #     #     self.out_write(str(self._prompt_str), NO_ASYNC);
-    #     # else
-    #     #     # if (io_channel->m_prompt_str.size() > 0)
-    #     #     #     io_channel->m_prompt_str.clear();
-    #     #     # std::string tmp_str (bytes, src_len);
-    #     #     # if (tmp_str.find (el_prompt (io_channel->m_edit_line)) == 0)
-    #     #     #     io_channel->m_refresh_request_pending = false;
-    #     #     # io_channel->OutWrite(bytes, src_len, NO_ASYNC);
-
     def stop(self):
         if self.is_alive():
             self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadShouldExit)
@@ -679,6 +658,7 @@ class IOChannel(threading.Thread):
 
         done = False
         while not done:
+            debug('listening for events')
             event = lldb.SBEvent()
             listener.WaitForEvent(BIG_TIMEOUT, event)
             debug('%s, %s' % (event, lldbutil.get_description(event)))

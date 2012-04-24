@@ -131,14 +131,14 @@ def got_input_function():
     return __got_input_function
 
 
-def show_lldb_panel(w=None):
-    if not w:
-        w = window_ref()
-    # last args: on_done, on_change, on_cancel.
-    # On change we could try to complete the input using a quick_panel.
-    if w:
-        w.show_input_panel('lldb', '',
-                            __got_input_function, None, None),
+# def show_lldb_panel(w=None):
+#     if not w:
+#         w = window_ref()
+#     # last args: on_done, on_change, on_cancel.
+#     # On change we could try to complete the input using a quick_panel.
+#     if w:
+#         w.show_input_panel('lldb', '',
+#                             __got_input_function, None, None),
 
 
 def lldb_input_fh():
@@ -292,8 +292,8 @@ class LldbInputDelegate(InputPanelDelegate):
             window = window_ref()
 
         # Don't show the panel if we're running a process
-        if not LldbInputDelegate._lldb_input_panel_is_active:
-            LldbInputDelegate().show_on_window(window, title, *args)
+        # if not LldbInputDelegate._lldb_input_panel_is_active:
+        LldbInputDelegate().show_on_window(window, title, *args)
 
     def show_on_window(self, window, *args):
         LldbInputDelegate._lldb_input_panel_is_active = True

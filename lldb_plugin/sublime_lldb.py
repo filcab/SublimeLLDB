@@ -75,8 +75,6 @@ def setup_settings():
     for k in get_settings_keys():
         _settings.add_on_change(k, reload_settings)
 
-    # reload_settings()
-
 
 def get_setting(name):
     setting_name = _setting_prefix + name
@@ -87,6 +85,7 @@ def get_setting(name):
     if sublime.active_window() and sublime.active_window().active_view():
         setting = sublime.active_window().active_view().settings().get(setting_name)
 
+    debug('"%s": "%s"' % (name, setting or _settings.get(setting_name)))
     return setting or _settings.get(setting_name)
 
 
@@ -128,7 +127,6 @@ def initialize_plugin():
     debug('python version: %s' % (sys.version_info,))
     debug('cwd: %s' % os.getcwd())
 
-    setup_settings()
     reload_settings()
 
     global _use_bundled_debugserver
@@ -337,8 +335,9 @@ def search_for_executable():
 
 
 def ensure_lldb_is_running(w=None):
+    """Returns True if lldb was started. False if it was already running"""
     # Ensure we reflect any changes to saved settings (including project settings)
-    reload_settings()
+    # reload_settings()
 
     if not w and window_ref():
         w = window_ref()
@@ -362,6 +361,9 @@ def ensure_lldb_is_running(w=None):
         w.set_view_index(lldb_out_view(), 1, 0)
 
         debug_prologue(driver_instance())
+        return True
+
+    return False
 
 
 import re
@@ -441,7 +443,6 @@ class LldbDebugProgram(WindowCommand):
     # Only enabled when we have a default program to run.
     def is_enabled(self):
         if not _default_exe:
-            setup_settings()
             reload_settings()
 
         exe = search_for_executable()
