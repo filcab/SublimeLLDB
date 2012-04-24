@@ -94,9 +94,11 @@ class LldbDriver(threading.Thread):
             pass
             # write_to_input_channel("quit\n")
         elif (notification == lldb.eInputReaderActivate):
-            self.ready_for_command()
-        elif (notification == lldb.eInputReaderDeactivate):
             pass
+        elif (notification == lldb.eInputReaderDeactivate):
+            # Another input reader got pushed onto the stack
+            # Let's open an input prompt for it.
+            LldbInputDelegate.get_input(self.__window, '?')
         elif (notification == lldb.eInputReaderDone):
             pass
 
@@ -114,8 +116,13 @@ class LldbDriver(threading.Thread):
         return len(bytes)
 
     def maybe_get_input(self):
-        if self.is_ready_for_command():
+        debug('maybe getting input')
+        if self.is_ready_for_command() and self.debugger.InputReaderIsTopReader(self.__input_reader):
+            debug('is ready for command')
             LldbInputDelegate.get_input(self.__window, 'lldb (driver)')
+            return True
+        elif self.is_ready_for_command():
+            LldbInputDelegate.get_input(self.__window, '?')
             return True
         return False
 
