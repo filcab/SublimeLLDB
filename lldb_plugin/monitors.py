@@ -59,7 +59,6 @@ class FileMonitor(threading.Thread):
         map(fun, rlist)
 
         while not self.isDone() and rlist is not []:
-            debug('selecting')
             r, w, x = select.select(rlist, [], [], FileMonitor.TIMEOUT)
             if r is []:
                 continue

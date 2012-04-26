@@ -25,7 +25,7 @@
 //
 // A build script phase can modify this version number if needed.
 //----------------------------------------------------------------------
-#define LLDB_VERSION 140 
+#define LLDB_VERSION 144 
 
 //----------------------------------------------------------------------
 // LLDB defines
