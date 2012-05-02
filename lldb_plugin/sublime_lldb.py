@@ -31,6 +31,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          get_lldb_output_view, lldb_prompt,             \
                          lldb_view_name, set_lldb_view_name,            \
                          lldb_register_view_name,                       \
+                         maybe_get_lldb_output_view,                    \
                          disabled_bps, set_disabled_bps,                \
                          get_settings_keys,                             \
                          InputPanelDelegate
@@ -319,6 +320,10 @@ def process_stopped(driver, state):
     if state == lldb.eStateCrashed:
         scope = 'invalid'
     marker_update('pc', (entry, scope))
+
+    v = maybe_get_lldb_output_view(lldb_register_view_name())
+    if v:
+        update_register_view(v)
 
 
 def initialize_lldb(w):

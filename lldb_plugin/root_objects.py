@@ -221,17 +221,22 @@ def lldb_view_write(string):
     __out_view.show(__out_view.size())
 
 
-def get_lldb_output_view(window, name=None):
-    # Search for the lldb_view view first.
-    if not name:
-        name = lldb_view_name()
-
+def maybe_get_lldb_output_view(window, name):
     f = None
     for v in window.views():
         if v.name() == name:
             f = v
             break
 
+    return f
+
+
+def get_lldb_output_view(window, name=None):
+    # Search for the lldb_view view first.
+    if not name:
+        name = lldb_view_name()
+
+    f = maybe_get_lldb_output_view(window, name)
     if f is None:
         f = window.new_file()
         f.set_name(name)
