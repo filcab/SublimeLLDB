@@ -35,7 +35,7 @@ lldb_file_markers_queue = Queue.Queue()
 
 
 class FileMonitor(threading.Thread):
-    TIMEOUT = 10
+    TIMEOUT = 10  # Our default select timeout is 10 secs
 
     def __init__(self, callback, *files):
         self._callback = callback

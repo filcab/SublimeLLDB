@@ -94,8 +94,6 @@ class LldbDriver(threading.Thread):
                 io_channel.out_write('^D\n', io_channel.NO_ASYNC)
                 # io_channel.refresh_prompt()
             self.__io_channel_w_fh.write(b'quit\n')
-            pass
-            # write_to_input_channel("quit\n")
         elif (notification == lldb.eInputReaderActivate):
             pass
         elif (notification == lldb.eInputReaderDeactivate):
