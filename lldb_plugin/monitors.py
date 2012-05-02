@@ -15,14 +15,17 @@ from lldb_wrappers import thread_created
 from root_objects import breakpoint_dict, reset_breakpoint_dict,   \
                          bps_for_file, add_bp_loc, del_bp_loc
 
+import sys
+
 
 def debug_thr():
-    print ('thread id: ' + threading.current_thread().name)
+    print >> sys.__stdout__, 'thread id:', threading.current_thread().name
+    sys.__stdout__.flush()
     # traceback.print_stack()
 
 
 def debug(string):
-    print threading.current_thread().name + ' ' + str(string)
+    print >> sys.__stdout__, threading.current_thread().name, str(string)
 
 
 lldb_markers_thread = None

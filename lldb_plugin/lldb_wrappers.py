@@ -13,8 +13,11 @@ BIG_TIMEOUT = 42000000
 START_LLDB_TIMEOUT = 5
 
 
+import sys
+
+
 def debug(string):
-    print threading.current_thread().name + ' ' + str(string)
+    print >> sys.__stdout__, threading.current_thread().name, str(string)
 
 
 debug('Loading LLDB wrappers for Sublime Text 2 plugin')

@@ -1,9 +1,11 @@
 # utilities for the sublime lldb plugin
 import string
 
+import sys
+
 
 def debug(thing):
-    print thing
+    print >> sys.__stdout__, thing
 
 
 def stderr_msg(str):

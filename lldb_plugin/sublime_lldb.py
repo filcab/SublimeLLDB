@@ -12,6 +12,18 @@ import threading
 import lldb
 import lldbutil
 
+
+def debug_thr(string=None):
+    if string:
+        print >> sys.__stdout__, 'thread id:', threading.current_thread().name, string
+    else:
+        print >> sys.__stdout__, 'thread id:', threading.current_thread().name
+
+
+def debug(str):
+    print >> sys.__stdout__, str
+
+
 from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
                          lldb_view_write, lldb_view_send,               \
@@ -56,17 +68,6 @@ _default_view_mem_width = 32
 _default_view_mem_grouping = 8
 _layout_group_source_file = 0
 _prologue = []
-
-
-def debug_thr(string=None):
-    if string:
-        print ('thread id: ' + threading.current_thread().name + ' ' + string)
-    else:
-        print ('thread id: ' + threading.current_thread().name)
-
-
-def debug(str):
-    print str
 
 
 def setup_settings():

@@ -19,8 +19,11 @@ __output_fh = None
 __error_fh = None
 
 
+import sys
+
+
 def debug(string):
-    print string
+    print >> sys.__stdout__, string
 
 
 def lldb_prompt():
