@@ -275,10 +275,56 @@ def unload_handler():
     cleanup(window_ref())
 
 
+def process_stopped(driver, state):
+    debugger = driver.debugger
+    entry = None
+    line_entry = debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame().GetLineEntry()
+    if line_entry:
+        # We don't need to run 'process status' like Driver.cpp
+        # Since we open the file and show the source line.
+        r = interpret_command(debugger, 'thread list')
+        lldb_view_send(stdout_msg(r[0].GetOutput()))
+        lldb_view_send(stderr_msg(r[0].GetError()))
+        r = interpret_command(debugger, 'frame info')
+        lldb_view_send(stdout_msg(r[0].GetOutput()))
+        lldb_view_send(stderr_msg(r[0].GetError()))
+
+        filespec = line_entry.GetFileSpec()
+
+        if filespec:
+            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
+                     line_entry.GetLine())
+    else:
+        # Give us some assembly to check the crash/stop
+        r = interpret_command(debugger, 'process status')
+        lldb_view_send(stdout_msg(r[0].GetOutput()))
+        lldb_view_send(stderr_msg(r[0].GetError()))
+        if not line_entry:
+            # Get ALL the SBFrames
+            t = debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
+            n = t.GetNumFrames()
+            for i in xrange(0, n):
+                f = t.GetFrameAtIndex(i)
+                if f:
+                    line_entry = f.GetLineEntry()
+                    if line_entry and line_entry.GetFileSpec():
+                        filespec = line_entry.GetFileSpec()
+
+                        if filespec:
+                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
+                                     line_entry.GetLine())
+                            break
+
+    scope = 'bookmark'
+    if state == lldb.eStateCrashed:
+        scope = 'invalid'
+    marker_update('pc', (entry, scope))
+
+
 def initialize_lldb(w):
     # set_got_input_function(lldb_in_panel_on_done)
 
-    driver = LldbDriver(w, lldb_view_send)
+    driver = LldbDriver(w, lldb_view_send, process_stopped)
     event = lldb.SBEvent()
     listener = lldb.SBListener('Wait for lldb initialization')
     listener.StartListeningForEvents(driver.broadcaster,
@@ -1088,4 +1134,6 @@ class LldbBogus(WindowCommand):
 
 # import this specific names without the prefix
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
+from utilities import stderr_msg, stdout_msg
+from monitors import marker_update
 import lldb_wrappers

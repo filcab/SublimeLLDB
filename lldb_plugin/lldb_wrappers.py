@@ -43,12 +43,13 @@ class LldbDriver(threading.Thread):
     __input_reader = None
     __waiting_for_command = False
 
-    def __init__(self, window, log_callback=None):
+    def __init__(self, window, log_callback=None, process_stopped_callback=None):
         super(LldbDriver, self).__init__()  # name='Driver')
         self.name = 'sublime.lldb.driver'
         self.__window = window
         lldb.SBDebugger.Initialize()
         self.__broadcaster = lldb.SBBroadcaster('Driver')
+        self.__process_stopped_callback = process_stopped_callback
 
         # if log_callback:
             # self._debugger = lldb.SBDebugger.Create(False, log_callback)
@@ -481,49 +482,8 @@ class LldbDriver(threading.Thread):
                         process.GetProcessID())
                 else:
                     self.update_selected_thread()
-                    debugger = self.debugger
-                    entry = None
-                    line_entry = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame().GetLineEntry()
-                    if line_entry:
-                        # We don't need to run 'process status' like Driver.cpp
-                        # Since we open the file and show the source line.
-                        r = interpret_command(debugger, 'thread list')
-                        lldb_view_send(stdout_msg(r[0].GetOutput()))
-                        lldb_view_send(stderr_msg(r[0].GetError()))
-                        r = interpret_command(debugger, 'frame info')
-                        lldb_view_send(stdout_msg(r[0].GetOutput()))
-                        lldb_view_send(stderr_msg(r[0].GetError()))
-
-                        filespec = line_entry.GetFileSpec()
-
-                        if filespec:
-                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
-                                     line_entry.GetLine())
-                    else:
-                        # Give us some assembly to check the crash/stop
-                        r = interpret_command(debugger, 'process status')
-                        lldb_view_send(stdout_msg(r[0].GetOutput()))
-                        lldb_view_send(stderr_msg(r[0].GetError()))
-                        if not line_entry:
-                            # Get ALL the SBFrames
-                            t = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
-                            n = t.GetNumFrames()
-                            for i in xrange(0, n):
-                                f = t.GetFrameAtIndex(i)
-                                if f:
-                                    line_entry = f.GetLineEntry()
-                                    if line_entry and line_entry.GetFileSpec():
-                                        filespec = line_entry.GetFileSpec()
-
-                                        if filespec:
-                                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
-                                                     line_entry.GetLine())
-                                            break
-
-                    scope = 'bookmark'
-                    if state == lldb.eStateCrashed:
-                        scope = 'invalid'
-                    marker_update('pc', (entry, scope))
+                    if self.__process_stopped_callback:
+                        self.__process_stopped_callback(self, state)
 
     def update_selected_thread(self):
         debugger = self.debugger
