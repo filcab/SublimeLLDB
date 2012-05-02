@@ -62,15 +62,18 @@ class FileMonitor(threading.Thread):
         map(fun, rlist)
 
         while not self.isDone() and rlist is not []:
+            debug('rlist: ' + str(rlist))
+            import pdb
+            pdb.set_trace()
             r, w, x = select.select(rlist, [], [], FileMonitor.TIMEOUT)
-            if r is []:
+            debug('after select: ' + str(r))
+            if len(r) == 0:
                 continue
+            debug(r[0].fileno())
             for f in r:
-                debug('file ' + str(f))
-                # MAKE THE FILES NON-BLOCKING!!!
                 data = f.read()
-                debug('data: ' + data)
-                if data is '':
+                debug('file: ' + str(f) + ', data: ' + data)
+                if data == '':
                     rlist.remove(f)
                 self._callback(data)
 

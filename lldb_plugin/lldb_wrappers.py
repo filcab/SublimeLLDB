@@ -226,11 +226,11 @@ class LldbDriver(threading.Thread):
         in_pipe_fd, out_pipe_fd = os.pipe()
         self.__from_debugger_fh_r = os.fdopen(in_pipe_fd, 'r', 0)
         self.__from_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
-        # debug('from debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
+        debug('from debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
         in_pipe_fd, out_pipe_fd = os.pipe()
         self.__to_debugger_fh_r = os.fdopen(in_pipe_fd, 'r', 0)
         self.__to_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
-        # debug('to debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
+        debug('to debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
 
         self.__file_monitor = FileMonitor(self.master_thread_bytes_received, self.__from_debugger_fh_r)
         self.__file_monitor.start()
