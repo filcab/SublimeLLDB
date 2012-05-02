@@ -63,8 +63,6 @@ class FileMonitor(threading.Thread):
 
         while not self.isDone() and rlist is not []:
             debug('rlist: ' + str(rlist))
-            import pdb
-            pdb.set_trace()
             r, w, x = select.select(rlist, [], [], FileMonitor.TIMEOUT)
             debug('after select: ' + str(r))
             if len(r) == 0:
