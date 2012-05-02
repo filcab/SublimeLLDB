@@ -30,6 +30,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          thread_created, window_ref, set_window_ref,    \
                          get_lldb_output_view, lldb_prompt,             \
                          lldb_view_name, set_lldb_view_name,            \
+                         lldb_register_view_name,                       \
                          disabled_bps, set_disabled_bps,                \
                          get_settings_keys,                             \
                          InputPanelDelegate
@@ -1039,6 +1040,43 @@ class LldbClearOutputView(WindowCommand):
         # TODO: Test variable to know if we should clear the view when starting a debug session
 
         clear_view(lldb_out_view())
+
+
+def update_register_view(v):
+    driver = driver_instance()
+    if not driver:
+        return False
+    target = driver.GetSelectedTarget()
+    if not target:
+        return False
+    thread = target.GetSelectedThread()
+    if not thread:
+        return False
+    frame = thread.GetSelectedFrame()
+    if not frame:
+        return False
+
+    registerList = frame.GetRegisters()
+    result = 'Frame registers (size of register set = %d):\n' % registerList.GetSize()
+    for value in registerList:
+        #print value
+        result.append('%s (number of children = %d):\n' % (value.GetName(), value.GetNumChildren()))
+        for child in value:
+            result.append('Name: %s  Value: %s\n' % (child.GetName(), ' Value: ', child.GetValue(frame)))
+
+    edit = v.begin_edit('lldb-shared-libraries-list')
+    v.insert(edit, 0, result)
+    v.end_edit(edit)
+    v.set_read_only(True)
+
+
+class LldbRegisterView(WindowCommand):
+    def run(self):
+        self.setup()
+        ensure_lldb_is_running(self.window)
+        reg_view = get_lldb_output_view(self.window, lldb_register_view_name())
+        update_register_view(reg_view)
+        pass
 
 
 class LldbBogus(WindowCommand):

@@ -5,6 +5,7 @@ import lldb
 
 __lldb_view_name = 'lldb i/o'
 __lldb_prompt = '(lldb) '
+__lldb_register_view_name = 'lldb registers'
 
 __driver = None
 __out_view = None
@@ -37,6 +38,15 @@ def lldb_view_name():
 def set_lldb_view_name(name):
     global __lldb_view_name
     __lldb_view_name = name
+
+
+def lldb_register_view_name():
+    return __lldb_register_view_name
+
+
+def set_lldb_register_view_name(name):
+    global __lldb_register_view_name
+    __lldb_register_view_name = name
 
 
 def process_state():
