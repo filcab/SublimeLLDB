@@ -106,6 +106,10 @@
                         "command": "lldb_view_shared_libraries"
                     },
                     {
+                        "caption": "Show registers",
+                        "command": "lldb_register_view"
+                    },
+                    {
                         "caption": "View Memory",
                         "command": "lldb_view_memory"
                     },

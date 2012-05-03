@@ -14,7 +14,7 @@
 		"command": "lldb_debug_program"
 	},
     {
-        "caption": "Attach to process",
+        "caption": "LLDB: Attach to process",
         "command": "lldb_attach_process"
     },
     {
@@ -38,20 +38,24 @@
         "command": "lldb_break_at_line"
     },
     {
-        "caption": "Create Symbolic Breakpoint"
+        "caption": "LLDB: Create Symbolic Breakpoint"
     },
     {
-        "caption": "Toggle Breakpoints",
+        "caption": "LLDB: Toggle Breakpoints",
         "command": "lldb_toggle_enable_breakpoints"
     },
 
     // Miscellaneous commands
     {
-        "caption": "Shared Libraries",
+        "caption": "LLDB: View Shared Libraries",
         "command": "lldb_view_shared_libraries"
     },
     {
-        "caption": "View Memory",
+        "caption": "LLDB: Show Registers",
+        "command": "lldb_register_view"
+    },
+    {
+        "caption": "LLDB: View Memory",
         "command": "lldb_view_memory"
     },
 
