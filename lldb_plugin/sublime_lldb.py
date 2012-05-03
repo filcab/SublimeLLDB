@@ -277,6 +277,10 @@ def unload_handler():
 
 
 def process_stopped(driver, state):
+    if state == lldb.eStateExited:
+        marker_update('pc', (None,))
+        return
+
     debugger = driver.debugger
     entry = None
     line_entry = debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame().GetLineEntry()

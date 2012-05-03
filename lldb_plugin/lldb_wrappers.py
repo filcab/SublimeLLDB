@@ -471,7 +471,8 @@ class LldbDriver(threading.Thread):
                 lldb_view_send(stdout_msg(r[0].GetOutput()))
                 lldb_view_send(stderr_msg(r[0].GetError()))
                 # Remove program counter markers
-                marker_update('pc', (None,))
+                if self.__process_stopped_callback:
+                    self.__process_stopped_callback(self, state)
             elif state == lldb.eStateStopped     \
                 or state == lldb.eStateCrashed   \
                 or state == lldb.eStateSuspended:
