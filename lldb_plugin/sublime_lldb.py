@@ -1101,13 +1101,18 @@ def update_register_view(v):
     driver = driver_instance()
     if not driver:
         return False
-    target = driver.GetSelectedTarget()
+    target = driver.debugger.GetSelectedTarget()
     if not target:
         return False
-    thread = target.GetSelectedThread()
+    process = target.GetProcess()
+    if not process:
+        return False
+    thread = process.GetSelectedThread()
     if not thread:
         return False
     frame = thread.GetSelectedFrame()
+    import pdb
+    pdb.set_trace()
     if not frame:
         return False
 
@@ -1124,6 +1129,8 @@ def update_register_view(v):
     v.end_edit(edit)
     v.set_read_only(True)
 
+    return True
+
 
 class LldbRegisterView(WindowCommand):
     def run(self):
@@ -1131,7 +1138,6 @@ class LldbRegisterView(WindowCommand):
         ensure_lldb_is_running(self.window)
         reg_view = get_lldb_output_view(self.window, lldb_register_view_name())
         update_register_view(reg_view)
-        pass
 
 
 class LldbBogus(WindowCommand):
