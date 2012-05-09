@@ -325,9 +325,11 @@ def process_stopped(driver, state):
         scope = 'invalid'
     marker_update('pc', (entry, scope))
 
-    v = maybe_get_lldb_output_view(lldb_register_view_name())
-    if v:
-        update_register_view(v)
+    def register_updater():
+        v = maybe_get_lldb_output_view(window_ref(), lldb_register_view_name())
+        if v:
+            update_register_view(v)
+    sublime.set_timeout(register_updater, 0)
 
 
 def initialize_lldb(w):
