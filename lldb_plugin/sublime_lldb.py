@@ -1150,6 +1150,7 @@ class LldbRegisterView(WindowCommand):
         ensure_lldb_is_running(self.window)
         reg_view = get_lldb_output_view(self.window, lldb_register_view_name())
         update_register_view(reg_view)
+        self.window.focus_view(reg_view)
 
 
 class LldbBogus(WindowCommand):
