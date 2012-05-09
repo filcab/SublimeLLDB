@@ -252,17 +252,17 @@ class LldbDriver(threading.Thread):
         self.debugger.PushInputReader(self.__input_reader)
 
         sb_interpreter = self._debugger.GetCommandInterpreter()
-        listener = lldb.SBListener('driver')  # self._debugger.GetListener())
+        listener = self._debugger.GetListener()
         listener.StartListeningForEventClass(self._debugger,
                      lldb.SBTarget.GetBroadcasterClassName(),
                      lldb.SBTarget.eBroadcastBitBreakpointChanged)
-        # This isn't in Driver.cpp. Check why it listens to those events (it uses SBDebugger's listener)
-        listener.StartListeningForEventClass(self._debugger,
-                     lldb.SBProcess.GetBroadcasterClassName(),
-                     lldb.SBProcess.eBroadcastBitStateChanged |     \
-                     lldb.SBProcess.eBroadcastBitInterrupt |        \
-                     lldb.SBProcess.eBroadcastBitSTDOUT |           \
-                     lldb.SBProcess.eBroadcastBitSTDERR)
+        # This isn't in Driver.cpp. Check why it listens to those events (because it uses SBDebugger's listener?)
+        # listener.StartListeningForEventClass(self._debugger,
+        #              lldb.SBProcess.GetBroadcasterClassName(),
+        #              lldb.SBProcess.eBroadcastBitStateChanged |     \
+        #              lldb.SBProcess.eBroadcastBitInterrupt |        \
+        #              lldb.SBProcess.eBroadcastBitSTDOUT |           \
+        #              lldb.SBProcess.eBroadcastBitSTDERR)
 
         if listener.IsValid():
             iochannel_thread_exited = False
