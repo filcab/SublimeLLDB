@@ -25,7 +25,7 @@
 //
 // A build script phase can modify this version number if needed.
 //----------------------------------------------------------------------
-#define LLDB_VERSION 144 
+#define LLDB_VERSION 146 
 
 //----------------------------------------------------------------------
 // LLDB defines
@@ -103,6 +103,7 @@
 #define LLDB_OPT_SET_8                  (1U << 7)
 #define LLDB_OPT_SET_9                  (1U << 8)
 #define LLDB_OPT_SET_10                 (1U << 9)
+#define LLDB_OPT_SET_FROM_TO(A, B)      (((1U << (B)) - 1) ^ (((1U << (A))-1) >> 1))
 
 #if defined(__cplusplus)
 
