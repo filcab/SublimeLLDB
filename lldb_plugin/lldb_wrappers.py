@@ -669,7 +669,7 @@ def interpret_command(debugger, cmd, add_to_history=False):
     result = lldb.SBCommandReturnObject()
     ci = debugger.GetCommandInterpreter()
 
-    r = ci.HandleCommand(cmd.__str__(), result, add_to_history)
+    r = ci.HandleCommand(str(cmd), result, add_to_history)
 
     return (result, r)
 
