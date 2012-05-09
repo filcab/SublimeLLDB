@@ -1118,14 +1118,25 @@ def update_register_view(v):
         return False
 
     registerList = frame.GetRegisters()
-    result = 'Frame registers (size of register set = %d):\n' % registerList.GetSize()
+    result = 'Frame registers:'
     for value in registerList:
         #print value
-        result = result + ('%s (number of children = %d):\n' % (value.GetName(), value.GetNumChildren()))
+        result = result + ('\n%s (number of registers = %d):\n' % (value.GetName(), value.GetNumChildren()))
         for child in value:
-            result = result + ('Name: %s  Value: %s\n' % (child.GetName(), ' Value: ', child.GetValue()))
+            if child.GetValue() is not None:
+                # Let's assume no register name is bigger than 10 chars, for now.
+                # 18 chars are needed for 64 bit values: 0x0000000000000000
+                addr = lldb.SBAddress(child.GetValueAsUnsigned(), target)
+                desc = lldbutil.get_description(addr)
+                if re.match('0x[0-9A-Fa-f]+|^$', desc):
+                    desc = ''
+                else:
+                    desc = ', ' + desc
+                result = result + ('%10.10s = %.18s%s\n' % (child.GetName(), child.GetValue(), desc))
 
-    edit = v.begin_edit('lldb-shared-libraries-list')
+    clear_view(v)
+    v.set_read_only(False)
+    edit = v.begin_edit(lldb_register_view_name())
     v.insert(edit, 0, result)
     v.end_edit(edit)
     v.set_read_only(True)
