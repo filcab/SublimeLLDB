@@ -20,9 +20,6 @@ def debug(string):
     print >> sys.__stdout__, threading.current_thread().name, str(string)
 
 
-debug('Loading LLDB wrappers for Sublime Text 2 plugin')
-
-
 def version():
     return lldb.SBDebugger.GetVersionString()
 
@@ -114,11 +111,10 @@ class LldbDriver(threading.Thread):
                     "eInputReaderInterrupt,  // reader received an interrupt signal (probably from a control-c)",
                     "eInputReaderEndOfFile,  // reader received an EOF char (probably from a control-d)",
                     "eInputReaderDone        // reader was just popped off the stack and is done"][notification]
-        debug('yaaay, input reader callback. "' + str(bytes) + '" ' + notif_str())
+        # debug('yaaay, input reader callback. "' + str(bytes) + '" ' + notif_str())
         return len(bytes)
 
     def maybe_get_input(self):
-        debug('maybe getting input')
         if self.is_ready_for_command() and self.debugger.InputReaderIsTopReader(self.__input_reader):
             debug('is ready for command')
             LldbInputDelegate.get_input(self.__window, 'lldb (driver)')
@@ -633,7 +629,7 @@ class IOChannel(threading.Thread):
             debug('listening for events')
             event = lldb.SBEvent()
             listener.WaitForEvent(BIG_TIMEOUT, event)
-            debug('%s, %s' % (event, lldbutil.get_description(event)))
+            # debug('%s, %s' % (event, lldbutil.get_description(event)))
             if not event:
                 continue
 

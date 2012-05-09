@@ -62,16 +62,16 @@ class FileMonitor(threading.Thread):
         map(fun, rlist)
 
         while not self.isDone() and rlist is not []:
-            debug('rlist: ' + str(rlist))
+            # debug('rlist: ' + str(rlist))
             r, w, x = select.select(rlist, [], [], FileMonitor.TIMEOUT)
-            debug('after select: ' + str(r))
+            # debug('after select: ' + str(r))
             if len(r) == 0:
                 continue
-            debug(r[0].fileno())
             for f in r:
                 data = f.read()
-                debug('file: ' + str(f) + ', data: ' + data)
+                # debug('file: ' + str(f) + ', data: ' + data)
                 if data == '':
+                    debug('removing ' + str(f) + ' from FileMonitor')
                     rlist.remove(f)
                 self._callback(data)
 
