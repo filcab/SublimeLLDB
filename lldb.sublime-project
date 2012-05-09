@@ -12,7 +12,8 @@
         // "lldb.args": [],
         // "lldb.arch": lldb.LLDB_ARCH_DEFAULT
         "lldb.attach.wait_for_launch": false,
-        "lldb.breakpoints": ["main", {"file": "tests.c", "line": 42}]
+        "lldb.breakpoints": ["main", {"file": "tests.c", "line": 42}],
+        "lldb.prologue": []
         /*
             Other lldb.breakpoints possibilities:
             "tests.c:42"
