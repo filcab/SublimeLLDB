@@ -130,6 +130,61 @@ class LldbDriver(threading.Thread):
     def stop(self):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
 
+    def get_PC(self):
+        target = self.debugger.GetSelectedTarget()
+        if not target:
+            return False
+        process = target.GetProcess()
+        if not process:
+            return False
+        thread = process.GetSelectedThread()
+        if not thread:
+            return False
+        frame = thread.GetSelectedFrame()
+        if not frame:
+            return False
+
+        return frame.GetPCAddress().GetLoadAddress(target)
+
+    def disassemble_selected_frame(self):
+        target = self.debugger.GetSelectedTarget()
+        if not target:
+            return None
+        process = target.GetProcess()
+        if not process:
+            return False
+        thread = process.GetSelectedThread()
+        if not thread:
+            return None
+        frame = thread.GetSelectedFrame()
+        if not frame:
+            None
+
+        pc = frame.GetPCAddress()
+        debug(lldbutil.get_description(pc))
+        function = pc.GetFunction()
+        debug(lldbutil.get_description(function))
+        code = function.GetInstructions(target)
+        result = []
+
+        for i in code:
+            comment = i.GetComment(target)
+            # data = i.GetData(target)
+            # data_str = ''
+            # if data.GetByteSize() > 0:
+            #     stream = lldb.SBStream()
+            #     error = lldb.SBError()
+            #     data.GetDescription(stream, data.GetAddress(error, 0))
+            #     if error.Success():
+            #         data_str = " (data: %s)" % stream.GetData()
+
+            if len(comment) > 0:
+                result.append((i.GetAddress().GetLoadAddress(target), i.GetMnemonic(target), i.GetOperands(target), comment))
+            else:
+                result.append((i.GetAddress().GetLoadAddress(target), i.GetMnemonic(target), i.GetOperands(target)))
+
+        return (function.GetName(), function.GetStartAddress().GetLoadAddress(target), result)
+
     @property
     def debugger(self):
         """The low-level SBDebugger for this driver."""

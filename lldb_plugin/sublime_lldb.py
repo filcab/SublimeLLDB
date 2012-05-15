@@ -31,6 +31,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          get_lldb_output_view, lldb_prompt,             \
                          lldb_view_name, set_lldb_view_name,            \
                          lldb_register_view_name,                       \
+                         lldb_disassembly_view_name,                    \
                          maybe_get_lldb_output_view,                    \
                          disabled_bps, set_disabled_bps,                \
                          get_settings_keys,                             \
@@ -1151,6 +1152,54 @@ class LldbRegisterView(WindowCommand):
         reg_view = get_lldb_output_view(self.window, lldb_register_view_name())
         update_register_view(reg_view)
         self.window.focus_view(reg_view)
+
+
+class LldbDisassembleFrame(WindowCommand):
+    def run(self):
+        self.setup()
+        ensure_lldb_is_running(self.window)
+        r = driver_instance().disassemble_selected_frame()
+        if not r:
+            return False
+        pc = driver_instance().get_PC()
+
+        (symbol, addr, instrs) = r
+
+        def get_max_sizes(accum, next):
+            debug('accum: ' + str(accum))
+            debug(next)
+            return (max(accum[0], len(next[1])), max(accum[1], len(next[2])))
+        (max_mnemonic, max_operands) = reduce(get_max_sizes, instrs, (0, 0))
+        # format_str = '%%2.2s%%10.10s: %%%d.%ds %%%d.%ds%%s\n' % (max_mnemonic, max_operands)
+        format_str = '%2.2s%.10s: %*s %*s%s\n'
+        debug('%s, %s' % (str(max_mnemonic), str(max_operands)))
+        max_mnemonic, max_operands = (int(max_mnemonic), int(max_operands))
+
+        result = '%s @ 0x%s:\n' % (symbol, addr)
+        for i in instrs:
+            if len(i) == 3:
+                (addr, mnemonic, ops) = i
+                comment_str = ''
+            elif len(i) == 4:
+                (addr, mnemonic, ops, comment) = i
+                comment_str = '\t; ' + comment
+            else:
+                assert False
+
+            pc_str = ''
+            if pc == addr:
+                pc_str = '=>'
+
+            result += format_str % (pc_str, hex(addr), max_mnemonic, mnemonic, max_operands, ops, comment_str)
+
+        view_name = lldb_disassembly_view_name(symbol, addr)
+        v = get_lldb_output_view(self.window, view_name)
+        clear_view(v)
+        v.set_read_only(False)
+        edit = v.begin_edit(view_name)
+        v.insert(edit, 0, result)
+        v.end_edit(edit)
+        v.set_read_only(True)
 
 
 class LldbBogus(WindowCommand):

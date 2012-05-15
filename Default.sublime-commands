@@ -55,6 +55,10 @@
         "command": "lldb_register_view"
     },
     {
+        "caption": "LLDB: Disassemble current frame",
+        "command": "lldb_disassemble_frame"
+    },
+    {
         "caption": "LLDB: View Memory",
         "command": "lldb_view_memory"
     },
