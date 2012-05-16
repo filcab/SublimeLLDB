@@ -131,32 +131,39 @@ class LldbDriver(threading.Thread):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
 
     def get_PC(self):
-        target = self.debugger.GetSelectedTarget()
-        if not target:
-            return False
-        process = target.GetProcess()
-        if not process:
-            return False
-        thread = process.GetSelectedThread()
-        if not thread:
-            return False
-        frame = thread.GetSelectedFrame()
+        frame = self.current_frame
         if not frame:
             return False
-
         return frame.GetPCAddress().GetLoadAddress(target)
 
-    def disassemble_selected_frame(self):
+    def current_target(self):
         target = self.debugger.GetSelectedTarget()
+        return target
+
+    def current_process(self):
+        target = self.current_target()
         if not target:
             return None
         process = target.GetProcess()
+        return process
+
+    def current_thread(self):
+        process = self.current_process()
         if not process:
             return False
         thread = process.GetSelectedThread()
+        return thread
+        
+
+    def current_frame(self):
+        thread = self.current_thread()
         if not thread:
             return None
         frame = thread.GetSelectedFrame()
+        return frame
+
+    def disassemble_selected_frame(self):
+        frame = self.current_frame()
         if not frame:
             None
 
