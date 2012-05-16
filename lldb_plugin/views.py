@@ -1,17 +1,28 @@
+import re
+import lldb
 import lldbutil
 
 import sublime
 import sublime_plugin
 
-class LLDBView(sublimg_plugin.SublimeView):
+from root_objects import lldb_register_view_name
+
+
+import sys
+import threading
+def debug(thing):
+  print >> sys.__stdout__, threading.current_thread().name, str(thing)
+
+class LLDBView(sublime.View):
   pass
 
 
 class LLDBRegisterView(LLDBView):
-  def __init__(self, frame):
+  def __init__(self, view, thread):
     self.__thread = thread
-    self.set_name(lldbutil.get_description(thread))
-    debug('LLDBRegisterView.name == ' + self.name())
+    self.__view = view
+    view.set_name(lldb_register_view_name(thread))
+    debug('LLDBRegisterView.name == ' + view.name())
 
   def __nonzero__(self):
     return self.valid
@@ -24,21 +35,31 @@ class LLDBRegisterView(LLDBView):
   def thread(self):
     return self.__thread
 
+  @property
+  def view(self):
+    return self.__view
+
+  def name(self):
+    return self.__view.name()
+
   def update(self):
     string = self.make_register_info_string()
-    region = sublime.Region(0, self.size()))
-    def updater(self):
-      self.set_read_only(False)
-      edit = self.begin_edit(self.name)
-      self.erase(edit, region)
-      self.insert(edit, 0, string)
-      self.end_edit(edit)
-      self.set_read_only(True)
+    view = self.__view
+    region = sublime.Region(0, view.size())
+    def updater():
+      view.set_read_only(False)
+      edit = view.begin_edit(view.name())
+      view.erase(edit, region)
+      view.insert(edit, 0, string)
+      view.end_edit(edit)
+      view.set_read_only(True)
     sublime.set_timeout(updater, 0)
 
   def make_register_info_string(self):
+    thread = self.__thread
     if not thread.IsValid():
       return 'Invalid thread. Has it finished its work?'
+    target = thread.GetProcess().GetTarget()
 
     frame = thread.GetSelectedFrame()
     registerList = frame.GetRegisters()
