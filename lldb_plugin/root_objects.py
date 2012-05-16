@@ -5,7 +5,7 @@ import lldb
 
 __lldb_view_name = 'lldb i/o'
 __lldb_prompt = '(lldb) '
-__lldb_register_view_name = 'lldb registers'
+__lldb_register_view_fmt = 'lldb thread #%d'
 __lldb_disassembly_view_fmt = 'lldb %s@0x%x disassembly'
 
 __driver = None
@@ -41,13 +41,9 @@ def set_lldb_view_name(name):
     __lldb_view_name = name
 
 
-def lldb_register_view_name():
-    return __lldb_register_view_name
+def lldb_register_view_name(thread):
+    return __lldb_register_view_fmt % thread.GetThreadID()
 
-
-def set_lldb_register_view_name(name):
-    global __lldb_register_view_name
-    __lldb_register_view_name = name
 
 
 def lldb_disassembly_view_name(symbol, addr):
