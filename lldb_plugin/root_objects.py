@@ -15,6 +15,7 @@ __window_ref = None
 _process_state = lldb.eStateInvalid
 __breakpoint_dict = {}
 _disabled_bps = []
+__lldb_views = []
 
 __input_fh = None
 __output_fh = None
@@ -224,12 +225,20 @@ def lldb_view_write(string):
 
 def maybe_get_lldb_output_view(window, name):
     f = None
+
+    for v in __lldb_views:
+        if v.name() == name:
+            return v
+
     for v in window.views():
         if v.name() == name:
-            f = v
-            break
+            return v
 
     return f
+
+
+def add_lldb_view(v):
+    __lldb_views.append(v)
 
 
 def get_lldb_output_view(window, name=None):
