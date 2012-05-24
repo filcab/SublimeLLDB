@@ -131,9 +131,10 @@ class LldbDriver(threading.Thread):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
 
     def get_PC(self):
-        frame = self.current_frame
+        frame = self.current_frame()
         if not frame:
             return False
+        target = frame.GetThread().GetProcess().GetTarget()
         return frame.GetPCAddress().GetLoadAddress(target)
 
     def current_target(self):
@@ -153,7 +154,6 @@ class LldbDriver(threading.Thread):
             return False
         thread = process.GetSelectedThread()
         return thread
-        
 
     def current_frame(self):
         thread = self.current_thread()
@@ -165,8 +165,9 @@ class LldbDriver(threading.Thread):
     def disassemble_selected_frame(self):
         frame = self.current_frame()
         if not frame:
-            None
+            return None
 
+        target = frame.GetThread().GetProcess().GetTarget()
         pc = frame.GetPCAddress()
         debug(lldbutil.get_description(pc))
         function = pc.GetFunction()
@@ -259,7 +260,9 @@ class LldbDriver(threading.Thread):
 
     @property
     def line_entry(self):
-        frame = self.debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame()
+        frame = self.current_frame()
+        if not frame:
+            return None
         entry = frame.GetLineEntry()
         filespec = entry.GetFileSpec()
 
