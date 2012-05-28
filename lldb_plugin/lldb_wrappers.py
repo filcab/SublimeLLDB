@@ -169,9 +169,7 @@ class LldbDriver(threading.Thread):
 
         target = frame.GetThread().GetProcess().GetTarget()
         pc = frame.GetPCAddress()
-        debug(lldbutil.get_description(pc))
         function = pc.GetFunction()
-        debug(lldbutil.get_description(function))
         code = function.GetInstructions(target)
         result = []
 
