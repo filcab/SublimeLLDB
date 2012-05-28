@@ -330,7 +330,7 @@ def process_stopped(driver, state):
     def register_updater():
         v = maybe_get_lldb_output_view(window_ref(), lldb_register_view_name(driver_instance().current_thread()))
         if v:
-            update_register_view(v)
+            v.update()
     sublime.set_timeout(register_updater, 0)
 
 
@@ -1101,8 +1101,8 @@ class LldbClearOutputView(WindowCommand):
         clear_view(lldb_out_view())
 
 
-def update_register_view(v):
-    v.update()
+# def update_register_view(v):
+#     v.update()
 #     driver = driver_instance()
 #     if not driver:
 #         return False
@@ -1161,7 +1161,7 @@ class LldbRegisterView(WindowCommand):
         else:
             reg_view = LLDBRegisterView(base_reg_view, thread)
             add_lldb_view(reg_view)
-        update_register_view(reg_view)
+        reg_view.update()
         self.window.focus_view(reg_view.base_view())
 
 
