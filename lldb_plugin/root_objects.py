@@ -46,7 +46,6 @@ def lldb_register_view_name(thread):
     return __lldb_register_view_fmt % thread.GetThreadID()
 
 
-
 def lldb_disassembly_view_name(symbol, addr):
     return __lldb_disassembly_view_fmt % (symbol, addr)
 
