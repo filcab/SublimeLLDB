@@ -1101,52 +1101,6 @@ class LldbClearOutputView(WindowCommand):
         clear_view(lldb_out_view())
 
 
-# def update_register_view(v):
-#     v.update()
-#     driver = driver_instance()
-#     if not driver:
-#         return False
-#     target = driver.debugger.GetSelectedTarget()
-#     if not target:
-#         return False
-#     process = target.GetProcess()
-#     if not process:
-#         return False
-#     thread = process.GetSelectedThread()
-#     if not thread:
-#         return False
-#     frame = thread.GetSelectedFrame()
-#     if not frame:
-#         debug('update_register_view: frame was not valid')
-#         return False
-# 
-#     registerList = frame.GetRegisters()
-#     result = 'Frame registers:'
-#     for value in registerList:
-#         #print value
-#         result = result + ('\n%s (number of registers = %d):\n' % (value.GetName(), value.GetNumChildren()))
-#         for child in value:
-#             if child.GetValue() is not None:
-#                 # Let's assume no register name is bigger than 10 chars, for now.
-#                 # 18 chars are needed for 64 bit values: 0x0000000000000000
-#                 addr = lldb.SBAddress(child.GetValueAsUnsigned(), target)
-#                 desc = lldbutil.get_description(addr)
-#                 if re.match('0x[0-9A-Fa-f]+|^$', desc):
-#                     desc = ''
-#                 else:
-#                     desc = ', ' + desc
-#                 result = result + ('%10.10s = %.18s%s\n' % (child.GetName(), child.GetValue(), desc))
-# 
-#     clear_view(v)
-#     v.set_read_only(False)
-#     edit = v.begin_edit(lldb_register_view_name())
-#     v.insert(edit, 0, result)
-#     v.end_edit(edit)
-#     v.set_read_only(True)
-# 
-#     return True
-
-
 class LldbRegisterView(WindowCommand):
     def run(self):
         self.setup()
