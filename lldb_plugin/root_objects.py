@@ -249,6 +249,11 @@ def add_lldb_view(v):
     __lldb_views.append(v)
 
 
+def update_lldb_views():
+    for v in __lldb_views:
+        v.update()
+
+
 def get_lldb_output_view(window, name=None):
     # Search for the lldb_view view first.
     if not name:

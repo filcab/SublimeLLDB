@@ -29,7 +29,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
                          get_lldb_output_view, lldb_prompt,             \
-                         add_lldb_view,                                 \
+                         add_lldb_view, update_lldb_views,              \
                          lldb_view_name, set_lldb_view_name,            \
                          lldb_register_view_name,                       \
                          lldb_disassembly_view_name,                    \
@@ -327,11 +327,8 @@ def process_stopped(driver, state):
         scope = 'invalid'
     marker_update('pc', (entry, scope))
 
-    def register_updater():
-        v = maybe_get_lldb_output_view(window_ref(), lldb_register_view_name(driver_instance().current_thread()))
-        if v:
-            v.update()
-    sublime.set_timeout(register_updater, 0)
+    # New LLDBView updaters
+    update_lldb_views()
 
 
 def initialize_lldb(w):
