@@ -46,7 +46,14 @@ def lldb_register_view_name(thread):
     return __lldb_register_view_fmt % thread.GetThreadID()
 
 
-def lldb_disassembly_view_name(symbol, addr):
+def lldb_disassembly_view_name(frame):
+    if not frame:
+        return ''
+    target = frame.GetThread().GetProcess().GetTarget()
+    pc = frame.GetPCAddress()
+    function = pc.GetFunction()
+    symbol = function.GetName()
+    addr = function.GetStartAddress().GetLoadAddress(target)
     return __lldb_disassembly_view_fmt % (symbol, addr)
 
 

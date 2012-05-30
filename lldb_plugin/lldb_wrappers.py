@@ -164,9 +164,11 @@ class LldbDriver(threading.Thread):
 
     def disassemble_selected_frame(self):
         frame = self.current_frame()
+        return self.disassemble_frame(frame)
+
+    def disassemble_frame(self, frame):
         if not frame:
             return None
-
         target = frame.GetThread().GetProcess().GetTarget()
         pc = frame.GetPCAddress()
         function = pc.GetFunction()
@@ -189,7 +191,7 @@ class LldbDriver(threading.Thread):
             else:
                 result.append((i.GetAddress().GetLoadAddress(target), i.GetMnemonic(target), i.GetOperands(target)))
 
-        return (function.GetName(), function.GetStartAddress().GetLoadAddress(target), result)
+        return result
 
     @property
     def debugger(self):
