@@ -237,6 +237,8 @@ def maybe_get_lldb_output_view(window, name):
 
 
 def add_lldb_view(v):
+    # This is leaking. Check if Sublime Text 2 tells us when our window is
+    # closed.
     __lldb_views.append(v)
 
 
