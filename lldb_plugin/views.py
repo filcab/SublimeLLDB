@@ -6,7 +6,7 @@ import sublime
 # import sublime_plugin
 
 from root_objects import lldb_register_view_name, lldb_disassembly_view_name, \
-                         driver_instance
+                         driver_instance, add_lldb_view
 
 
 import sys
@@ -20,6 +20,7 @@ def debug(thing):
 class LLDBView(sublime.View):
     def __init__(self, view):
         self.__view = view
+        add_lldb_view(self)
 
     def base_view(self):
         return self.__view

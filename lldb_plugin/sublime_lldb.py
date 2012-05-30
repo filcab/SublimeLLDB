@@ -1114,7 +1114,6 @@ class LldbRegisterView(WindowCommand):
             reg_view = base_reg_view
         else:
             reg_view = LLDBRegisterView(base_reg_view, thread)
-            add_lldb_view(reg_view)
         reg_view.update()
         self.window.focus_view(reg_view.base_view())
 
