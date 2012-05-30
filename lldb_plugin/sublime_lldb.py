@@ -29,11 +29,10 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
                          get_lldb_output_view, lldb_prompt,             \
-                         add_lldb_view, update_lldb_views,              \
+                         update_lldb_views,                             \
                          lldb_view_name, set_lldb_view_name,            \
                          lldb_register_view_name,                       \
                          lldb_disassembly_view_name,                    \
-                         maybe_get_lldb_output_view,                    \
                          disabled_bps, set_disabled_bps,                \
                          get_settings_keys,                             \
                          InputPanelDelegate

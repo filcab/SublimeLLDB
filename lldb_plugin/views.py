@@ -145,17 +145,14 @@ class LLDBDisassemblyView(LLDBView):
 
         instrs = driver_instance().disassemble_frame(frame)
         if not instrs:
-            return False
+            return 'Error getting instructions for frame ' + str(frame)
+
         pc = driver_instance().get_PC()
 
         def get_max_sizes(accum, next):
-            debug('accum: ' + str(accum))
-            debug(next)
             return (max(accum[0], len(next[1])), max(accum[1], len(next[2])))
         (max_mnemonic, max_operands) = reduce(get_max_sizes, instrs, (0, 0))
-        # format_str = '%%2.2s%%10.10s: %%%d.%ds %%%d.%ds%%s\n' % (max_mnemonic, max_operands)
         format_str = '%2.2s%.10s: %*s %*s%s\n'
-        debug('%s, %s' % (str(max_mnemonic), str(max_operands)))
         max_mnemonic, max_operands = (int(max_mnemonic), int(max_operands))
 
         result = '%s @ 0x%s:\n' % (symbol, start_addr)
