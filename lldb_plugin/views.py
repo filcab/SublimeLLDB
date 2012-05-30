@@ -110,6 +110,8 @@ class LLDBRegisterView(LLDBView):
 
 
 class LLDBDisassemblyView(LLDBView):
+    __pc_line = 0
+
     def __init__(self, view, frame):
         self.__frame = frame
         super(LLDBDisassemblyView, self).__init__(view)
@@ -127,7 +129,7 @@ class LLDBDisassemblyView(LLDBView):
         return self.__pc_line
 
     def epilogue(self):
-        r = self.base_view.text_point(self.pc_line, 0)
+        r = self.base_view().text_point(self.pc_line, 0)
         self.show(r, True)
         
     def updated_content(self):
@@ -157,7 +159,9 @@ class LLDBDisassemblyView(LLDBView):
         max_mnemonic, max_operands = (int(max_mnemonic), int(max_operands))
 
         result = '%s @ 0x%s:\n' % (symbol, start_addr)
+        n_instrs = 0
         for i in instrs:
+            n_instrs += 1
             if len(i) == 3:
                 (addr, mnemonic, ops) = i
                 comment_str = ''
@@ -169,10 +173,10 @@ class LLDBDisassemblyView(LLDBView):
 
             pc_str = ''
             if pc == addr:
+                self.__pc_line = n_instrs
                 pc_str = '=>'
 
             result += format_str % (pc_str, hex(addr), max_mnemonic, mnemonic, max_operands, ops, comment_str)
 
-        self.__pc_line = pc - start_addr
         return result
 
