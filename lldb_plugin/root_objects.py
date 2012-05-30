@@ -6,6 +6,7 @@ import lldb
 __lldb_view_name = 'lldb i/o'
 __lldb_prompt = '(lldb) '
 __lldb_register_view_fmt = 'lldb thread #%d'
+__lldb_disassembly_view__unkown_addr_fmt = 'lldb 0x%x disassembly'
 __lldb_disassembly_view_fmt = 'lldb %s@0x%x disassembly'
 
 __driver = None
@@ -53,7 +54,12 @@ def lldb_disassembly_view_name(frame):
     pc = frame.GetPCAddress()
     function = pc.GetFunction()
     symbol = function.GetName()
-    addr = function.GetStartAddress().GetLoadAddress(target)
+    start_addr = function.GetStartAddress()
+    if start_addr.IsValid():
+        addr = start_addr.GetLoadAddress(target)
+    else:
+        addr = pc.GetLoadAddress(target)
+        return __lldb_disassembly_view__unkown_addr_fmt % (addr,)
     return __lldb_disassembly_view_fmt % (symbol, addr)
 
 

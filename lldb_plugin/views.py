@@ -140,8 +140,15 @@ class LLDBDisassemblyView(LLDBView):
         target = frame.GetThread().GetProcess().GetTarget()
         pc = frame.GetPCAddress()
         function = pc.GetFunction()
-        symbol = function.GetName()
-        start_addr = function.GetStartAddress().GetLoadAddress(target)
+        symbol = pc.GetSymbol()
+        if function.IsValid():
+            name = function.GetName()
+            start_addr = function.GetStartAddress().GetLoadAddress(target)
+        elif symbol.IsValid():
+            name = symbol.GetName()
+            start_addr = symbol.GetStartAddress().GetLoadAddress(target)
+        else:
+            assert False, "Neither symbol nor the function are valid!"
 
         instrs = driver_instance().disassemble_frame(frame)
         if not instrs:
@@ -155,7 +162,7 @@ class LLDBDisassemblyView(LLDBView):
         format_str = '%2.2s%.10s: %*s %*s%s\n'
         max_mnemonic, max_operands = (int(max_mnemonic), int(max_operands))
 
-        result = '%s @ 0x%s:\n' % (symbol, start_addr)
+        result = '%s @ 0x%s:\n' % (name, start_addr)
         n_instrs = 0
         for i in instrs:
             n_instrs += 1
