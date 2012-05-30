@@ -50,11 +50,11 @@ class LLDBView(sublime.View):
     def update(self):
         string = self.updated_content()
         view = self.base_view()
-        region = sublime.Region(0, view.size())
 
         def updater():
             view.set_read_only(False)
             edit = view.begin_edit(view.name())
+            region = sublime.Region(0, view.size())
             view.erase(edit, region)
             view.insert(edit, 0, string)
             view.end_edit(edit)
