@@ -40,6 +40,9 @@ class LldbDriver(threading.Thread):
     __input_reader = None
     __waiting_for_command = False
 
+    # FIXME: This should be configurable
+    __max_instructions = 200
+
     def __init__(self, window, log_callback=None, process_stopped_callback=None):
         super(LldbDriver, self).__init__()  # name='Driver')
         self.name = 'sublime.lldb.driver'
@@ -172,7 +175,11 @@ class LldbDriver(threading.Thread):
         target = frame.GetThread().GetProcess().GetTarget()
         pc = frame.GetPCAddress()
         function = pc.GetFunction()
-        code = function.GetInstructions(target)
+
+        if function.IsValid():
+            code = function.GetInstructions(target)
+        else:
+            code = target.ReadInstructions(pc, self.__max_instructions)
         result = []
 
         for i in code:
