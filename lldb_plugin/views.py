@@ -23,6 +23,28 @@ class LLDBView(sublime.View):
     def base_view(self):
         return self.__view
 
+    def name(self):
+        return self.base_view().name()
+
+    def set_name(self, name):
+        self.__view.set_name(name)
+
+    def set_read_only(self, is_ro=True):
+        self.__view.set_read_only(is_ro)
+
+    def set_scratch(self, is_scratch=True):
+        self.__view.set_scratch(is_scratch)
+
+    def show(self, point_or_region_or_region_set, show_surrounds=True):
+        self.__view.show(point_or_region_or_region_set, show_surrounds)
+
+    # Method that is run in the end of an update
+    def epilogue(self):
+        pass
+
+    def updated_content(self):
+        assert False, "%s.updated_content() wasn't overridden." % self.__class__.__name__
+
     def update(self):
         string = self.updated_content()
         view = self.base_view()
@@ -35,17 +57,16 @@ class LLDBView(sublime.View):
             view.insert(edit, 0, string)
             view.end_edit(edit)
             view.set_read_only(True)
+            self.epilogue()
         sublime.set_timeout(updater, 0)
-
-    def name(self):
-        return self.base_view().name()
 
 
 class LLDBRegisterView(LLDBView):
     def __init__(self, view, thread):
         self.__thread = thread
         super(LLDBRegisterView, self).__init__(view)
-        view.set_name(lldb_register_view_name(thread))
+        self.set_name(lldb_register_view_name(thread))
+        self.set_scratch()
         debug('LLDBRegisterView.name == ' + view.name())
 
     # def __nonzero__(self):
