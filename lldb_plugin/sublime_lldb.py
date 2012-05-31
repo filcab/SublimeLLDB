@@ -1131,13 +1131,6 @@ class LldbDisassembleFrame(WindowCommand):
         self.window.focus_view(disasm_view.base_view())
 
 
-class LldbBogus(WindowCommand):
-    def run(self):
-        self.setup()
-        ensure_lldb_is_running(self.window)
-        driver_instance().debugger.DispatchInput(str('ola!\n'))
-
-
 # import this specific names without the prefix
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 from utilities import stderr_msg, stdout_msg
