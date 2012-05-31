@@ -175,9 +175,12 @@ class LldbDriver(threading.Thread):
         target = frame.GetThread().GetProcess().GetTarget()
         pc = frame.GetPCAddress()
         function = pc.GetFunction()
+        symbol = pc.GetSymbol()
 
         if function.IsValid():
             code = function.GetInstructions(target)
+        elif symbol.IsValid():
+            code = symbol.GetInstructions(target)
         else:
             code = target.ReadInstructions(pc, self.__max_instructions)
         result = []
