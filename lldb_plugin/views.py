@@ -5,7 +5,7 @@ import lldbutil
 import sublime
 # import sublime_plugin
 
-from root_objects import lldb_register_view_name, lldb_disassembly_view_name, \
+from root_objects import lldb_register_view_name, lldb_disassembly_view_name,   \
                          driver_instance, add_lldb_view
 
 
@@ -69,7 +69,6 @@ class LLDBRegisterView(LLDBView):
         super(LLDBRegisterView, self).__init__(view)
         self.set_name(lldb_register_view_name(thread))
         self.set_scratch()
-        debug('LLDBRegisterView.name == ' + view.name())
 
     # def __nonzero__(self):
     #     return self.valid
@@ -118,7 +117,6 @@ class LLDBDisassemblyView(LLDBView):
 
         self.set_name(lldb_disassembly_view_name(frame))
         self.set_scratch()
-        debug('LLDBDisassemblyView.name == ' + view.name())
 
     @property
     def frame(self):
@@ -131,7 +129,7 @@ class LLDBDisassemblyView(LLDBView):
     def epilogue(self):
         r = self.base_view().text_point(self.pc_line, 0)
         self.show(r, True)
-        
+
     def updated_content(self):
         frame = self.__frame
         if not frame.IsValid():
@@ -155,6 +153,84 @@ class LLDBDisassemblyView(LLDBView):
         instrs = driver_instance().disassemble_frame(frame)
         if not instrs:
             return 'Error getting instructions for frame ' + str(frame)
+
+        pc = driver_instance().get_PC()
+
+        def get_max_sizes(accum, next):
+            return (max(accum[0], len(next[1])), max(accum[1], len(next[2])))
+        (max_mnemonic, max_operands) = reduce(get_max_sizes, instrs, (0, 0))
+        format_str = '%2.2s%.10s: %*s %*s%s\n'
+        max_mnemonic, max_operands = (int(max_mnemonic), int(max_operands))
+
+        result = '%s @ 0x%s:\n' % (name, start_addr)
+        n_instrs = 0
+        for i in instrs:
+            n_instrs += 1
+            if len(i) == 3:
+                (addr, mnemonic, ops) = i
+                comment_str = ''
+            elif len(i) == 4:
+                (addr, mnemonic, ops, comment) = i
+                comment_str = '\t; ' + comment
+            else:
+                assert False
+
+            pc_str = ''
+            if pc == addr:
+                self.__pc_line = n_instrs
+                pc_str = '=>'
+
+            result += format_str % (pc_str, hex(addr), max_mnemonic, mnemonic, max_operands, ops, comment_str)
+
+        return result
+
+
+class LLDBThreadDisassemblyView(LLDBView):
+    __pc_line = 0
+    # __frame = lldb.SBFrame()
+
+    def __init__(self, view, thread):
+        self.__thread = thread
+        super(LLDBThreadDisassemblyView, self).__init__(view)
+
+        self.set_name(lldb_disassembly_view_name(thread.GetThreadID()))
+        self.set_scratch()
+
+    @property
+    def thread(self):
+        return self.__thread
+
+    @property
+    def pc_line(self):
+        return self.__pc_line
+
+    def epilogue(self):
+        r = self.base_view().text_point(self.pc_line, 0)
+        self.show(r, True)
+
+    def updated_content(self):
+        thread = self.__thread
+        if not thread.IsValid():
+            return 'Invalid thread. Has it finished its work?'
+
+        target = thread.GetProcess().GetTarget()
+        pc = thread.GetSelectedFrame().GetPCAddress()
+        function = pc.GetFunction()
+        symbol = pc.GetSymbol()
+        if function.IsValid():
+            name = function.GetName()
+            start_addr = function.GetStartAddress().GetLoadAddress(target)
+        elif symbol.IsValid():
+            name = symbol.GetName()
+            start_addr = symbol.GetStartAddress().GetLoadAddress(target)
+        else:
+            name = pc.GetModule().GetFileSpec().GetFilename()
+            start_addr = pc.GetLoadAddress(target)
+            # assert False, "Neither symbol nor the function are valid!"
+
+        instrs = driver_instance().disassemble_frame(thread.GetSelectedFrame())
+        if not instrs:
+            return 'Error getting instructions for thread ' + str(thread)
 
         pc = driver_instance().get_PC()
 
