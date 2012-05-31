@@ -166,7 +166,8 @@ def update_code_view(window, entry=None, scope='entity.name.class'):
 
         window.focus_group(0)
         view = window.open_file(loc, sublime.ENCODED_POSITION)
-        window.set_view_index(view, 0, 0)
+        # Comented out so the view won't always jump in front of us.
+        # window.set_view_index(view, 0, 0)
 
         # If the view is already loaded:
         # (Otherwise, let the listener do the work)
