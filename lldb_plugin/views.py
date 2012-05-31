@@ -148,7 +148,9 @@ class LLDBDisassemblyView(LLDBView):
             name = symbol.GetName()
             start_addr = symbol.GetStartAddress().GetLoadAddress(target)
         else:
-            assert False, "Neither symbol nor the function are valid!"
+            name = pc.GetModule().GetFileSpec().GetFilename()
+            start_addr = pc.GetLoadAddress(target)
+            # assert False, "Neither symbol nor the function are valid!"
 
         instrs = driver_instance().disassemble_frame(frame)
         if not instrs:
