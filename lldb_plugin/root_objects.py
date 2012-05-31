@@ -8,6 +8,7 @@ __lldb_prompt = '(lldb) '
 __lldb_register_view_fmt = 'lldb thread #%d'
 __lldb_disassembly_view__unkown_addr_fmt = 'lldb 0x%x disassembly'
 __lldb_disassembly_view_fmt = 'lldb %s@0x%x disassembly'
+__lldb_thread_disassembly_view_fmt = 'lldb disassembly of TID %d'
 
 __driver = None
 __out_view = None
@@ -47,9 +48,15 @@ def lldb_register_view_name(thread):
     return __lldb_register_view_fmt % thread.GetThreadID()
 
 
-def lldb_disassembly_view_name(frame):
+def lldb_disassembly_view_name(arg):
+    if type(arg) is int:
+        # We have a thread ID
+        return __lldb_thread_disassembly_view_fmt % (arg,)
+
+    frame = arg
     if not frame:
         return ''
+
     target = frame.GetThread().GetProcess().GetTarget()
     pc = frame.GetPCAddress()
     function = pc.GetFunction()
