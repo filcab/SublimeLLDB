@@ -1118,15 +1118,15 @@ class LldbDisassembleFrame(WindowCommand):
     def run(self):
         self.setup()
         ensure_lldb_is_running(self.window)
-        frame = driver_instance().current_frame()
-        if not frame:
+        thread = driver_instance().current_thread()
+        if not thread:
             return False
 
-        base_disasm_view = get_lldb_output_view(self.window, lldb_disassembly_view_name(frame))
-        if isinstance(base_disasm_view, LLDBDisassemblyView):
+        base_disasm_view = get_lldb_output_view(self.window, lldb_disassembly_view_name(thread.GetThreadID()))
+        if isinstance(base_disasm_view, LLDBThreadDisassemblyView):
             disasm_view = base_disasm_view
         else:
-            disasm_view = LLDBDisassemblyView(base_disasm_view, frame)
+            disasm_view = LLDBThreadDisassemblyView(base_disasm_view, thread)
         disasm_view.update()
         self.window.focus_view(disasm_view.base_view())
 
@@ -1135,5 +1135,5 @@ class LldbDisassembleFrame(WindowCommand):
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 from utilities import stderr_msg, stdout_msg
 from monitors import marker_update
-from views import LLDBRegisterView, LLDBDisassemblyView
+from views import LLDBRegisterView, LLDBThreadDisassemblyView
 import lldb_wrappers
