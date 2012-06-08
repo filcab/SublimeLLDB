@@ -29,17 +29,18 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
                          get_lldb_output_view, lldb_prompt,             \
-                         update_lldb_views,                             \
+                         lldb_views_update_content, lldb_views_refresh, \
                          lldb_view_name, set_lldb_view_name,            \
                          lldb_register_view_name,                       \
                          lldb_disassembly_view_name,                    \
                          disabled_bps, set_disabled_bps,                \
                          get_settings_keys,                             \
-                         InputPanelDelegate
+                         InputPanelDelegate,                            \
+                         set_ui_updater, ui_updater
 
 from utilities import generate_memory_view_for
 
-from monitors import start_markers_monitor, stop_markers_monitor
+from monitors import start_markers_monitor, stop_markers_monitor, UIUpdater
 
 _settings = None
 # _setting_prefix = 'lldb.'
@@ -278,6 +279,8 @@ def unload_handler():
 
 
 def process_stopped(driver, state):
+    ui_updater().process_stopped(state)
+
     if state == lldb.eStateExited:
         marker_update('pc', (None,))
         return
@@ -327,7 +330,8 @@ def process_stopped(driver, state):
     marker_update('pc', (entry, scope))
 
     # New LLDBView updaters
-    update_lldb_views()
+    lldb_views_update_content()
+    sublime.set_timeout(lldb_views_refresh, 0)
 
 
 def initialize_lldb(w):
@@ -410,6 +414,7 @@ def ensure_lldb_is_running(w=None):
         if not start_debugging(w):
             return
 
+        set_ui_updater(UIUpdater())
         g = lldb_greeting()
         if lldb_out_view().size() > 0:
             g = '\n\n' + lldb_greeting()
@@ -1110,7 +1115,7 @@ class LldbRegisterView(WindowCommand):
             reg_view = base_reg_view
         else:
             reg_view = LLDBRegisterView(base_reg_view, thread)
-        reg_view.update()
+        reg_view.update(True)
         self.window.focus_view(reg_view.base_view())
 
 
@@ -1127,7 +1132,7 @@ class LldbDisassembleFrame(WindowCommand):
             disasm_view = base_disasm_view
         else:
             disasm_view = LLDBThreadDisassemblyView(base_disasm_view, thread)
-        disasm_view.update()
+        disasm_view.update(True)
         self.window.focus_view(disasm_view.base_view())
 
 
