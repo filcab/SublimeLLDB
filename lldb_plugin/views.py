@@ -20,10 +20,14 @@ def debug(thing):
 class LLDBView(sublime.View):
     def __init__(self, view):
         self.__view = view
+        self.__content = ''
         add_lldb_view(self)
 
     def base_view(self):
         return self.__view
+
+    def content(self):
+        return self.__content
 
     def name(self):
         return self.base_view().name()
@@ -47,23 +51,36 @@ class LLDBView(sublime.View):
     def updated_content(self):
         assert False, "%s.updated_content() wasn't overridden." % self.__class__.__name__
 
-    def update(self):
-        string = self.updated_content()
+    def update_content(self):
+        self.__content = self.updated_content()
+
+    def update(self, update_content=True):
+        if update_content:
+            self.update_content()
+
+        string = self.content()
         view = self.base_view()
 
-        def updater():
-            view.set_read_only(False)
-            edit = view.begin_edit(view.name())
-            region = sublime.Region(0, view.size())
-            view.erase(edit, region)
-            view.insert(edit, 0, string)
-            view.end_edit(edit)
-            view.set_read_only(True)
-            self.epilogue()
-        sublime.set_timeout(updater, 0)
+        view.set_read_only(False)
+        edit = view.begin_edit(view.name())
+        region = sublime.Region(0, view.size())
+        view.erase(edit, region)
+        view.insert(edit, 0, string)
+        view.end_edit(edit)
+        view.set_read_only(True)
+        self.epilogue()
 
 
-class LLDBRegisterView(LLDBView):
+class LLDBReadOnlyView(LLDBView):
+    # Put here the stuff only for read-only views
+    pass
+
+
+class LLDBCodeView(LLDBView):
+    pass
+
+
+class LLDBRegisterView(LLDBReadOnlyView):
     def __init__(self, view, thread):
         self.__thread = thread
         super(LLDBRegisterView, self).__init__(view)
@@ -108,7 +125,7 @@ class LLDBRegisterView(LLDBView):
         return result
 
 
-class LLDBDisassemblyView(LLDBView):
+class LLDBDisassemblyView(LLDBReadOnlyView):
     __pc_line = 0
 
     def __init__(self, view, frame):
@@ -185,7 +202,7 @@ class LLDBDisassemblyView(LLDBView):
         return result
 
 
-class LLDBThreadDisassemblyView(LLDBView):
+class LLDBThreadDisassemblyView(LLDBReadOnlyView):
     __pc_line = 0
     # __frame = lldb.SBFrame()
 
@@ -261,4 +278,3 @@ class LLDBThreadDisassemblyView(LLDBView):
             result += format_str % (pc_str, hex(addr), max_mnemonic, mnemonic, max_operands, ops, comment_str)
 
         return result
-

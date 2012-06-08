@@ -11,6 +11,7 @@ __lldb_disassembly_view_fmt = 'lldb %s@0x%x disassembly'
 __lldb_thread_disassembly_view_fmt = 'lldb disassembly of TID %d'
 
 __driver = None
+__ui_updater = None
 __out_view = None
 __got_input_function = None
 __window_ref = None
@@ -29,6 +30,15 @@ import sys
 
 def debug(string):
     print >> sys.__stdout__, string
+
+
+def ui_updater():
+    return __ui_updater
+
+
+def set_ui_updater(ui_updater):
+    global __ui_updater
+    __ui_updater = ui_updater
 
 
 def lldb_prompt():
@@ -262,9 +272,33 @@ def add_lldb_view(v):
     __lldb_views.append(v)
 
 
-def update_lldb_views():
+def del_lldb_view(v):
+    __lldb_views.delete(v)
+
+
+def lldb_views():
+    # Return a copy of the list
+    return list(__lldb_views)
+
+
+def lldb_views_update_content():
     for v in __lldb_views:
-        v.update()
+        v.update_content()
+
+
+def lldb_views_refresh():
+    def updater():
+        for v in __lldb_views:
+            v.update(False)
+    sublime.set_timeout(updater, 0)
+
+
+def get_lldb_view_for(v):
+    name = v.name()
+    for lldb_view in __lldb_views:
+        if name == lldb_view.name():
+            return lldb_view
+    return None
 
 
 def get_lldb_output_view(window, name=None):
