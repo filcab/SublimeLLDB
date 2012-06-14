@@ -259,9 +259,10 @@ def maybe_get_lldb_output_view(window, name):
         if v.name() == name:
             return v
 
-    for v in window.views():
-        if v.name() == name:
-            return v
+    if window:
+        for v in window.views():
+            if v.name() == name:
+                return v
 
     return f
 
