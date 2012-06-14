@@ -1115,7 +1115,7 @@ class LldbRegisterView(WindowCommand):
             reg_view = base_reg_view
         else:
             reg_view = LLDBRegisterView(base_reg_view, thread)
-        reg_view.update(True)
+        reg_view.full_update()
         self.window.focus_view(reg_view.base_view())
 
 
@@ -1132,7 +1132,7 @@ class LldbDisassembleFrame(WindowCommand):
             disasm_view = base_disasm_view
         else:
             disasm_view = LLDBThreadDisassemblyView(base_disasm_view, thread)
-        disasm_view.update(True)
+        disasm_view.full_update()
         self.window.focus_view(disasm_view.base_view())
 
 
@@ -1140,5 +1140,5 @@ class LldbDisassembleFrame(WindowCommand):
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 from utilities import stderr_msg, stdout_msg
 from monitors import marker_update
-from views import LLDBRegisterView, LLDBThreadDisassemblyView
+from views import LLDBRegisterView, LLDBThreadDisassemblyView, LLDBCodeView
 import lldb_wrappers
