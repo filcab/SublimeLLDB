@@ -28,9 +28,6 @@ class LLDBView(sublime.View):
     def base_view(self):
         return self.__view
 
-    def content(self):
-        return self.__content
-
     def name(self):
         return self.__name
 
@@ -47,9 +44,37 @@ class LLDBView(sublime.View):
     def show(self, point_or_region_or_region_set, show_surrounds=True):
         self.__view.show(point_or_region_or_region_set, show_surrounds)
 
-    # Method that is run in the end of an update
-    def epilogue(self):
+    def full_update(self):
+        """This method calls pre_update and then makes the main thread
+call update().
+    It should only be used when there is only one view to update."""
+        self.pre_update()
+        sublime.set_timeout(self.update, 0)
+
+    # Method that can be overridden, if need be
+    def pre_update(self):
+        """This method will do what's needed to prepare for the view
+update. It won't necessarily be called from the main thread."""
         pass
+
+    # Method that has to be overridden by each subclass
+    def update(self):
+        """This method will update the view. Ideally, only UI code will be
+run here. It will be called from the main (UI) thread."""
+        assert False, "%s.update() wasn't overridden." % self.__class__.__name__
+
+
+class LLDBReadOnlyView(LLDBView):
+    # Put here the stuff only for read-only views
+    def __init__(self, view):
+        super(LLDBReadOnlyView, self).__init__(view)
+        self.__content = ''
+
+    def content(self):
+        return self.__content
+
+    def pre_update(self):
+        self.updated_content()
 
     def updated_content(self):
         assert False, "%s.updated_content() wasn't overridden." % self.__class__.__name__
@@ -57,10 +82,11 @@ class LLDBView(sublime.View):
     def update_content(self):
         self.__content = self.updated_content()
 
-    def update(self, update_content=True):
-        if update_content:
-            self.update_content()
+    # Method that is run in the end of an update
+    def epilogue(self):
+        pass
 
+    def update(self):
         string = self.content()
         view = self.base_view()
 
@@ -74,13 +100,119 @@ class LLDBView(sublime.View):
         self.epilogue()
 
 
-class LLDBReadOnlyView(LLDBView):
-    # Put here the stuff only for read-only views
-    pass
-
-
 class LLDBCodeView(LLDBView):
-    pass
+    eRegionPC = 1 << 0
+    eRegionBreakpointEnabled = 1 << 1
+    eRegionBreakpointDisabled = 1 << 2
+
+    __pc_line = None
+
+    # FIXME: Split stuff that doesn't have to run on the UI thread.
+    def __init__(self, view, driver):
+        super(LLDBCodeView, self).__init__(view)
+        debug('LLDBCodeView: setting view name to ' + view.file_name())
+        self.__name = view.file_name()  # Override default name
+        self.__driver = driver
+        self.__enabled_bps = {}
+        self.__disabled_bps = {}
+        # Get info on current breakpoints for this file
+
+    def mark_regions(self, regions, type):
+        eMarkerPCScope = 'bookmark'
+        eMarkerPCIcon = 'bookmark'
+        eMarkerBreakpointScope = 'string'
+        eMarkerBreakpointIcon = 'circle'
+        if type == self.eRegionPC:
+            debug('adding regions: ' + str(('lldb-location', regions,
+                  eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)))
+            self.base_view().add_regions('lldb-location', regions,
+                                         eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)
+        elif type == self.eRegionBreakpointEnabled:
+            # v.erase_regions('lldb.breakpoint.enabled')
+            v.add_regions('lldb.breakpoint.enabled', regions, eMarkerBreakpointScope,
+                          eMarkerBreakpointIcon, sublime.HIDDEN)
+        elif type == self.eRegionBreakpointDisabled:
+            # v.erase_regions('lldb.breakpoint.disabled')
+            v.add_regions('lldb.breakpoint.disabled', regions, eMarkerBreakpointScope,
+                          eMarkerBreakpointIcon, sublime.HIDDEN)
+
+    def mark_pc(self, line, show=False):
+        v = self.base_view()
+        region = v.line(v.text_point(line, 0))
+        self.mark_regions([region], self.eRegionPC)
+        if show:
+            self.show(region, True)
+
+    def update_bps():
+        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+        self.mark_regions(regions, self.eBreakpointEnabled)
+        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+        self.mark_regions(regions, self.eBreakpointDisabled)
+
+    def add_bps(self, lines, are_enabled=True):
+        """Adds breakpoints (enabled or disabled) to the view.
+update_bps() must be called afterwards to refresh the UI."""
+        for line in lines:
+            if are_enabled:
+                add_to = self.__enabled_bps
+                maybe_remove_from = self.__disabled_bps
+            else:
+                add_to = self.__disabled_bps
+                maybe_remove_from = self.__enabled_bps
+    
+            if line in maybe_remove_from:
+                existing = maybe_remove_from[line]
+                if existing == 1:
+                    del maybe_remove_from[line]
+                else:
+                    maybe_remove_from[line] = existing - 1
+    
+            if line in add_to:
+                existing = add_to[line]
+            else:
+                existing = 0
+    
+            add_to[line] = existing + 1
+
+
+    def mark_bp(self, line, is_enabled=True):
+        """Mark a new breakpoint as enabled/disabled and immediately mark
+its region."""
+        sef.add_bps([line], is_enabled)
+        v = self.base_view()
+
+        if is_enabled:
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+            self.mark_regions(regions, self.eRegionBreakpointEnabled)
+        else:
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+            self.mark_regions(regions, self.eRegionBreakpointDisabled)
+
+
+    def pre_update(self):
+        thread = self.__driver.current_thread()
+        if not thread:
+            return False
+
+        for frame in thread:
+            debug('frame: ' + lldbutil.get_description(frame))
+            line_entry = frame.GetLineEntry()
+            filespec = line_entry.GetFileSpec()
+            debug('filespec ' + lldbutil.get_description(filespec))
+            if filespec:
+                filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
+                debug('is ' + filename + ' == ' + self.__name)
+                if filename == self.__name:
+                    self.__pc_line = line_entry.GetLine()
+                    return True
+
+        self.__pc_line = None
+        return False
+
+    def update(self):
+        if self.__pc_line:
+            debug('update for ' + self.__class__.__name__)
+            self.mark_pc(self.__pc_line - 1, True)
 
 
 class LLDBRegisterView(LLDBReadOnlyView):
