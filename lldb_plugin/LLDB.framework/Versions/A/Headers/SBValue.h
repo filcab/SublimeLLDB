@@ -26,7 +26,7 @@ public:
 
     lldb::SBValue &
     operator =(const lldb::SBValue &rhs);
-
+    
     ~SBValue ();
 
     bool
@@ -101,8 +101,12 @@ public:
     const char *
     GetLocation ();
 
+    // Deprecated - use the one that takes SBError&
     bool
     SetValueFromCString (const char *value_str);
+
+    bool
+    SetValueFromCString (const char *value_str, lldb::SBError& error);
     
     lldb::SBTypeFormat
     GetTypeFormat ();
@@ -321,12 +325,19 @@ public:
     /// @param[in] write
     ///     Stop when this value is modified
     ///
+    /// @param[out]
+    ///     An error object. Contains the reason if there is some failure.
+    ///
     /// @return
     ///     An SBWatchpoint object. This object might not be valid upon
     ///     return due to a value not being contained in memory, too 
     ///     large, or watchpoint resources are not available or all in
     ///     use.
     //------------------------------------------------------------------
+    lldb::SBWatchpoint
+    Watch (bool resolve_location, bool read, bool write, SBError &error);
+
+    // Backward compatibility fix in the interim.
     lldb::SBWatchpoint
     Watch (bool resolve_location, bool read, bool write);
 
@@ -347,6 +358,9 @@ public:
     /// @param[in] write
     ///     Stop when this value is modified
     ///
+    /// @param[out]
+    ///     An error object. Contains the reason if there is some failure.
+    ///
     /// @return
     ///     An SBWatchpoint object. This object might not be valid upon
     ///     return due to a value not being contained in memory, too 
@@ -354,7 +368,7 @@ public:
     ///     use.
     //------------------------------------------------------------------
     lldb::SBWatchpoint
-    WatchPointee (bool resolve_location, bool read, bool write);
+    WatchPointee (bool resolve_location, bool read, bool write, SBError &error);
 
     // this must be defined in the .h file because synthetic children as implemented in the core
     // currently rely on being able to extract the SharedPointer out of an SBValue. if the implementation

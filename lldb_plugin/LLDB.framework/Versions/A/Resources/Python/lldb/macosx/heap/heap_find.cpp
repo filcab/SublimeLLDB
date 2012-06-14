@@ -68,7 +68,9 @@
 #include <ctype.h>
 #include <mach/mach.h>
 #include <malloc/malloc.h>
+extern "C" {
 #include <stack_logging.h>
+}
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
@@ -117,10 +119,20 @@ struct malloc_match
     intptr_t offset;
 };
 
+struct malloc_stack_entry
+{
+    const void *address;
+    uint64_t argument;
+    uint32_t type_flags;
+    std::vector<uintptr_t> frames;
+};
+
+
 std::vector<malloc_match> g_matches;
 const void *g_lookup_addr = 0;
+std::vector<malloc_stack_entry> g_malloc_stack_history;
 mach_vm_address_t g_stack_frames[MAX_FRAMES];
-uint32_t g_stack_frames_count = 0;
+char g_error_string[PATH_MAX];
 
 //----------------------------------------------------------------------
 // task_peek
@@ -240,6 +252,71 @@ range_info_callback (task_t task, void *baton, unsigned type, uint64_t ptr_addr,
         }
         break;
     }
+}
+
+static void 
+get_stack_for_address_enumerator(mach_stack_logging_record_t stack_record, void *task_ptr)
+{
+    uint32_t num_frames = 0;
+    kern_return_t err = __mach_stack_logging_frames_for_uniqued_stack (*(task_t *)task_ptr, 
+                                                                       stack_record.stack_identifier,
+                                                                       g_stack_frames,
+                                                                       MAX_FRAMES,
+                                                                       &num_frames);    
+    g_malloc_stack_history.resize(g_malloc_stack_history.size() + 1);
+    g_malloc_stack_history.back().address = (void *)stack_record.address;
+    g_malloc_stack_history.back().type_flags = stack_record.type_flags;
+    g_malloc_stack_history.back().argument = stack_record.argument;
+    if (num_frames > 0)
+        g_malloc_stack_history.back().frames.assign(g_stack_frames, g_stack_frames + num_frames);
+    g_malloc_stack_history.back().frames.push_back(0); // Terminate the frames with zero
+}
+
+malloc_stack_entry *
+get_stack_history_for_address (const void * addr, int history)
+{
+    std::vector<malloc_stack_entry> empty;
+    g_malloc_stack_history.swap(empty);
+    if (!stack_logging_enable_logging || (history && !stack_logging_dontcompact))
+    {
+        if (history)
+            strncpy(g_error_string, "error: stack history logging is not enabled, set MallocStackLoggingNoCompact=1 in the environment when launching to enable stack history logging.", sizeof(g_error_string));
+        else
+            strncpy(g_error_string, "error: stack logging is not enabled, set MallocStackLogging=1 in the environment when launching to enable stack logging.", sizeof(g_error_string));
+        return NULL;
+    }
+    kern_return_t err;
+    task_t task = mach_task_self();
+    if (history)
+    {
+        err = __mach_stack_logging_enumerate_records (task,
+                                                      (mach_vm_address_t)addr, 
+                                                      get_stack_for_address_enumerator,
+                                                      &task);
+    }
+    else
+    {
+        uint32_t num_frames = 0;
+        err = __mach_stack_logging_get_frames(task, (mach_vm_address_t)addr, g_stack_frames, MAX_FRAMES, &num_frames);
+        if (err == 0 && num_frames > 0)
+        {
+            g_malloc_stack_history.resize(1);
+            g_malloc_stack_history.back().address = addr;
+            g_malloc_stack_history.back().type_flags = stack_logging_type_alloc;
+            g_malloc_stack_history.back().argument = 0;
+            if (num_frames > 0)
+                g_malloc_stack_history.back().frames.assign(g_stack_frames, g_stack_frames + num_frames);
+            g_malloc_stack_history.back().frames.push_back(0); // Terminate the frames with zero
+        }
+    }
+    // Append an empty entry
+    if (g_malloc_stack_history.empty())
+        return NULL;
+    g_malloc_stack_history.resize(g_malloc_stack_history.size() + 1);
+    g_malloc_stack_history.back().address = 0;
+    g_malloc_stack_history.back().type_flags = 0;
+    g_malloc_stack_history.back().argument = 0;
+    return g_malloc_stack_history.data();
 }
 
 //----------------------------------------------------------------------

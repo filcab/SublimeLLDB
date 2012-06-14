@@ -193,6 +193,8 @@ class Image:
     def __init__(self, path, uuid = None):
         self.path = path
         self.resolved_path = None
+        self.resolved = False
+        self.unavailable = False
         self.uuid = uuid
         self.section_infos = list()
         self.identifier = None
@@ -245,6 +247,8 @@ class Image:
         return self.section_infos or self.slide != None
     
     def load_module(self, target):
+        if self.unavailable:
+            return None # We already warned that we couldn't find this module, so don't return an error string
         # Load this module into "target" using the section infos to
         # set the section load addresses
         if self.has_section_load_info():
@@ -283,12 +287,15 @@ class Image:
         '''Add the Image described in this object to "target" and load the sections if "load" is True.'''
         if target:
             # Try and find using UUID only first so that paths need not match up
-            if self.uuid:
-                self.module = target.AddModule (None, None, str(self.uuid))
+            uuid_str = self.get_normalized_uuid_string()
+            if uuid_str:
+                self.module = target.AddModule (None, None, uuid_str)
             if not self.module:
                 self.locate_module_and_debug_symbols ()
+                if self.unavailable:
+                    return None
                 resolved_path = self.get_resolved_path()
-                self.module = target.AddModule (resolved_path, self.arch, self.uuid)#, self.symfile)
+                self.module = target.AddModule (resolved_path, self.arch, uuid_str, self.symfile)
             if not self.module:
                 return 'error: unable to get module for (%s) "%s"' % (self.arch, self.get_resolved_path())
             if self.has_section_load_info():
@@ -305,15 +312,24 @@ class Image:
         # self.module
         # self.symfile
         # Subclasses can inherit from this class and override this function
+        self.resolved = True
         return True
     
     def get_uuid(self):
-        if not self.uuid:
+        if not self.uuid and self.module:
             self.uuid = uuid.UUID(self.module.GetUUIDString())
         return self.uuid
 
+    def get_normalized_uuid_string(self):
+        if self.uuid:
+            return str(self.uuid).upper()
+        return None
+
     def create_target(self):
         '''Create a target using the information in this Image object.'''
+        if self.unavailable:
+            return None
+
         if self.locate_module_and_debug_symbols ():
             resolved_path = self.get_resolved_path();
             path_spec = lldb.SBFileSpec (resolved_path)
@@ -362,7 +378,7 @@ class Symbolicator:
         
     def find_image_containing_load_addr(self, load_addr):
         for image in self.images:
-            if image.contains_addr (load_addr):
+            if image.get_section_containing_load_addr (load_addr):
                 return image
         return None
     
@@ -378,32 +394,39 @@ class Symbolicator:
         return None
     
     def symbolicate(self, load_addr):
+        if not self.target:
+            self.create_target()
         if self.target:
-            symbolicated_address = Address(self.target, load_addr)
-            if symbolicated_address.symbolicate ():
+            image = self.find_image_containing_load_addr (load_addr)
+            if image:
+                image.add_module (self.target)
+                symbolicated_address = Address(self.target, load_addr)
+                if symbolicated_address.symbolicate ():
             
-                if symbolicated_address.so_addr:
-                    symbolicated_addresses = list()
-                    symbolicated_addresses.append(symbolicated_address)
-                    # See if we were able to reconstruct anything?
-                    while 1:
-                        inlined_parent_so_addr = lldb.SBAddress()
-                        inlined_parent_sym_ctx = symbolicated_address.sym_ctx.GetParentOfInlinedScope (symbolicated_address.so_addr, inlined_parent_so_addr)
-                        if not inlined_parent_sym_ctx:
-                            break
-                        if not inlined_parent_so_addr:
-                            break
+                    if symbolicated_address.so_addr:
+                        symbolicated_addresses = list()
+                        symbolicated_addresses.append(symbolicated_address)
+                        # See if we were able to reconstruct anything?
+                        while 1:
+                            inlined_parent_so_addr = lldb.SBAddress()
+                            inlined_parent_sym_ctx = symbolicated_address.sym_ctx.GetParentOfInlinedScope (symbolicated_address.so_addr, inlined_parent_so_addr)
+                            if not inlined_parent_sym_ctx:
+                                break
+                            if not inlined_parent_so_addr:
+                                break
 
-                        symbolicated_address = Address(self.target, inlined_parent_so_addr.GetLoadAddress(self.target))
-                        symbolicated_address.sym_ctx = inlined_parent_sym_ctx
-                        symbolicated_address.so_addr = inlined_parent_so_addr
-                        symbolicated_address.symbolicate ()
+                            symbolicated_address = Address(self.target, inlined_parent_so_addr.GetLoadAddress(self.target))
+                            symbolicated_address.sym_ctx = inlined_parent_sym_ctx
+                            symbolicated_address.so_addr = inlined_parent_so_addr
+                            symbolicated_address.symbolicate ()
                 
-                        # push the new frame onto the new frame stack
-                        symbolicated_addresses.append (symbolicated_address)
+                            # push the new frame onto the new frame stack
+                            symbolicated_addresses.append (symbolicated_address)
             
-                    if symbolicated_addresses:
-                        return symbolicated_addresses
+                        if symbolicated_addresses:
+                            return symbolicated_addresses
+        else:
+            print 'error: no target in Symbolicator'
         return None
             
         
