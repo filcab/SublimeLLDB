@@ -44,7 +44,6 @@ class UIUpdater(threading.Thread):
     def __init__(self):
         super(UIUpdater, self).__init__(daemon=True)
         self.__queue = Queue.Queue()
-        debug('detaching thread')
         self.start()
 
 
@@ -198,6 +197,7 @@ def update_code_view(window, entry=None, scope='entity.name.class'):
         window.focus_group(0)
         view = window.open_file(loc, sublime.ENCODED_POSITION)
         # Comented out so the view won't always jump in front of us.
+        # TODO: Create a setting for this
         # window.set_view_index(view, 0, 0)
 
         # If the view is already loaded:

@@ -76,7 +76,6 @@ class LldbDriver(threading.Thread):
             self.ready_for_command()
         elif (notification == lldb.eInputReaderGotToken):
             # We're using a Line granularity. We don't receive the \n
-            debug('writing "' + bytes + '" to io_channel_w_fh (' + str(self.__io_channel_w_fh.fileno()) + ')')
             self.__io_channel_w_fh.write(bytes + '\n')
             self.__io_channel_w_fh.flush()
         elif (notification == lldb.eInputReaderAsynchronousOutputWritten):
@@ -241,7 +240,6 @@ class LldbDriver(threading.Thread):
 
     def send_input(self, cmd):
         """Send a command asynchronously to the IO channel."""
-        debug('sending input: ' + cmd + ' fd: ' + str(self.__to_debugger_fh_w.fileno()))
         self.__to_debugger_fh_w.write(bytes(cmd) + '\n')
         self.__to_debugger_fh_w.flush()
         # event = lldb.SBEvent(IOChannel.eBroadcastBitHasUserInput, str(cmd))
@@ -298,11 +296,9 @@ class LldbDriver(threading.Thread):
         in_pipe_fd, out_pipe_fd = os.pipe()
         self.__from_debugger_fh_r = os.fdopen(in_pipe_fd, 'r', 0)
         self.__from_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
-        debug('from debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
         in_pipe_fd, out_pipe_fd = os.pipe()
         self.__to_debugger_fh_r = os.fdopen(in_pipe_fd, 'r', 0)
         self.__to_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
-        debug('to debugger: ' + str(in_pipe_fd) + ', ' + str(out_pipe_fd))
 
         self.__file_monitor = FileMonitor(self.master_thread_bytes_received, self.__from_debugger_fh_r)
         self.__file_monitor.start()
@@ -454,7 +450,7 @@ class LldbDriver(threading.Thread):
             or type & lldb.eBreakpointEventTypeLocationsResolved:
             # TODO: show disabled bps
             bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
-            # debug('bp: ' + lldbutil.get_description(bp))
+            debug('bp: ' + lldbutil.get_description(bp))
             for loc in bp:
                 entry = None
                 if loc and loc.GetAddress():
@@ -713,7 +709,6 @@ class IOChannel(threading.Thread):
                 if event.BroadcasterMatchesRef(self.driver.broadcaster):
                     if event_type & LldbDriver.eBroadcastBitReadyForInput:
                         self.driver.maybe_get_input()
-                        debug('iochannel reading from fd: ' + str(self.__io_channel_pipe.fileno()))
                         line = self.__io_channel_pipe.readline()
                         if line == '':
                             done = True
