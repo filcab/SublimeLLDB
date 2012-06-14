@@ -55,6 +55,7 @@ class LldbDriver(threading.Thread):
             # self._debugger = lldb.SBDebugger.Create(False, log_callback)
         # else:
         self._debugger = lldb.SBDebugger.Create(False)
+        self.__listener = self._debugger.GetListener()
         set_driver_instance(self)
         r, w = os.pipe()
         self.__io_channel_r_fh = os.fdopen(r, 'r', 0)
@@ -212,6 +213,10 @@ class LldbDriver(threading.Thread):
         return self.__broadcaster
 
     @property
+    def listener(self):
+        return self.__listener
+
+    @property
     def debug_mode(self):
         """True if the driver is in debug mode."""
         return self.__debug_mode
@@ -323,7 +328,8 @@ class LldbDriver(threading.Thread):
         self.debugger.PushInputReader(self.__input_reader)
 
         sb_interpreter = self._debugger.GetCommandInterpreter()
-        listener = self._debugger.GetListener()
+        #listener = self._debugger.GetListener()
+        listener = self.__listener
         listener.StartListeningForEventClass(self._debugger,
                      lldb.SBTarget.GetBroadcasterClassName(),
                      lldb.SBTarget.eBroadcastBitBreakpointChanged)
