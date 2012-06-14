@@ -20,7 +20,9 @@ def debug(thing):
 class LLDBView(sublime.View):
     def __init__(self, view):
         self.__view = view
-        self.__content = ''
+        # Keep track of the View's name, so we don't have to call name()
+        # on the main thread
+        self.__name = view.name()
         add_lldb_view(self)
 
     def base_view(self):
@@ -30,10 +32,11 @@ class LLDBView(sublime.View):
         return self.__content
 
     def name(self):
-        return self.base_view().name()
+        return self.__name
 
     def set_name(self, name):
         self.__view.set_name(name)
+        self.__name = name
 
     def set_read_only(self, is_ro=True):
         self.__view.set_read_only(is_ro)
