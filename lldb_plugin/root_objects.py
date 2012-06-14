@@ -282,15 +282,16 @@ def lldb_views():
     return list(__lldb_views)
 
 
-def lldb_views_update_content():
+def lldb_views_update():
+    debug('Updating lldb views')
     for v in __lldb_views:
-        v.update_content()
-
-
-def lldb_views_refresh():
+        debug('pre-updating')
+        v.pre_update()
     def updater():
+        debug('updating')
         for v in __lldb_views:
-            v.update(False)
+            v.update()
+    debug('calling updater on UI thread')
     sublime.set_timeout(updater, 0)
 
 
