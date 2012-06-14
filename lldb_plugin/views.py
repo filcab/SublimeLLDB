@@ -159,21 +159,20 @@ update_bps() must be called afterwards to refresh the UI."""
             else:
                 add_to = self.__disabled_bps
                 maybe_remove_from = self.__enabled_bps
-    
+
             if line in maybe_remove_from:
                 existing = maybe_remove_from[line]
                 if existing == 1:
                     del maybe_remove_from[line]
                 else:
                     maybe_remove_from[line] = existing - 1
-    
+
             if line in add_to:
                 existing = add_to[line]
             else:
                 existing = 0
-    
-            add_to[line] = existing + 1
 
+            add_to[line] = existing + 1
 
     def mark_bp(self, line, is_enabled=True):
         """Mark a new breakpoint as enabled/disabled and immediately mark
@@ -187,7 +186,6 @@ its region."""
         else:
             regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
             self.mark_regions(regions, self.eRegionBreakpointDisabled)
-
 
     def pre_update(self):
         thread = self.__driver.current_thread()
