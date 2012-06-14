@@ -5,6 +5,7 @@ import sublime_plugin
 
 import os
 import sys
+import time
 import atexit
 import datetime
 import threading
@@ -28,8 +29,8 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
-                         get_lldb_output_view, lldb_prompt,             \
-                         lldb_views_update_content, lldb_views_refresh, \
+                         get_lldb_output_view, get_lldb_view_for,       \
+                         lldb_prompt, lldb_views_update,                \
                          lldb_view_name, set_lldb_view_name,            \
                          lldb_register_view_name,                       \
                          lldb_disassembly_view_name,                    \
@@ -319,19 +320,30 @@ def process_stopped(driver, state):
                     if line_entry and line_entry.GetFileSpec():
                         filespec = line_entry.GetFileSpec()
 
-                        if filespec:
-                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
-                                     line_entry.GetLine())
-                            break
+    # scope = 'bookmark'
+    # if state == lldb.eStateCrashed:
+    #     scope = 'invalid'
+    # marker_update('pc', (entry, scope))
 
-    scope = 'bookmark'
-    if state == lldb.eStateCrashed:
-        scope = 'invalid'
-    marker_update('pc', (entry, scope))
+    if filespec:
+        filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
+        # Maybe we don't need to focus the first group. The user knows
+        # what he/she wants.
+        def to_ui_thread():
+            window_ref().focus_group(0)
+            v = window_ref().open_file(filename)
+            lldb_view = get_lldb_view_for(v)
+            if lldb_view is None:
+                lldb_view = LLDBCodeView(v, driver)
+        sublime.set_timeout(to_ui_thread, 0)
+        # time.sleep(0.042)
+    else:
+        # TODO: If we don't have a filespec, we can try to disassemble
+        # around the thread's PC.
+        pass
 
     # New LLDBView updaters
-    lldb_views_update_content()
-    sublime.set_timeout(lldb_views_refresh, 0)
+    lldb_views_update()
 
 
 def initialize_lldb(w):
