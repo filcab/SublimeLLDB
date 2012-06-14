@@ -287,8 +287,7 @@ def process_stopped(driver, state):
         return
 
     debugger = driver.debugger
-    entry = None
-    line_entry = debugger.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame().GetLineEntry()
+    line_entry = driver.current_frame().GetLineEntry()
     if line_entry:
         # We don't need to run 'process status' like Driver.cpp
         # Since we open the file and show the source line.
@@ -300,10 +299,6 @@ def process_stopped(driver, state):
         lldb_view_send(stderr_msg(r[0].GetError()))
 
         filespec = line_entry.GetFileSpec()
-
-        if filespec:
-            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
-                     line_entry.GetLine())
     else:
         # Give us some assembly to check the crash/stop
         r = interpret_command(debugger, 'process status')
@@ -311,7 +306,7 @@ def process_stopped(driver, state):
         lldb_view_send(stderr_msg(r[0].GetError()))
         if not line_entry:
             # Get ALL the SBFrames
-            t = debugger.GetSelectedTarget().GetProcess().GetSelectedThread()
+            t = driver.current_thread()
             n = t.GetNumFrames()
             for i in xrange(0, n):
                 f = t.GetFrameAtIndex(i)
