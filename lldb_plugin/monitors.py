@@ -14,7 +14,7 @@ import threading
 from lldb_wrappers import thread_created
 from root_objects import breakpoint_dict, reset_breakpoint_dict,        \
                          bps_for_file, add_bp_loc, del_bp_loc,          \
-                         lldb_views_update_content, lldb_views_refresh, \
+                         lldb_views_update,                             \
                          get_lldb_view_for, del_lldb_view
 
 import sys
@@ -39,30 +39,66 @@ lldb_file_markers_queue = Queue.Queue()
 class UIUpdater(threading.Thread):
     _done = False
 
-    eProcessStopped = 1
+    eProcessStopped = 1 << 0
+    eBreakpointAdded = 1 << 1
+    eBreakpointEnabled = 1 << 2
+    eBreakpointRemoved = 1 << 3
+    eBreakpointDisabled = 1 << 4
 
     def __init__(self):
-        super(UIUpdater, self).__init__(daemon=True)
+        super(UIUpdater, self).__init__()
+        self.daemon = True
         self.__queue = Queue.Queue()
         self.start()
 
+    def process_stopped(self, state):
+        self.__queue.put(self.packet(self.eProcessStopped, state))
 
-    def process_stopped(self):
-        self.__queue.put(self.eProcessStopped)
+    def breakpoint_added(self, file, line):
+        packet = self.packet(self.eBreakpointAdded, file, line)
+        self.__queue.put(packet)
+
+    def breakpoint_removed(self, file, line):
+        packet = self.packet(self.eBreakpointRemoved, file, line)
+        self.__queue.put(packet)
+
+    def get_next_packet(self):
+        packet = self.__queue.get()
+        self.__queue.task_done()
+        return packet
+
+    def packet(self, *args):
+        return args
+
+    def maybe_get_view_for_file(self, filename):
+        return maybe_get_lldb_output_view(None, filename)
+
 
     def run(self):
+        thread_created('<' + self.name + '>')
+
         packet = self.get_next_packet()
         while packet:
-            if packet == self.eProcessStopped:
-                lldb_views_update_content()
-                sublime.set_timeout(lldb_views_refresh, 0)
+            debug(packet)
+            if packet[0] == self.eProcessStopped:
+                state = packet[1]
+                lldb_views_update()
                 # Should we wait or signal ourselves from lldb_views_refresh?
                 # We'll have to signal ourselves if we find that the views get marked,
                 # instead of the input box
 
                 # Focus the best view
                 # Ask for input, if appropriate
+            elif packet[0] == self.eBreakpointAdded:
+                filename = packet[1]
+                line = packet[2]
 
+                v = maybe_get_view_for_file(filename)
+                v.mark_bp(line, True)
+            elif packet[0] == self.eBreakpointRemoved:
+                pass
+
+            packet = self.get_next_packet()
 
 class FileMonitor(threading.Thread):
     TIMEOUT = 10  # Our default select timeout is 10 secs
@@ -208,6 +244,7 @@ def update_code_view(window, entry=None, scope='entity.name.class'):
 
 
 def update_breakpoints(w, entry=None, remove=False):
+    return False
     if entry:
         (directory, file, line) = entry
         filename = directory + '/' + file
@@ -257,11 +294,12 @@ class UIListener(sublime_plugin.EventListener):
         lldb_view = get_lldb_view_for(v)
         if lldb_view:
             # TODO: Instead of updating it here, send a message to the UIUpdater
-            lldb_view.update()
+            lldb_view.full_update()
 
 
 class MarkersListener(sublime_plugin.EventListener):
     def on_load(self, v):
+        return
         bps = breakpoint_dict()
         if v.file_name() in bps:
             regions = map(lambda line: v.full_line(v.text_point(line - 1, 0)), bps_for_file(v.file_name()))

@@ -465,12 +465,14 @@ class LldbDriver(threading.Thread):
                         filespec = line_entry.GetFileSpec()
 
                         if filespec:
-                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
+                            entry = (filespec.GetDirectory() + '/' + filespec.GetFilename(), \
                                      line_entry.GetLine())
                         else:
                             return None
                 if entry:
-                    marker_update('bp', (entry,))
+                    ui_updater().breakpoint_added(entry[0], entry[1])
+                    # Old version:
+                    # marker_update('bp', (entry,))
 
         elif type & lldb.eBreakpointEventTypeDisabled         \
             or type & lldb.eBreakpointEventTypeIgnoreChanged:
@@ -487,12 +489,14 @@ class LldbDriver(threading.Thread):
                         filespec = line_entry.GetFileSpec()
 
                         if filespec:
-                            entry = (filespec.GetDirectory(), filespec.GetFilename(), \
+                            entry = (filespec.GetDirectory() + '/' + filespec.GetFilename(), \
                                      line_entry.GetLine())
                         else:
                             return None
                 if entry:
-                    marker_update('bp', (entry, True))
+                    ui_updater().breakpoint_removed(entry[0], entry[1])
+                    # Old version:
+                    # marker_update('bp', (entry, True))
         elif type & lldb.eBreakpointEventTypeLocationsAdded:
             new_locs = lldb.SBBreakpoint.GetNumBreakpointLocationsFromEvent(ev)
             if new_locs > 0:
@@ -790,6 +794,6 @@ def is_return_invalid(r):
     return r == lldb.eReturnStatusInvalid
 
 
-from root_objects import set_driver_instance, lldb_view_send, set_process_state, LldbInputDelegate
+from root_objects import set_driver_instance, lldb_view_send, set_process_state, LldbInputDelegate, ui_updater
 from monitors import marker_update, FileMonitor
 from utilities import stderr_msg, stdout_msg
