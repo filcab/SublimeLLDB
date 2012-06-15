@@ -5,7 +5,6 @@ import sublime_plugin
 
 import os
 import sys
-import time
 import atexit
 import datetime
 import threading
@@ -65,7 +64,7 @@ _basic_layout = {  # 1 group
                  }
 _default_exe = None
 _default_bps = []
-_default_args = []
+_default_args = None
 _default_arch = lldb.LLDB_ARCH_DEFAULT
 _default_wait_for_launch = False
 _default_view_mem_size = int(512)
@@ -111,7 +110,7 @@ def reload_settings():
     _prologue = get_setting('lldb.prologue')
 
     _default_exe = get_setting('lldb.exe')
-    _default_args = get_setting('lldb.args') or []
+    _default_args = get_setting('lldb.args') or None
     _default_arch = get_setting('lldb.arch') or lldb.LLDB_ARCH_DEFAULT
     _default_bps = get_setting('lldb.breakpoints') or []
 
