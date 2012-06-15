@@ -93,7 +93,7 @@ class UIUpdater(threading.Thread):
                 filename = packet[1]
                 line = packet[2]
 
-                v = maybe_get_view_for_file(filename)
+                v = self.maybe_get_view_for_file(filename)
                 v.mark_bp(line, True)
             elif packet[0] == self.eBreakpointRemoved:
                 pass
