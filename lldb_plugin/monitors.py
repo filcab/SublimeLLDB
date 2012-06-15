@@ -15,7 +15,7 @@ from lldb_wrappers import thread_created
 from root_objects import breakpoint_dict, reset_breakpoint_dict,        \
                          bps_for_file, add_bp_loc, del_bp_loc,          \
                          lldb_views_update,                             \
-                         get_lldb_view_for, del_lldb_view
+                         get_lldb_view_for
 
 import sys
 
