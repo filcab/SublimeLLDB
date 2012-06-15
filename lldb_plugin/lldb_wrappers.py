@@ -320,7 +320,6 @@ class LldbDriver(threading.Thread):
         self.__to_debugger_fh_w = os.fdopen(out_pipe_fd, 'w', 0)
 
         self.__file_monitor = FileMonitor(self.master_thread_bytes_received, self.__from_debugger_fh_r)
-        self.__file_monitor.start()
         self.debugger.SetOutputFileHandle(self.__from_debugger_fh_w, False)
         self.debugger.SetErrorFileHandle(self.__from_debugger_fh_w, False)
         self.debugger.SetInputFileHandle(self.__to_debugger_fh_r, False)

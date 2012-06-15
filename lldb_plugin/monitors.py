@@ -46,7 +46,7 @@ class UIUpdater(threading.Thread):
     eBreakpointDisabled = 1 << 4
 
     def __init__(self):
-        super(UIUpdater, self).__init__()
+        super(UIUpdater, self).__init__(name='UIUpdater')
         self.daemon = True
         self.__queue = Queue.Queue()
         self.start()
@@ -104,10 +104,11 @@ class FileMonitor(threading.Thread):
     TIMEOUT = 10  # Our default select timeout is 10 secs
 
     def __init__(self, callback, *files):
+        super(FileMonitor, self).__init__(name='lldb.debugger.out.monitor')
         self._callback = callback
         self._files = list(files)
         self._done = False
-        super(FileMonitor, self).__init__(name='lldb.debugger.out.monitor')
+        self.start()
 
     def isDone(self):
         return self._done
