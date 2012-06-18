@@ -114,7 +114,6 @@ class LldbDriver(threading.Thread):
                     "eInputReaderInterrupt,  // reader received an interrupt signal (probably from a control-c)",
                     "eInputReaderEndOfFile,  // reader received an EOF char (probably from a control-d)",
                     "eInputReaderDone        // reader was just popped off the stack and is done"][notification]
-        # debug('yaaay, input reader callback. "' + str(bytes) + '" ' + notif_str())
         return len(bytes)
 
     def maybe_get_input(self):
@@ -283,7 +282,6 @@ class LldbDriver(threading.Thread):
         """Send an eBroadcastBitReadyForInput if the debugger wasn't ready before this call."""
         debug('ready for command. was waiting: ' + str(self.__waiting_for_command))
         if not self.__waiting_for_command:
-            debug('waiting_for_command = True')
             self.__waiting_for_command = True
             self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, False)
 
@@ -398,7 +396,6 @@ class LldbDriver(threading.Thread):
                             if (event.BroadcasterMatchesRef(self.io_channel.broadcaster)):
                                 if ev_type & IOChannel.eBroadcastBitHasUserInput:
                                     command_string = lldb.SBEvent.GetCStringFromEvent(event)
-                                    debug('got eBroadcastBitHasUserInput: ' + str(command_string))
                                     if command_string is None:
                                         command_string = ''
                                     result = lldb.SBCommandReturnObject()
@@ -461,7 +458,6 @@ class LldbDriver(threading.Thread):
 
     def handle_breakpoint_event(self, ev):
         type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
-        # debug('breakpoint event: ' + lldbutil.get_description(ev))
 
         if type & lldb.eBreakpointEventTypeCommandChanged       \
             or type & lldb.eBreakpointEventTypeConditionChanged:
@@ -471,7 +467,6 @@ class LldbDriver(threading.Thread):
             or type & lldb.eBreakpointEventTypeLocationsResolved:
             # TODO: show disabled bps
             bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
-            debug('bp: ' + lldbutil.get_description(bp))
             for loc in bp:
                 entry = None
                 if loc and loc.GetAddress():
@@ -523,7 +518,6 @@ class LldbDriver(threading.Thread):
 
     def handle_process_event(self, ev):
         type = ev.GetType()
-        # debug('process event: ' + lldbutil.get_description(ev))
 
         if type & lldb.SBProcess.eBroadcastBitSTDOUT:
             self.get_process_stdout()
@@ -722,10 +716,8 @@ class IOChannel(threading.Thread):
 
         done = False
         while not done:
-            debug('listening for events')
             event = lldb.SBEvent()
             listener.WaitForEvent(BIG_TIMEOUT, event)
-            # debug('%s, %s' % (event, lldbutil.get_description(event)))
             if not event:
                 continue
 
@@ -740,7 +732,6 @@ class IOChannel(threading.Thread):
                             continue
                         if line[-1] == '\n':
                             line = line[:-1]
-                        debug('io channel broadcasting eBroadcastBitHasUserInput: + ' + str(line))
                         event = lldb.SBEvent(self.eBroadcastBitHasUserInput, line)
                         self.broadcaster.BroadcastEvent(event)
                     if event_type & LldbDriver.eBroadcastBitThreadShouldExit:
