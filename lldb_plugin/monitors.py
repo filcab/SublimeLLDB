@@ -15,7 +15,7 @@ from lldb_wrappers import thread_created
 from root_objects import breakpoint_dict, reset_breakpoint_dict,        \
                          bps_for_file, add_bp_loc, del_bp_loc,          \
                          lldb_views_update,                             \
-                         get_lldb_view_for
+                         get_lldb_view_for, maybe_get_lldb_output_view
 
 import sys
 
@@ -94,8 +94,8 @@ class UIUpdater(threading.Thread):
                 line = packet[2]
 
                 v = self.maybe_get_view_for_file(filename)
-                if v:
-                    v.mark_bp(line, True)
+                if v is not None:
+                    sublime.set_timeout(lambda: v.mark_bp(line, True), 0)
             elif packet[0] == self.eBreakpointRemoved:
                 pass
 

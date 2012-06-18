@@ -23,6 +23,8 @@ class LLDBView(sublime.View):
         # Keep track of the View's name, so we don't have to call name()
         # on the main thread
         self.__name = view.name()
+        # TODO: What happens when a file is renamed?
+        self.__file_name = view.file_name()
         add_lldb_view(self)
 
     def base_view(self):
@@ -32,8 +34,11 @@ class LLDBView(sublime.View):
         return self.__name
 
     def set_name(self, name):
-        self.__view.set_name(name)
+        self.base_view().set_name(name)
         self.__name = name
+
+    def file_name(self):
+        return self.__file_name
 
     def set_read_only(self, is_ro=True):
         self.__view.set_read_only(is_ro)
@@ -110,8 +115,6 @@ class LLDBCodeView(LLDBView):
     # FIXME: Split stuff that doesn't have to run on the UI thread.
     def __init__(self, view, driver):
         super(LLDBCodeView, self).__init__(view)
-        debug('LLDBCodeView: setting view name to ' + view.file_name())
-        self.__name = view.file_name()  # Override default name
         self.__driver = driver
         self.__enabled_bps = {}
         self.__disabled_bps = {}
@@ -129,11 +132,11 @@ class LLDBCodeView(LLDBView):
                                          eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)
         elif type == self.eRegionBreakpointEnabled:
             # v.erase_regions('lldb.breakpoint.enabled')
-            v.add_regions('lldb.breakpoint.enabled', regions, eMarkerBreakpointScope,
+            self.base_view().add_regions('lldb.breakpoint.enabled', regions, eMarkerBreakpointScope,
                           eMarkerBreakpointIcon, sublime.HIDDEN)
         elif type == self.eRegionBreakpointDisabled:
             # v.erase_regions('lldb.breakpoint.disabled')
-            v.add_regions('lldb.breakpoint.disabled', regions, eMarkerBreakpointScope,
+            self.base_view().add_regions('lldb.breakpoint.disabled', regions, eMarkerBreakpointScope,
                           eMarkerBreakpointIcon, sublime.HIDDEN)
 
     def mark_pc(self, line, show=False):
@@ -177,7 +180,7 @@ update_bps() must be called afterwards to refresh the UI."""
     def mark_bp(self, line, is_enabled=True):
         """Mark a new breakpoint as enabled/disabled and immediately mark
 its region."""
-        sef.add_bps([line], is_enabled)
+        self.add_bps([line], is_enabled)
         v = self.base_view()
 
         if is_enabled:
@@ -193,14 +196,11 @@ its region."""
             return False
 
         for frame in thread:
-            debug('frame: ' + lldbutil.get_description(frame))
             line_entry = frame.GetLineEntry()
             filespec = line_entry.GetFileSpec()
-            debug('filespec ' + lldbutil.get_description(filespec))
             if filespec:
                 filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
-                debug('is ' + filename + ' == ' + self.__name)
-                if filename == self.__name:
+                if filename == self.file_name():
                     self.__pc_line = line_entry.GetLine()
                     return True
 

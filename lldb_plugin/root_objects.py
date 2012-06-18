@@ -256,7 +256,7 @@ def maybe_get_lldb_output_view(window, name):
     f = None
 
     for v in __lldb_views:
-        if v.name() == name:
+        if v.name() == name or v.file_name() == name:
             return v
 
     if window:
