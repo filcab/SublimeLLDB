@@ -480,16 +480,10 @@ class LldbDriver(threading.Thread):
                         else:
                             return None
                 if entry:
-                    ui_updater().breakpoint_added(entry[0], entry[1])
-                    # Old version:
-                    # marker_update('bp', (entry,))
+                    ui_updater().breakpoint_added(entry[0], entry[1], loc.IsEnabled())
 
-        elif type & lldb.eBreakpointEventTypeDisabled         \
-            or type & lldb.eBreakpointEventTypeIgnoreChanged:
-            # We don't need the eBreakpointEventTypeRemoved type
-            # Because breakpoints are first disabled and then removed.
-            # or type & lldb.eBreakpointEventTypeRemoved            \
-            # TODO: show disabled bps
+        elif type & lldb.eBreakpointEventTypeEnabled    \
+              or type & lldb.eBreakpointEventTypeDisabled:
             bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
             for loc in bp:
                 entry = None
@@ -504,9 +498,24 @@ class LldbDriver(threading.Thread):
                         else:
                             return None
                 if entry:
-                    ui_updater().breakpoint_removed(entry[0], entry[1])
-                    # Old version:
-                    # marker_update('bp', (entry, True))
+                    ui_updater().breakpoint_changed(entry[0], entry[1], loc.IsEnabled())
+
+        elif type & lldb.eBreakpointEventTypeRemoved:
+            bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
+            for loc in bp:
+                entry = None
+                if loc and loc.GetAddress():
+                    line_entry = loc.GetAddress().GetLineEntry()
+                    if line_entry:
+                        filespec = line_entry.GetFileSpec()
+
+                        if filespec:
+                            entry = (filespec.GetDirectory() + '/' + filespec.GetFilename(), \
+                                     line_entry.GetLine())
+                        else:
+                            return None
+                if entry:
+                    ui_updater().breakpoint_removed(entry[0], entry[1], loc.IsEnabled())
         elif type & lldb.eBreakpointEventTypeLocationsAdded:
             new_locs = lldb.SBBreakpoint.GetNumBreakpointLocationsFromEvent(ev)
             if new_locs > 0:

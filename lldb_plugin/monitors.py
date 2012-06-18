@@ -41,9 +41,10 @@ class UIUpdater(threading.Thread):
 
     eProcessStopped = 1 << 0
     eBreakpointAdded = 1 << 1
-    eBreakpointEnabled = 1 << 2
+    eBreakpointChanged = 1 << 2
+    # eBreakpointEnabled = 1 << 2
     eBreakpointRemoved = 1 << 3
-    eBreakpointDisabled = 1 << 4
+    # eBreakpointDisabled = 1 << 4
 
     def __init__(self):
         super(UIUpdater, self).__init__(name='UIUpdater')
@@ -54,12 +55,16 @@ class UIUpdater(threading.Thread):
     def process_stopped(self, state):
         self.__queue.put(self.packet(self.eProcessStopped, state))
 
-    def breakpoint_added(self, file, line):
-        packet = self.packet(self.eBreakpointAdded, file, line)
+    def breakpoint_added(self, file, line, is_enabled):
+        packet = self.packet(self.eBreakpointAdded, file, line, is_enabled)
         self.__queue.put(packet)
 
-    def breakpoint_removed(self, file, line):
-        packet = self.packet(self.eBreakpointRemoved, file, line)
+    def breakpoint_removed(self, file, line, is_enabled):
+        packet = self.packet(self.eBreakpointRemoved, file, line, is_enabled)
+        self.__queue.put(packet)
+
+    def breakpoint_changed(self, file, line, is_enabled):
+        packet = self.packet(self.eBreakpointChanged, file, line, is_enabled)
         self.__queue.put(packet)
 
     def get_next_packet(self):
@@ -92,12 +97,29 @@ class UIUpdater(threading.Thread):
             elif packet[0] == self.eBreakpointAdded:
                 filename = packet[1]
                 line = packet[2]
+                is_enabled = packet[3]
 
                 v = self.maybe_get_view_for_file(filename)
                 if v is not None:
-                    sublime.set_timeout(lambda: v.mark_bp(line, True), 0)
+                    sublime.set_timeout(lambda: v.mark_bp(line, is_enabled), 0)
+
+            elif packet[0] == self.eBreakpointChanged:
+                filename = packet[1]
+                line = packet[2]
+                is_enabled = packet[3]
+
+                v = self.maybe_get_view_for_file(filename)
+                if v is not None:
+                    sublime.set_timeout(lambda: v.change_bp(line, is_enabled), 0)
+
             elif packet[0] == self.eBreakpointRemoved:
-                pass
+                filename = packet[1]
+                line = packet[2]
+                is_enabled = packet[3]
+
+                v = self.maybe_get_view_for_file(filename)
+                if v is not None:
+                    sublime.set_timeout(lambda: v.unmark_bp(line, is_enabled), 0)
 
             packet = self.get_next_packet()
 
