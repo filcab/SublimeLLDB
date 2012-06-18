@@ -458,12 +458,13 @@ class LldbDriver(threading.Thread):
     def handle_breakpoint_event(self, ev):
         type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
 
+        # TODO: Remove duplicate code for adding/deleting BP
         if type & lldb.eBreakpointEventTypeCommandChanged       \
-            or type & lldb.eBreakpointEventTypeConditionChanged:
-            None
-        if type & lldb.eBreakpointEventTypeAdded                \
-            or type & lldb.eBreakpointEventTypeEnabled          \
+            or type & lldb.eBreakpointEventTypeIgnoreChanged    \
+            or type & lldb.eBreakpointEventTypeConditionChanged \
             or type & lldb.eBreakpointEventTypeLocationsResolved:
+            None
+        elif type & lldb.eBreakpointEventTypeAdded:
             # TODO: show disabled bps
             bp = lldb.SBBreakpoint.GetBreakpointFromEvent(ev)
             for loc in bp:
