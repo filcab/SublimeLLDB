@@ -17,7 +17,7 @@ def debug(thing):
     print >> sys.__stdout__, threading.current_thread().name, str(thing)
 
 
-class LLDBView(sublime.View):
+class LLDBView(object):
     def __init__(self, view):
         self.__view = view
         # Keep track of the View's name, so we don't have to call name()
