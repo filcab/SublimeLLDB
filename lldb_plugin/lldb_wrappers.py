@@ -118,7 +118,6 @@ class LldbDriver(threading.Thread):
 
     def maybe_get_input(self):
         if self.is_ready_for_command() and self.debugger.InputReaderIsTopReader(self.__input_reader):
-            debug('is ready for command')
             LldbInputDelegate.get_input(self.__window, 'lldb (driver)')
             return True
         elif self.is_ready_for_command():

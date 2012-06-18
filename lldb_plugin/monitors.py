@@ -79,7 +79,7 @@ class UIUpdater(threading.Thread):
 
         packet = self.get_next_packet()
         while packet:
-            debug(packet)
+            debug('UIUpdater: ' + str(packet))
             if packet[0] == self.eProcessStopped:
                 state = packet[1]
                 lldb_views_update()
@@ -130,14 +130,11 @@ class FileMonitor(threading.Thread):
         map(fun, rlist)
 
         while not self.isDone() and rlist is not []:
-            # debug('rlist: ' + str(rlist))
             r, w, x = select.select(rlist, [], [], FileMonitor.TIMEOUT)
-            # debug('after select: ' + str(r))
             if len(r) == 0:
                 continue
             for f in r:
                 data = f.read()
-                # debug('file: ' + str(f) + ', data: ' + data)
                 if data == '':
                     debug('removing ' + str(f) + ' from FileMonitor')
                     rlist.remove(f)
@@ -174,7 +171,6 @@ def stop_markers_monitor():
 
 def lldb_markers_monitor(w, driver):
     thread_created(threading.current_thread().name)
-    # debug_thr()
     debug('started')
 
     done = False
@@ -186,7 +182,6 @@ def lldb_markers_monitor(w, driver):
             v = lldb_file_markers_queue.get(True)
             m = v['marks']
 
-            # debug('got: ' + str(v))
             if 'pc' == m:
                 args = v['args']
                 f = lambda: update_code_view(w, *args)

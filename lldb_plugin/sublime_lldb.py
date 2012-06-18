@@ -451,21 +451,18 @@ def create_default_bps_for_target(target):
             bp = str(bp)
             m = bp_re_file_line.match(bp)
             if m:
-                # debug('breaking at: %s:%d' % (m.group(1), m.group(2)))
                 target.BreakpointCreateByLocation(m.group(1), m.group(2))
                 ++n
                 continue
 
             m = bp_re_address.match(bp)
             if m:
-                # debug('breaking at: %x' % m.group(1))
                 target.BreakpointCreateByAddress(m.group(1))
                 ++n
                 continue
 
             m = bp_re_name.match(bp)
             if m:
-                # debug('breaking at: %s' % m.group(1))
                 target.BreakpointCreateByName(m.group(1))
                 ++n
                 continue
@@ -474,16 +471,13 @@ def create_default_bps_for_target(target):
 
         # bp isn't an str. It should be a dict
         elif 'file' in bp and 'line' in bp:
-            # debug('breaking at: %s:%d' % (str(bp['file']), bp['line']))
             target.BreakpointCreateByLocation(str(bp['file']), bp['line'])
             ++n
         elif 'address' in bp:
-            # debug('breaking at: %x' % bp['address'])
             target.BreakpointCreateByAddress(bp['address'])
             ++n
         else:
             debug('unrecognized breakpoint type: ' + str(bp))
-    # debug('%d breakpoints created' % n)
 
 
 # TODO: Check when each command should be enabled.
@@ -1090,7 +1084,6 @@ class LldbToggleOutputView(WindowCommand):
     def run(self):
         self.setup()
 
-        # debug('layout: ' + str(good_lldb_layout(window=self.window)))
         global _basic_layout
         if good_lldb_layout(window=self.window) and _basic_layout != None:
             # restore backup_layout (groups and views)
@@ -1102,7 +1095,6 @@ class LldbToggleOutputView(WindowCommand):
 class LldbClearOutputView(WindowCommand):
     def run(self):
         self.setup()
-        # debug('clearing lldb view')
         # TODO: Test variable to know if we should clear the view when starting a debug session
 
         clear_view(lldb_out_view())

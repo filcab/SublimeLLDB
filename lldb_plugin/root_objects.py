@@ -111,7 +111,6 @@ def reset_breakpoint_dict():
 
 
 def add_bp_loc(filename, line):
-    debug('add_bp_loc filename="%s", line=%d"' % (filename, line))
     bps = __breakpoint_dict
     if not filename in bps:
         bps[filename] = []
@@ -283,15 +282,12 @@ def lldb_views():
 
 
 def lldb_views_update():
-    debug('Updating lldb views')
     for v in __lldb_views:
-        debug('pre-updating')
         v.pre_update()
+
     def updater():
-        debug('updating')
         for v in __lldb_views:
             v.update()
-    debug('calling updater on UI thread')
     sublime.set_timeout(updater, 0)
 
 
