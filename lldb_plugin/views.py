@@ -179,21 +179,12 @@ class LLDBCodeView(LLDBView):
     def add_bps(self, lines, are_enabled=True):
         """Adds breakpoints (enabled or disabled) to the view.
 update_bps() must be called afterwards to refresh the UI."""
+        if are_enabled:
+            add_to = self.__enabled_bps
+        else:
+            add_to = self.__disabled_bps
+
         for line in lines:
-            if are_enabled:
-                add_to = self.__enabled_bps
-                maybe_remove_from = self.__disabled_bps
-            else:
-                add_to = self.__disabled_bps
-                maybe_remove_from = self.__enabled_bps
-
-            if line in maybe_remove_from:
-                existing = maybe_remove_from[line]
-                if existing == 1:
-                    del maybe_remove_from[line]
-                else:
-                    maybe_remove_from[line] = existing - 1
-
             if line in add_to:
                 existing = add_to[line]
             else:
@@ -201,10 +192,65 @@ update_bps() must be called afterwards to refresh the UI."""
 
             add_to[line] = existing + 1
 
+    def remove_bps(self, lines, are_enabled=True):
+        """Removes breakpoints (enabled or disabled) from the view.
+update_bps() must be called afterwards to refresh the UI."""
+        if are_enabled:
+            remove_from = self.__enabled_bps
+        else:
+            remove_from = self.__disabled_bps
+
+        for line in lines:
+            existing = remove_from[line]
+            if existing == 1:
+                del remove_from[line]
+            else:
+                remove_from[line] = existing - 1
+
     def mark_bp(self, line, is_enabled=True):
         """Mark a new breakpoint as enabled/disabled and immediately mark
 its region."""
         self.add_bps([line], is_enabled)
+        v = self.base_view()
+
+        if is_enabled:
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+            self.mark_regions(regions, self.eRegionBreakpointEnabled)
+        else:
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+            self.mark_regions(regions, self.eRegionBreakpointDisabled)
+
+    def change_bp(self, line, is_enabled):
+        if is_enabled:
+            remove_from = self.__disabled_bps
+            add_to = self.__enabled_bps
+        else:
+            remove_from = self.__enabled_bps
+            add_to = self.__disabled_bps
+
+
+        existing = remove_from[line]
+        if existing == 1:
+            del remove_from[line]
+        else:
+            remove_from[line] = existing - 1
+
+        if line in add_to:
+            existing = add_to[line]
+        else:
+            existing = 0
+        add_to[line] = existing + 1
+
+        v = self.base_view()
+        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+        self.mark_regions(regions, self.eRegionBreakpointEnabled)
+        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+        self.mark_regions(regions, self.eRegionBreakpointDisabled)
+
+    def unmark_bp(self, line, is_enabled=True):
+        """Remove merkings for a breakpoint and update the UI
+afterwards."""
+        self.remove_bps([line], is_enabled)
         v = self.base_view()
 
         if is_enabled:
