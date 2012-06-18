@@ -146,11 +146,12 @@ class LLDBCodeView(LLDBView):
         if show:
             self.show(region, True)
 
-    def update_bps():
+    def update_bps(self):
+        v = self.base_view()
         regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-        self.mark_regions(regions, self.eBreakpointEnabled)
+        self.mark_regions(regions, self.eRegionBreakpointEnabled)
         regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-        self.mark_regions(regions, self.eBreakpointDisabled)
+        self.mark_regions(regions, self.eRegionBreakpointDisabled)
 
     def add_bps(self, lines, are_enabled=True):
         """Adds breakpoints (enabled or disabled) to the view.
