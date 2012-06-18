@@ -119,6 +119,27 @@ class LLDBCodeView(LLDBView):
         self.__enabled_bps = {}
         self.__disabled_bps = {}
         # Get info on current breakpoints for this file
+        self.populate_breakpoint_lists()
+        self.update_bps()
+
+    def populate_breakpoint_lists(self):
+        file_bp_locs = self.__driver.get_breakpoint_locations_for_file(self.file_name())
+
+        def line_from_bp_loc(bp_loc):
+            line_entry = bp_loc.GetAddress().GetLineEntry()
+            return line_entry.GetLine()
+
+        enabled_bp_lines = []
+        disabled_bp_lines = []
+        for bp_loc in file_bp_locs:
+            if bp_loc.IsEnabled():
+                enabled_bp_lines.append(line_from_bp_loc(bp_loc))
+            else:
+                disabled_bp_lines.append(line_from_bp_loc(bp_loc))
+
+        self.add_bps(enabled_bp_lines, True)
+        self.add_bps(disabled_bp_lines, False)
+
 
     def mark_regions(self, regions, type):
         eMarkerPCScope = 'bookmark'

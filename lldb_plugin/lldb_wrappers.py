@@ -203,6 +203,22 @@ class LldbDriver(threading.Thread):
 
         return result
 
+    def get_breakpoint_locations_for_file(self, filename):
+        bp_iter = self.current_target().breakpoint_iter()
+        def filter(bp_loc):
+            addr = bp_loc.GetAddress()
+            if addr:
+                line_entry = addr.GetLineEntry()
+                if line_entry:
+                    filespec = line_entry.GetFileSpec()
+                    if filespec:
+                        filespec_path = filespec.GetDirectory() + '/' + filespec.GetFilename()
+                        return filespec_path == filename
+
+        lst = [bp_loc for bp in bp_iter for bp_loc in bp if filter(bp_loc)]
+        return lst
+
+
     @property
     def debugger(self):
         """The low-level SBDebugger for this driver."""
