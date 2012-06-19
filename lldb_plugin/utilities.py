@@ -4,10 +4,6 @@ import string
 import sys
 
 
-def debug(thing):
-    print >> sys.__stdout__, thing
-
-
 def stderr_msg(str):
     if str is not None and len(str) > 0:
         str = 'err> ' + str.replace('\n', '\nerr> ')

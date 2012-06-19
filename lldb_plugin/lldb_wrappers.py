@@ -15,9 +15,11 @@ START_LLDB_TIMEOUT = 5
 
 import sys
 
+from debug import debug as _debug
+from debug import debugDriver
 
-def debug(string):
-    print >> sys.__stdout__, threading.current_thread().name, str(string)
+def debug(thing):
+    _debug(debugDriver, thing)
 
 
 def version():

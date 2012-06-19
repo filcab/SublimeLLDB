@@ -12,9 +12,11 @@ from root_objects import lldb_register_view_name, lldb_disassembly_view_name,   
 import sys
 import threading
 
+from debug import debug as _debug
+from debug import debugViews
 
 def debug(thing):
-    print >> sys.__stdout__, threading.current_thread().name, str(thing)
+    _debug(debugViews, thing)
 
 
 class LLDBView(object):
@@ -150,18 +152,18 @@ class LLDBCodeView(LLDBView):
         eMarkerBreakpointScope = 'string'
         eMarkerBreakpointIcon = 'circle'
         if type == self.eRegionPC:
-            # debug('adding regions: ' + str(('lldb.location', regions,
-            #       eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)))
+            debug('adding regions: ' + str(('lldb.location', regions,
+                  eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)))
             self.base_view().add_regions('lldb.location', regions,
                                          eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)
         elif type == self.eRegionBreakpointEnabled:
-            # debug('adding regions: ' + str(('lldb.breakpoint.enabled', regions,
-            #       eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
+            debug('adding regions: ' + str(('lldb.breakpoint.enabled', regions,
+                  eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
             self.base_view().add_regions('lldb.breakpoint.enabled', regions, eMarkerBreakpointScope,
                           eMarkerBreakpointIcon, sublime.HIDDEN)
         elif type == self.eRegionBreakpointDisabled:
-            # debug('adding regions: ' + str(('lldb.breakpoint.disabled', regions,
-            #       eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
+            debug('adding regions: ' + str(('lldb.breakpoint.disabled', regions,
+                  eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
             self.base_view().add_regions('lldb.breakpoint.disabled', regions, eMarkerBreakpointScope,
                           eMarkerBreakpointIcon, sublime.HIDDEN)
 

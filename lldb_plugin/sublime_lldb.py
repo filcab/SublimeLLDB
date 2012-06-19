@@ -13,15 +13,12 @@ import lldb
 import lldbutil
 
 
-def debug_thr(string=None):
-    if string:
-        print >> sys.__stdout__, 'thread id:', threading.current_thread().name, string
-    else:
-        print >> sys.__stdout__, 'thread id:', threading.current_thread().name
+from debug import debug as _debug
+from debug import debugPlugin
 
 
-def debug(str):
-    print >> sys.__stdout__, str
+def debug(thing):
+    _debug(debugPlugin, thing)
 
 
 from root_objects import driver_instance, set_driver_instance,          \
@@ -29,7 +26,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
                          get_lldb_output_view, get_lldb_view_for,       \
-                         lldb_prompt, lldb_views_update,                \
+                         lldb_prompt,                                   \
                          lldb_view_name, set_lldb_view_name,            \
                          lldb_register_view_name,                       \
                          lldb_disassembly_view_name,                    \
@@ -312,6 +309,7 @@ def process_stopped(driver, state):
         filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
         # Maybe we don't need to focus the first group. The user knows
         # what he/she wants.
+
         def to_ui_thread():
             window_ref().focus_group(0)
             v = window_ref().open_file(filename)

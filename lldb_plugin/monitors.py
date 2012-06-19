@@ -20,8 +20,10 @@ from root_objects import breakpoint_dict, reset_breakpoint_dict,        \
 import sys
 
 
-def debug(string):
-    print >> sys.__stdout__, threading.current_thread().name, str(string)
+from debug import debug as _debug
+from debug import debugMonitors
+def debug(thing):
+    _debug(debugMonitors, thing)
 
 
 class UIUpdater(threading.Thread):
@@ -76,7 +78,7 @@ class UIUpdater(threading.Thread):
 
         packet = self.get_next_packet()
         while packet:
-            # debug('UIUpdater: ' + str(packet))
+            debug('UIUpdater: ' + str(packet))
             if packet[0] == self.eProcessStopped:
                 state = packet[1]
                 epilogue = packet[2]

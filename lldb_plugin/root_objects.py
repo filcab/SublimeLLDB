@@ -27,9 +27,10 @@ __error_fh = None
 
 import sys
 
-
-def debug(string):
-    print >> sys.__stdout__, string
+from debug import debug as _debug
+from debug import debugRoot
+def debug(thing):
+    _debug(debugRoot, thing)
 
 
 def ui_updater():
