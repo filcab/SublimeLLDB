@@ -324,9 +324,6 @@ def process_stopped(driver, state):
         # around the thread's PC.
         pass
 
-    # New LLDBView updaters
-    lldb_views_update()
-
 
 def initialize_lldb(w):
     # set_got_input_function(lldb_in_panel_on_done)
