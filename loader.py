@@ -1,5 +1,4 @@
 from lldb_plugin.sublime_lldb import *
-from lldb_plugin.monitors import MarkersListener
 
 # If we only import those names, it works too. But we get lint errors.
 # So we import everything and export only the command names.
