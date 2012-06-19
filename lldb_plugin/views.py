@@ -150,18 +150,18 @@ class LLDBCodeView(LLDBView):
         eMarkerBreakpointScope = 'string'
         eMarkerBreakpointIcon = 'circle'
         if type == self.eRegionPC:
-            debug('adding regions: ' + str(('lldb.location', regions,
-                  eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)))
+            # debug('adding regions: ' + str(('lldb.location', regions,
+            #       eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)))
             self.base_view().add_regions('lldb.location', regions,
                                          eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)
         elif type == self.eRegionBreakpointEnabled:
-            debug('adding regions: ' + str(('lldb.breakpoint.enabled', regions,
-                  eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
+            # debug('adding regions: ' + str(('lldb.breakpoint.enabled', regions,
+            #       eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
             self.base_view().add_regions('lldb.breakpoint.enabled', regions, eMarkerBreakpointScope,
                           eMarkerBreakpointIcon, sublime.HIDDEN)
         elif type == self.eRegionBreakpointDisabled:
-            debug('adding regions: ' + str(('lldb.breakpoint.disabled', regions,
-                  eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
+            # debug('adding regions: ' + str(('lldb.breakpoint.disabled', regions,
+            #       eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
             self.base_view().add_regions('lldb.breakpoint.disabled', regions, eMarkerBreakpointScope,
                           eMarkerBreakpointIcon, sublime.HIDDEN)
 

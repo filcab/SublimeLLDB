@@ -76,7 +76,7 @@ class UIUpdater(threading.Thread):
 
         packet = self.get_next_packet()
         while packet:
-            debug('UIUpdater: ' + str(packet))
+            # debug('UIUpdater: ' + str(packet))
             if packet[0] == self.eProcessStopped:
                 state = packet[1]
                 epilogue = packet[2]
