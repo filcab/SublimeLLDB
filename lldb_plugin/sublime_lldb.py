@@ -40,7 +40,7 @@ from root_objects import driver_instance, set_driver_instance,          \
 
 from utilities import generate_memory_view_for
 
-from monitors import start_markers_monitor, stop_markers_monitor, UIUpdater
+from monitors import UIUpdater
 
 _settings = None
 # _setting_prefix = 'lldb.'
@@ -260,7 +260,8 @@ def cleanup(w=None):
     _is_debugging = False
 
     set_disabled_bps([])
-    stop_markers_monitor()
+    # TODO: Stop UIUpdater, FileMonitor, etc.
+    #stop_markers_monitor()
     driver = driver_instance()
     if driver:
         driver.stop()
@@ -389,7 +390,6 @@ def start_debugging(w):
     initialize_lldb(w)
 
     driver_instance().debugger.SetInputFileHandle(sys.__stdin__, False)
-    start_markers_monitor(window_ref(), driver_instance())
 
     # We may also need to change the width upon window resize
     # debugger.SetTerminalWidth()
