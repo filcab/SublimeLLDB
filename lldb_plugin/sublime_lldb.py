@@ -261,6 +261,7 @@ def cleanup(w=None):
 
     set_disabled_bps([])
     # TODO: Stop UIUpdater, FileMonitor, etc.
+    ui_updater().stop()
     #stop_markers_monitor()
     driver = driver_instance()
     if driver:

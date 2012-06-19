@@ -45,12 +45,16 @@ class UIUpdater(threading.Thread):
     # eBreakpointEnabled = 1 << 2
     eBreakpointRemoved = 1 << 3
     # eBreakpointDisabled = 1 << 4
+    eUIUpdaterExit = 1 << 4
 
     def __init__(self):
         super(UIUpdater, self).__init__(name='UIUpdater')
         self.daemon = True
         self.__queue = Queue.Queue()
         self.start()
+
+    def stop():
+        self.__queue.put(self.packet(self.eUIUpdaterExit))
 
     def process_stopped(self, state):
         self.__queue.put(self.packet(self.eProcessStopped, state))
@@ -120,6 +124,9 @@ class UIUpdater(threading.Thread):
                 v = self.maybe_get_view_for_file(filename)
                 if v is not None:
                     sublime.set_timeout(lambda: v.unmark_bp(line, is_enabled), 0)
+
+            elif packet[0] == self.eUIUpdaterDone:
+                return
 
             packet = self.get_next_packet()
 
