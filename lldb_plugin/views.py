@@ -120,7 +120,10 @@ class LLDBCodeView(LLDBView):
         self.__disabled_bps = {}
         # Get info on current breakpoints for this file
         self.populate_breakpoint_lists()
-        self.update_bps()
+        if not view.is_loading():
+            self.update_bps()
+        else:
+            debug('Skipped LLDBCodeView.update_bps() because view.is_loading is True')
 
     def populate_breakpoint_lists(self):
         file_bp_locs = self.__driver.get_breakpoint_locations_for_file(self.file_name())
@@ -280,6 +283,7 @@ afterwards."""
     def update(self):
         if self.__pc_line:
             self.mark_pc(self.__pc_line - 1, True)
+        self.update_bps()
 
 
 class LLDBRegisterView(LLDBReadOnlyView):
