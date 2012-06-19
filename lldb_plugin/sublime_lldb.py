@@ -90,7 +90,7 @@ def get_setting(name):
     if sublime.active_window() and sublime.active_window().active_view():
         setting = sublime.active_window().active_view().settings().get(setting_name)
 
-    debug('"%s": "%s"' % (name, setting or _settings.get(setting_name)))
+    debug('%s: %s' % (name, setting or _settings.get(setting_name)))
     return setting or _settings.get(setting_name)
 
 
@@ -173,10 +173,6 @@ def debug_prologue(driver):
     for c in _prologue:
         lldb_view_write(lldb_prompt() + c + '\n')
         interpret_command(debugger, c)
-    # lldb_view_write('(lldb) target create ~/dev/softek/lldb-plugin/tests\n')
-    # interpret_command(debugger, 'target create ~/dev/softek/lldb-plugin/tests')
-    # lldb_view_write('(lldb) b main\n')
-    # interpret_command(debugger, 'b main')
 
 
 def lldb_greeting():

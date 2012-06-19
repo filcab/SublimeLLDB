@@ -161,6 +161,7 @@ class FileMonitor(threading.Thread):
         while not self.isDone() and rlist is not []:
             r, w, x = select.select(rlist, [], [], FileMonitor.TIMEOUT)
             if len(r) == 0:
+                # Timeout occurred: check for self.isDone()
                 continue
             for f in r:
                 data = f.read()
