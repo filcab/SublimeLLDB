@@ -277,7 +277,7 @@ def unload_handler():
 
 
 def process_stopped(driver, state):
-    ui_updater().process_stopped(state)
+    ui_updater().process_stopped(state, lambda: driver.maybe_get_input())
 
     debugger = driver.debugger
     line_entry = driver.current_frame().GetLineEntry()

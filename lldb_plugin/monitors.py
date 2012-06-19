@@ -44,8 +44,8 @@ class UIUpdater(threading.Thread):
     def stop():
         self.__queue.put(self.packet(self.eUIUpdaterExit))
 
-    def process_stopped(self, state):
-        self.__queue.put(self.packet(self.eProcessStopped, state))
+    def process_stopped(self, state, epilogue):
+        self.__queue.put(self.packet(self.eProcessStopped, state, epilogue))
 
     def breakpoint_added(self, file, line, is_enabled):
         packet = self.packet(self.eBreakpointAdded, file, line, is_enabled)
@@ -79,7 +79,8 @@ class UIUpdater(threading.Thread):
             debug('UIUpdater: ' + str(packet))
             if packet[0] == self.eProcessStopped:
                 state = packet[1]
-                lldb_views_update()
+                epilogue = packet[2]
+                lldb_views_update(epilogue)
                 # Should we wait or signal ourselves from lldb_views_refresh?
                 # We'll have to signal ourselves if we find that the views get marked,
                 # instead of the input box

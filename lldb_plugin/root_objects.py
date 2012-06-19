@@ -281,13 +281,14 @@ def lldb_views():
     return list(__lldb_views)
 
 
-def lldb_views_update():
+def lldb_views_update(epilogue):
     for v in __lldb_views:
         v.pre_update()
 
     def updater():
         for v in __lldb_views:
             v.update()
+        epilogue()
     sublime.set_timeout(updater, 0)
 
 
