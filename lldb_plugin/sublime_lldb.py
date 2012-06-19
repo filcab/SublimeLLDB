@@ -279,10 +279,6 @@ def unload_handler():
 def process_stopped(driver, state):
     ui_updater().process_stopped(state)
 
-    if state == lldb.eStateExited:
-        marker_update('pc', (None,))
-        return
-
     debugger = driver.debugger
     line_entry = driver.current_frame().GetLineEntry()
     if line_entry:
@@ -312,11 +308,6 @@ def process_stopped(driver, state):
                     if line_entry and line_entry.GetFileSpec():
                         filespec = line_entry.GetFileSpec()
 
-    # scope = 'bookmark'
-    # if state == lldb.eStateCrashed:
-    #     scope = 'invalid'
-    # marker_update('pc', (entry, scope))
-
     if filespec:
         filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
         # Maybe we don't need to focus the first group. The user knows
@@ -328,7 +319,6 @@ def process_stopped(driver, state):
             if lldb_view is None:
                 lldb_view = LLDBCodeView(v, driver)
         sublime.set_timeout(to_ui_thread, 0)
-        # time.sleep(0.042)
     else:
         # TODO: If we don't have a filespec, we can try to disassemble
         # around the thread's PC.
@@ -1134,6 +1124,5 @@ class LldbDisassembleFrame(WindowCommand):
 # import this specific names without the prefix
 from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
 from utilities import stderr_msg, stdout_msg
-from monitors import marker_update
 from views import LLDBRegisterView, LLDBThreadDisassemblyView, LLDBCodeView
 import lldb_wrappers

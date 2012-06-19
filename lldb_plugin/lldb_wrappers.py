@@ -810,5 +810,5 @@ def is_return_invalid(r):
 
 
 from root_objects import set_driver_instance, lldb_view_send, set_process_state, LldbInputDelegate, ui_updater
-from monitors import marker_update, FileMonitor
+from monitors import FileMonitor
 from utilities import stderr_msg, stdout_msg
