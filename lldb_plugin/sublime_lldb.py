@@ -326,7 +326,7 @@ def process_stopped(driver, state):
 def initialize_lldb(w):
     # set_got_input_function(lldb_in_panel_on_done)
 
-    driver = LldbDriver(w, lldb_view_send, process_stopped)
+    driver = LldbDriver(w, lldb_view_send, process_stopped, on_exit_callback=cleanup)
     event = lldb.SBEvent()
     listener = lldb.SBListener('Wait for lldb initialization')
     listener.StartListeningForEvents(driver.broadcaster,

@@ -45,12 +45,13 @@ class LldbDriver(threading.Thread):
     # FIXME: This should be configurable
     __max_instructions = 200
 
-    def __init__(self, window, log_callback=None, process_stopped_callback=None):
+    def __init__(self, window, log_callback=None, process_stopped_callback=None, on_exit_callback=None):
         super(LldbDriver, self).__init__(name='sublime.lldb.driver')
         self.__window = window
         lldb.SBDebugger.Initialize()
         self.__broadcaster = lldb.SBBroadcaster('Driver')
         self.__process_stopped_callback = process_stopped_callback
+        self.__on_exit_callback = on_exit_callback
 
         # if log_callback:
             # self._debugger = lldb.SBDebugger.Create(False, log_callback)
@@ -455,6 +456,8 @@ class LldbDriver(threading.Thread):
 
         debug('leaving')
         set_driver_instance(None)
+        if self.__on_exit_callback:
+            self.__on_exit_callback()
 
     def handle_breakpoint_event(self, ev):
         type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
