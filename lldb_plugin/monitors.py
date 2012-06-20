@@ -164,7 +164,11 @@ class FileMonitor(threading.Thread):
         self.setDone(True)
 
 
-class UIListener(sublime_plugin.EventListener):
+class LLDBUIListener(sublime_plugin.EventListener):
+    def __init__(self):
+        super(LLDBUIListener, self).__init__()
+        _debug(debugMonitors, 'Started UIListener')
+
     def on_close(self, v):
         lldb_view = get_lldb_view_for(v)
         if lldb_view:
@@ -173,5 +177,6 @@ class UIListener(sublime_plugin.EventListener):
     def on_load(self, v):
         lldb_view = get_lldb_view_for(v)
         if lldb_view:
+            _debug(debugMonitors, 'on_load: %s' % str((repr(lldb_view), lldb_view.file_name())))
             # TODO: Instead of updating it here, send a message to the UIUpdater
             lldb_view.full_update()

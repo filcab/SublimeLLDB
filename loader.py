@@ -1,4 +1,5 @@
 from lldb_plugin.sublime_lldb import *
+from lldb_plugin import monitors
 
 # If we only import those names, it works too. But we get lint errors.
 # So we import everything and export only the command names.
@@ -17,3 +18,6 @@ LldbClearOutputView = LldbClearOutputView
 LldbToggleOutputView = LldbToggleOutputView
 
 unload_handler = unload_handler
+
+# UI Listener, for on_load events.
+LLDBUIListener = monitors.LLDBUIListener
