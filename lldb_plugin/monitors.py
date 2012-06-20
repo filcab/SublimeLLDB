@@ -14,14 +14,15 @@ import threading
 from lldb_wrappers import thread_created
 from root_objects import breakpoint_dict, reset_breakpoint_dict,        \
                          bps_for_file, add_bp_loc, del_bp_loc,          \
-                         lldb_views_update,                             \
+                         lldb_views_update, del_lldb_view,              \
+                         lldb_views_destroy,                            \
                          get_lldb_view_for, maybe_get_lldb_output_view
 
 import sys
 
 
 from debug import debug as _debug
-from debug import debugMonitors
+from debug import debugMonitors, debugViews
 def debug(thing):
     _debug(debugMonitors, thing)
 
@@ -117,6 +118,7 @@ class LLDBUIUpdater(threading.Thread):
                     sublime.set_timeout(lambda: v.unmark_bp(line, is_enabled), 0)
 
             elif packet[0] == self.eUIUpdaterExit:
+                lldb_views_destroy()
                 return
 
             packet = self.get_next_packet()

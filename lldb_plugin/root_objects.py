@@ -293,7 +293,17 @@ def lldb_views_update(epilogue):
     sublime.set_timeout(updater, 0)
 
 
+def lldb_views_destroy():
+    global __lldb_views
+    views = __lldb_views
+    __lldb_views = []
+    def stop_visitor(thing):
+        thing.stop()
+    map(stop_visitor, views)
+
+
 def get_lldb_view_for(v):
+    _debug(debugRoot, 'lldb_views: %s' % repr(__lldb_views))
     name = v.name()
     file_name = v.file_name()
     for lldb_view in __lldb_views:
