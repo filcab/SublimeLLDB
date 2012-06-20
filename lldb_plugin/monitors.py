@@ -43,7 +43,7 @@ class UIUpdater(threading.Thread):
         self.__queue = Queue.Queue()
         self.start()
 
-    def stop():
+    def stop(self):
         self.__queue.put(self.packet(self.eUIUpdaterExit))
 
     def process_stopped(self, state, epilogue):
