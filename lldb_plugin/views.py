@@ -132,6 +132,11 @@ class LLDBCodeView(LLDBView):
             self.__update_bps()
         else:
             debug('Skipped LLDBCodeView.__update_bps() because view.is_loading is True')
+        self.pre_update()
+
+    def __repr__(self):
+        return 'file_name: %s, needs_update: %s, pc_line: %s, enabled_bps: %s, disable_bps: %s' % \
+            (self.file_name(), str(self._needs_update), str(self.__pc_line), str(self.__enabled_bps), str(self.__disabled_bps))
 
     @property
     def needs_update(self):
