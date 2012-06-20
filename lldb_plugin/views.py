@@ -138,6 +138,8 @@ class LLDBCodeView(LLDBView):
     def needs_update(self, value):
         self._needs_update = value
 
+    # {mark,change,unmark}_bp don't update needs_update because they
+    # immediately update what was touched.
     def mark_bp(self, line, is_enabled=True):
         """Mark a new breakpoint as enabled/disabled and immediately mark
 its region."""
@@ -158,7 +160,6 @@ its region."""
         else:
             remove_from = self.__enabled_bps
             add_to = self.__disabled_bps
-
 
         existing = remove_from[line]
         if existing == 1:
@@ -192,6 +193,9 @@ afterwards."""
             self.__mark_regions(regions, self.eRegionBreakpointDisabled)
 
     def pre_update(self):
+        """pre_update will perform lldb-related work and get our PC line"""
+        old_pc_line = self.__pc_line
+
         thread = self.__driver.current_thread()
         if not thread:
             return False
@@ -203,9 +207,13 @@ afterwards."""
                 filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
                 if filename == self.file_name():
                     self.__pc_line = line_entry.GetLine()
+                    if self.__pc_line != old_pc_line:
+                        self.needs_update = True
                     return True
 
         self.__pc_line = None
+        if self.__pc_line != old_pc_line:
+            self.needs_update = True
         return False
 
     def update(self):
@@ -214,7 +222,9 @@ afterwards."""
                 self.__mark_pc(self.__pc_line - 1, True)
             else:
                 self.__mark_pc(None)
-            self.__update_bps()
+            # For now, bp-marking functions will immediately update the
+            # view. We don't need to update it when the view is dirty.
+            # self.__update_bps()
             self.needs_update = False
         else:
             _debug(debugViews, '%s: didn\'t need an update.' % self.__class__.__name__)
