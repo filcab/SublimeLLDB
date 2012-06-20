@@ -38,7 +38,7 @@ class UIUpdater(threading.Thread):
     eUIUpdaterExit = 1 << 4
 
     def __init__(self):
-        super(UIUpdater, self).__init__(name='UIUpdater')
+        super(UIUpdater, self).__init__(name='sublime.lldb.UIUpdater')
         self.daemon = True
         self.__queue = Queue.Queue()
         self.start()
@@ -125,7 +125,7 @@ class FileMonitor(threading.Thread):
     TIMEOUT = 10  # Our default select timeout is 10 secs
 
     def __init__(self, callback, *files):
-        super(FileMonitor, self).__init__(name='lldb.debugger.out.monitor')
+        super(FileMonitor, self).__init__(name='sublime.lldb.debugger.out.monitor')
         self._callback = callback
         self._files = list(files)
         self._done = False

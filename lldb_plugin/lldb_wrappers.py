@@ -46,8 +46,7 @@ class LldbDriver(threading.Thread):
     __max_instructions = 200
 
     def __init__(self, window, log_callback=None, process_stopped_callback=None):
-        super(LldbDriver, self).__init__()  # name='Driver')
-        self.name = 'sublime.lldb.driver'
+        super(LldbDriver, self).__init__(name='sublime.lldb.driver')
         self.__window = window
         lldb.SBDebugger.Initialize()
         self.__broadcaster = lldb.SBBroadcaster('Driver')
@@ -670,8 +669,7 @@ class IOChannel(threading.Thread):
     __broadcaster = None
 
     def __init__(self, driver, pipe, out_write, err_write=None):
-        super(IOChannel, self).__init__()
-        self.name = 'sublime.lldb.io-channel'
+        super(IOChannel, self).__init__(name='sublime.lldb.io-channel')
 
         if err_write is None:
             err_write = out_write
