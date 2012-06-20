@@ -15,10 +15,13 @@ debugSettings = 1 << 7
 
 debugAll = 0xff
 
+from multiprocessing import Lock
+mutex = Lock()
 
 def debug(level, thing):
     if _active & level == level:
-        print >> DFILE, threading.current_thread().name, str(thing)
+        with mutex:
+            print >> DFILE, threading.current_thread().name, str(thing)
 
 def toggle_debug(level):
     global _active
