@@ -273,7 +273,7 @@ def unload_handler():
     cleanup(window_ref())
 
 
-def process_stopped(driver, state):
+def process_stopped(driver, state=None):
     ui_updater().process_stopped(state, lambda: driver.maybe_get_input())
 
     debugger = driver.debugger
@@ -316,6 +316,7 @@ def process_stopped(driver, state):
             lldb_view = get_lldb_view_for(v)
             if lldb_view is None:
                 lldb_view = LLDBCodeView(v, driver)
+            # TODO: Maybe bring the view to the front?
         sublime.set_timeout(to_ui_thread, 0)
     else:
         # TODO: If we don't have a filespec, we can try to disassemble
