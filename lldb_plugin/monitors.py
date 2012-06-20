@@ -116,7 +116,7 @@ class LLDBUIUpdater(threading.Thread):
                 if v is not None:
                     sublime.set_timeout(lambda: v.unmark_bp(line, is_enabled), 0)
 
-            elif packet[0] == self.eUIUpdaterExit
+            elif packet[0] == self.eUIUpdaterExit:
                 return
 
             packet = self.get_next_packet()
