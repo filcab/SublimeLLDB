@@ -154,27 +154,42 @@ class LLDBCodeView(LLDBView):
         eMarkerBreakpointScope = 'string'
         eMarkerBreakpointIcon = 'circle'
         if type == self.eRegionPC:
-            debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.location', regions,
-                  eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)))
-            self.base_view().add_regions('lldb.location', regions,
-                                         eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)
+            if len(regions) > 0:
+                debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.location', regions,
+                      eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)))
+                self.base_view().add_regions('lldb.location', regions,
+                                             eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)
+            else:
+                _debug(debugViews, 'erasing region: lldb.location')
+                self.base_view().erase_regions('lldb.location')
         elif type == self.eRegionBreakpointEnabled:
-            debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.breakpoint.enabled', regions,
-                  eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
-            self.base_view().add_regions('lldb.breakpoint.enabled', regions, eMarkerBreakpointScope,
-                          eMarkerBreakpointIcon, sublime.HIDDEN)
+            if len(regions) > 0:
+                debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.breakpoint.enabled', regions,
+                      eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
+                self.base_view().add_regions('lldb.breakpoint.enabled', regions, eMarkerBreakpointScope,
+                              eMarkerBreakpointIcon, sublime.HIDDEN)
+            else:
+                _debug(debugViews, 'erasing regions:lldb.breakpoint.enabled')
+                self.base_view().erase_regions('lldb.breakpoint.enabled')
         elif type == self.eRegionBreakpointDisabled:
-            debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.breakpoint.disabled', regions,
-                  eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
-            self.base_view().add_regions('lldb.breakpoint.disabled', regions, eMarkerBreakpointScope,
-                          eMarkerBreakpointIcon, sublime.HIDDEN)
+            if len(regions) > 0:
+                debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.breakpoint.disabled', regions,
+                      eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
+                self.base_view().add_regions('lldb.breakpoint.disabled', regions, eMarkerBreakpointScope,
+                              eMarkerBreakpointIcon, sublime.HIDDEN)
+            else:
+                _debug(debugViews, 'erasing regions:lldb.breakpoint.disabled')
+                self.base_view().erase_regions('lldb.breakpoint.disabled')
 
     def mark_pc(self, line, show=False):
         v = self.base_view()
-        region = v.line(v.text_point(line, 0))
-        self.mark_regions([region], self.eRegionPC)
-        if show:
-            self.show(region, True)
+        if line is None:
+            to_mark = []
+        else:
+            to_mark = [v.line(v.text_point(line, 0))]
+        self.mark_regions(to_mark, self.eRegionPC)
+        if show and to_mark:
+            self.show(to_mark[0], True)
 
     def update_bps(self):
         v = self.base_view()
@@ -287,6 +302,8 @@ afterwards."""
     def update(self):
         if self.__pc_line:
             self.mark_pc(self.__pc_line - 1, True)
+        else:
+            self.mark_pc(None)
         self.update_bps()
 
 
