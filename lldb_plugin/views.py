@@ -138,6 +138,88 @@ class LLDBCodeView(LLDBView):
     def needs_update(self, value):
         self._needs_update = value
 
+    def mark_bp(self, line, is_enabled=True):
+        """Mark a new breakpoint as enabled/disabled and immediately mark
+its region."""
+        self.__add_bps([line], is_enabled)
+        v = self.base_view()
+
+        if is_enabled:
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+            self.__mark_regions(regions, self.eRegionBreakpointEnabled)
+        else:
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+            self.__mark_regions(regions, self.eRegionBreakpointDisabled)
+
+    def change_bp(self, line, is_enabled):
+        if is_enabled:
+            remove_from = self.__disabled_bps
+            add_to = self.__enabled_bps
+        else:
+            remove_from = self.__enabled_bps
+            add_to = self.__disabled_bps
+
+
+        existing = remove_from[line]
+        if existing == 1:
+            del remove_from[line]
+        else:
+            remove_from[line] = existing - 1
+
+        if line in add_to:
+            existing = add_to[line]
+        else:
+            existing = 0
+        add_to[line] = existing + 1
+
+        v = self.base_view()
+        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+        self.__mark_regions(regions, self.eRegionBreakpointEnabled)
+        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+        self.__mark_regions(regions, self.eRegionBreakpointDisabled)
+
+    def unmark_bp(self, line, is_enabled=True):
+        """Remove merkings for a breakpoint and update the UI
+afterwards."""
+        self.__remove_bps([line], is_enabled)
+        v = self.base_view()
+
+        if is_enabled:
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+            self.__mark_regions(regions, self.eRegionBreakpointEnabled)
+        else:
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+            self.__mark_regions(regions, self.eRegionBreakpointDisabled)
+
+    def pre_update(self):
+        thread = self.__driver.current_thread()
+        if not thread:
+            return False
+
+        for frame in thread:
+            line_entry = frame.GetLineEntry()
+            filespec = line_entry.GetFileSpec()
+            if filespec:
+                filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
+                if filename == self.file_name():
+                    self.__pc_line = line_entry.GetLine()
+                    return True
+
+        self.__pc_line = None
+        return False
+
+    def update(self):
+        if self.needs_update:
+            if self.__pc_line:
+                self.__mark_pc(self.__pc_line - 1, True)
+            else:
+                self.__mark_pc(None)
+            self.__update_bps()
+            self.needs_update = False
+        else:
+            _debug(debugViews, '%s: didn\'t need an update.' % self.__class__.__name__)
+
+    # Private LLDBCodeView methods
     def __populate_breakpoint_lists(self):
         file_bp_locs = self.__driver.get_breakpoint_locations_for_file(self.file_name())
 
@@ -243,87 +325,6 @@ __update_bps() must be called afterwards to refresh the UI."""
                 del remove_from[line]
             else:
                 remove_from[line] = existing - 1
-
-    def mark_bp(self, line, is_enabled=True):
-        """Mark a new breakpoint as enabled/disabled and immediately mark
-its region."""
-        self.__add_bps([line], is_enabled)
-        v = self.base_view()
-
-        if is_enabled:
-            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-            self.__mark_regions(regions, self.eRegionBreakpointEnabled)
-        else:
-            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-            self.__mark_regions(regions, self.eRegionBreakpointDisabled)
-
-    def change_bp(self, line, is_enabled):
-        if is_enabled:
-            remove_from = self.__disabled_bps
-            add_to = self.__enabled_bps
-        else:
-            remove_from = self.__enabled_bps
-            add_to = self.__disabled_bps
-
-
-        existing = remove_from[line]
-        if existing == 1:
-            del remove_from[line]
-        else:
-            remove_from[line] = existing - 1
-
-        if line in add_to:
-            existing = add_to[line]
-        else:
-            existing = 0
-        add_to[line] = existing + 1
-
-        v = self.base_view()
-        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-        self.__mark_regions(regions, self.eRegionBreakpointEnabled)
-        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-        self.__mark_regions(regions, self.eRegionBreakpointDisabled)
-
-    def unmark_bp(self, line, is_enabled=True):
-        """Remove merkings for a breakpoint and update the UI
-afterwards."""
-        self.__remove_bps([line], is_enabled)
-        v = self.base_view()
-
-        if is_enabled:
-            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-            self.__mark_regions(regions, self.eRegionBreakpointEnabled)
-        else:
-            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-            self.__mark_regions(regions, self.eRegionBreakpointDisabled)
-
-    def pre_update(self):
-        thread = self.__driver.current_thread()
-        if not thread:
-            return False
-
-        for frame in thread:
-            line_entry = frame.GetLineEntry()
-            filespec = line_entry.GetFileSpec()
-            if filespec:
-                filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
-                if filename == self.file_name():
-                    self.__pc_line = line_entry.GetLine()
-                    return True
-
-        self.__pc_line = None
-        return False
-
-    def update(self):
-        if self.needs_update:
-            if self.__pc_line:
-                self.__mark_pc(self.__pc_line - 1, True)
-            else:
-                self.__mark_pc(None)
-            self.__update_bps()
-            self.needs_update = False
-        else:
-            _debug(debugViews, '%s: didn\'t need an update.' % self.__class__.__name__)
 
 
 class LLDBRegisterView(LLDBReadOnlyView):
