@@ -72,6 +72,9 @@ update. It won't necessarily be called from the main thread."""
 run here. It will be called from the main (UI) thread."""
         assert False, "%s.update() wasn't overridden." % self.__class__.__name__
 
+    def stop(self):
+        pass
+
 
 class LLDBReadOnlyView(LLDBView):
     # Put here the stuff only for read-only views
@@ -227,7 +230,14 @@ afterwards."""
             # self.__update_bps()
             self.needs_update = False
         else:
-            _debug(debugViews, '%s: didn\'t need an update.' % self.__class__.__name__)
+            _debug(debugViews, 'LLDBCodeView: didn\'t need an update: %s' % repr(self))
+
+    def stop(self):
+        def to_ui():
+            self.base_view().erase_regions('lldb.location')
+            self.base_view().erase_regions('lldb.breakpoint.enabled')
+            self.base_view().erase_regions('lldb.breakpoint.disabled')
+        sublime.set_timeout(to_ui, 0)
 
     # Private LLDBCodeView methods
     def __populate_breakpoint_lists(self):
