@@ -1,6 +1,8 @@
 Sublime Text 2 LLDB plugin
 ==========================
 
+(last updated: long ago)
+
 This is a plugin that allows users to debug programs in Sublime Text 2
 using lldb.
 
@@ -45,6 +47,9 @@ Known bugs
   until you reply with `y` or `n` to the `stdin` (usually the Terminal).
 * The plugin is very new and doesn't export a lot of functionality. But simple
   usage shold be fine.
+* The input reader thread is named (for Python) Dummy-N (N=1, ...). This
+  is a Python problem (the LLDB library uses `pthread_setname_np` to name
+  the thread).
 * ...
 
 Please feel free to ask for additional functionalities either in the
