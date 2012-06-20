@@ -198,6 +198,7 @@ afterwards."""
     def pre_update(self):
         """pre_update will perform lldb-related work and get our PC line"""
         old_pc_line = self.__pc_line
+        _debug(debugViews, 'old pc_line: %s' % str(old_pc_line))
 
         thread = self.__driver.current_thread()
         if not thread:
@@ -210,11 +211,13 @@ afterwards."""
                 filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
                 if filename == self.file_name():
                     self.__pc_line = line_entry.GetLine()
+                    _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
                     if self.__pc_line != old_pc_line:
                         self.needs_update = True
                     return True
 
         self.__pc_line = None
+        _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
         if self.__pc_line != old_pc_line:
             self.needs_update = True
         return False

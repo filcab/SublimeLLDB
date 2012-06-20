@@ -182,4 +182,5 @@ class LLDBUIListener(sublime_plugin.EventListener):
             _debug(debugMonitors, 'on_load: %s' % str((repr(lldb_view), lldb_view.file_name())))
             # TODO: Instead of updating it here, send a message to the
             # LLDBUIUpdater
+            _debug(debugViews | debugMonitors, 'on_load for: %s' % repr(lldb_view))
             lldb_view.full_update()
