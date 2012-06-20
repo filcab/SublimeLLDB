@@ -29,7 +29,7 @@ class LLDBView(object):
         self.__file_name = view.file_name()
         add_lldb_view(self)
         debug("Created an LLDBView with (class, view, name, file_name) == %s" %
-              (self.__class__.__name__, self.__view, self.__name, self.__file_name))
+              str((self.__class__.__name__, self.__view, self.__name, self.__file_name)))
 
     def base_view(self):
         return self.__view
