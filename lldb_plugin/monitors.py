@@ -26,7 +26,7 @@ def debug(thing):
     _debug(debugMonitors, thing)
 
 
-class UIUpdater(threading.Thread):
+class LLDBUIUpdater(threading.Thread):
     _done = False
 
     eProcessStopped = 1 << 0
@@ -38,7 +38,7 @@ class UIUpdater(threading.Thread):
     eUIUpdaterExit = 1 << 4
 
     def __init__(self):
-        super(UIUpdater, self).__init__(name='sublime.lldb.UIUpdater')
+        super(LLDBUIUpdater, self).__init__(name='sublime.lldb.UIUpdater')
         self.daemon = True
         self.__queue = Queue.Queue()
         self.start()
@@ -78,7 +78,7 @@ class UIUpdater(threading.Thread):
 
         packet = self.get_next_packet()
         while packet:
-            debug('UIUpdater: ' + str(packet))
+            debug('LLDBUIUpdater: ' + str(packet))
             if packet[0] == self.eProcessStopped:
                 state = packet[1]
                 epilogue = packet[2]
@@ -116,7 +116,7 @@ class UIUpdater(threading.Thread):
                 if v is not None:
                     sublime.set_timeout(lambda: v.unmark_bp(line, is_enabled), 0)
 
-            elif packet[0] == self.eUIUpdaterDone:
+            elif packet[0] == self.eUIUpdaterExit
                 return
 
             packet = self.get_next_packet()
@@ -178,5 +178,6 @@ class LLDBUIListener(sublime_plugin.EventListener):
         lldb_view = get_lldb_view_for(v)
         if lldb_view:
             _debug(debugMonitors, 'on_load: %s' % str((repr(lldb_view), lldb_view.file_name())))
-            # TODO: Instead of updating it here, send a message to the UIUpdater
+            # TODO: Instead of updating it here, send a message to the
+            # LLDBUIUpdater
             lldb_view.full_update()

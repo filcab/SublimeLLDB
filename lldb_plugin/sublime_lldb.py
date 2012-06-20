@@ -37,7 +37,7 @@ from root_objects import driver_instance, set_driver_instance,          \
 
 from utilities import generate_memory_view_for
 
-from monitors import UIUpdater
+from monitors import LLDBUIUpdater
 
 _settings = None
 # _setting_prefix = 'lldb.'
@@ -253,7 +253,7 @@ def cleanup(w=None):
     _is_debugging = False
 
     set_disabled_bps([])
-    # TODO: Stop UIUpdater, FileMonitor, etc.
+    # TODO: Stop LLDBUIUpdater, FileMonitor, etc.
     ui_updater().stop()
     #stop_markers_monitor()
     driver = driver_instance()
@@ -402,7 +402,7 @@ def ensure_lldb_is_running(w=None):
         if not start_debugging(w):
             return
 
-        set_ui_updater(UIUpdater())
+        set_ui_updater(LLDBUIUpdater())
         g = lldb_greeting()
         if lldb_out_view().size() > 0:
             g = '\n\n' + lldb_greeting()
