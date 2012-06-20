@@ -14,7 +14,7 @@ import lldbutil
 
 
 from debug import debug as _debug
-from debug import debugPlugin
+from debug import debugPlugin, debugSettings
 
 
 def debug(thing):
@@ -87,12 +87,12 @@ def get_setting(name):
     if sublime.active_window() and sublime.active_window().active_view():
         setting = sublime.active_window().active_view().settings().get(setting_name)
 
-    debug('%s: %s' % (name, setting or _settings.get(setting_name)))
+    _debug(debugSettings, '%s: %s' % (name, setting or _settings.get(setting_name)))
     return setting or _settings.get(setting_name)
 
 
 def reload_settings():
-    debug('reloading settings')
+    _debug(debugSettings, 'reloading settings')
 
     global _use_bundled_debugserver, _lldb_window_layout, _basic_layout
     global _clear_view_on_startup, _prologue
