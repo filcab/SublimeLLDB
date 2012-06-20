@@ -124,11 +124,11 @@ class LLDBCodeView(LLDBView):
         self.__enabled_bps = {}
         self.__disabled_bps = {}
         # Get info on current breakpoints for this file
-        self.populate_breakpoint_lists()
+        self.__populate_breakpoint_lists()
         if not view.is_loading():
-            self.update_bps()
+            self.__update_bps()
         else:
-            debug('Skipped LLDBCodeView.update_bps() because view.is_loading is True')
+            debug('Skipped LLDBCodeView.__update_bps() because view.is_loading is True')
 
     @property
     def needs_update(self):
@@ -138,7 +138,7 @@ class LLDBCodeView(LLDBView):
     def needs_update(self, value):
         self._needs_update = value
 
-    def populate_breakpoint_lists(self):
+    def __populate_breakpoint_lists(self):
         file_bp_locs = self.__driver.get_breakpoint_locations_for_file(self.file_name())
 
         def line_from_bp_loc(bp_loc):
@@ -153,11 +153,11 @@ class LLDBCodeView(LLDBView):
             else:
                 disabled_bp_lines.append(line_from_bp_loc(bp_loc))
 
-        self.add_bps(enabled_bp_lines, True)
-        self.add_bps(disabled_bp_lines, False)
+        self.__add_bps(enabled_bp_lines, True)
+        self.__add_bps(disabled_bp_lines, False)
 
 
-    def mark_regions(self, regions, type):
+    def __mark_regions(self, regions, type):
         eMarkerPCScope = 'bookmark'
         eMarkerPCIcon = 'bookmark'
         eMarkerBreakpointScope = 'string'
@@ -190,26 +190,26 @@ class LLDBCodeView(LLDBView):
                 _debug(debugViews, 'erasing regions:lldb.breakpoint.disabled')
                 self.base_view().erase_regions('lldb.breakpoint.disabled')
 
-    def mark_pc(self, line, show=False):
+    def __mark_pc(self, line, show=False):
         v = self.base_view()
         if line is None:
             to_mark = []
         else:
             to_mark = [v.line(v.text_point(line, 0))]
-        self.mark_regions(to_mark, self.eRegionPC)
+        self.__mark_regions(to_mark, self.eRegionPC)
         if show and to_mark:
             self.show(to_mark[0], True)
 
-    def update_bps(self):
+    def __update_bps(self):
         v = self.base_view()
         regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-        self.mark_regions(regions, self.eRegionBreakpointEnabled)
+        self.__mark_regions(regions, self.eRegionBreakpointEnabled)
         regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-        self.mark_regions(regions, self.eRegionBreakpointDisabled)
+        self.__mark_regions(regions, self.eRegionBreakpointDisabled)
 
-    def add_bps(self, lines, are_enabled=True):
+    def __add_bps(self, lines, are_enabled=True):
         """Adds breakpoints (enabled or disabled) to the view.
-update_bps() must be called afterwards to refresh the UI."""
+__update_bps() must be called afterwards to refresh the UI."""
         if len(lines) > 0:
             self.needs_update = True
 
@@ -226,9 +226,9 @@ update_bps() must be called afterwards to refresh the UI."""
 
             add_to[line] = existing + 1
 
-    def remove_bps(self, lines, are_enabled=True):
+    def __remove_bps(self, lines, are_enabled=True):
         """Removes breakpoints (enabled or disabled) from the view.
-update_bps() must be called afterwards to refresh the UI."""
+__update_bps() must be called afterwards to refresh the UI."""
         if len(lines) > 0:
             self.needs_update = True
 
@@ -247,15 +247,15 @@ update_bps() must be called afterwards to refresh the UI."""
     def mark_bp(self, line, is_enabled=True):
         """Mark a new breakpoint as enabled/disabled and immediately mark
 its region."""
-        self.add_bps([line], is_enabled)
+        self.__add_bps([line], is_enabled)
         v = self.base_view()
 
         if is_enabled:
             regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-            self.mark_regions(regions, self.eRegionBreakpointEnabled)
+            self.__mark_regions(regions, self.eRegionBreakpointEnabled)
         else:
             regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-            self.mark_regions(regions, self.eRegionBreakpointDisabled)
+            self.__mark_regions(regions, self.eRegionBreakpointDisabled)
 
     def change_bp(self, line, is_enabled):
         if is_enabled:
@@ -280,22 +280,22 @@ its region."""
 
         v = self.base_view()
         regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-        self.mark_regions(regions, self.eRegionBreakpointEnabled)
+        self.__mark_regions(regions, self.eRegionBreakpointEnabled)
         regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-        self.mark_regions(regions, self.eRegionBreakpointDisabled)
+        self.__mark_regions(regions, self.eRegionBreakpointDisabled)
 
     def unmark_bp(self, line, is_enabled=True):
         """Remove merkings for a breakpoint and update the UI
 afterwards."""
-        self.remove_bps([line], is_enabled)
+        self.__remove_bps([line], is_enabled)
         v = self.base_view()
 
         if is_enabled:
             regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-            self.mark_regions(regions, self.eRegionBreakpointEnabled)
+            self.__mark_regions(regions, self.eRegionBreakpointEnabled)
         else:
             regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-            self.mark_regions(regions, self.eRegionBreakpointDisabled)
+            self.__mark_regions(regions, self.eRegionBreakpointDisabled)
 
     def pre_update(self):
         thread = self.__driver.current_thread()
@@ -317,10 +317,10 @@ afterwards."""
     def update(self):
         if self.needs_update:
             if self.__pc_line:
-                self.mark_pc(self.__pc_line - 1, True)
+                self.__mark_pc(self.__pc_line - 1, True)
             else:
-                self.mark_pc(None)
-            self.update_bps()
+                self.__mark_pc(None)
+            self.__update_bps()
             self.needs_update = False
         else:
             _debug(debugViews, '%s: didn\'t need an update.' % self.__class__.__name__)
