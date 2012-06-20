@@ -119,6 +119,7 @@ class LLDBCodeView(LLDBView):
     # FIXME: Split stuff that doesn't have to run on the UI thread.
     def __init__(self, view, driver):
         super(LLDBCodeView, self).__init__(view)
+        self._needs_update = False
         self.__driver = driver
         self.__enabled_bps = {}
         self.__disabled_bps = {}
@@ -128,6 +129,14 @@ class LLDBCodeView(LLDBView):
             self.update_bps()
         else:
             debug('Skipped LLDBCodeView.update_bps() because view.is_loading is True')
+
+    @property
+    def needs_update(self):
+        return self._needs_update
+
+    @needs_update.setter
+    def needs_update(self, value):
+        self._needs_update = value
 
     def populate_breakpoint_lists(self):
         file_bp_locs = self.__driver.get_breakpoint_locations_for_file(self.file_name())
@@ -201,6 +210,9 @@ class LLDBCodeView(LLDBView):
     def add_bps(self, lines, are_enabled=True):
         """Adds breakpoints (enabled or disabled) to the view.
 update_bps() must be called afterwards to refresh the UI."""
+        if len(lines) > 0:
+            self.needs_update = True
+
         if are_enabled:
             add_to = self.__enabled_bps
         else:
@@ -217,6 +229,9 @@ update_bps() must be called afterwards to refresh the UI."""
     def remove_bps(self, lines, are_enabled=True):
         """Removes breakpoints (enabled or disabled) from the view.
 update_bps() must be called afterwards to refresh the UI."""
+        if len(lines) > 0:
+            self.needs_update = True
+
         if are_enabled:
             remove_from = self.__enabled_bps
         else:
@@ -300,11 +315,15 @@ afterwards."""
         return False
 
     def update(self):
-        if self.__pc_line:
-            self.mark_pc(self.__pc_line - 1, True)
+        if self.needs_update:
+            if self.__pc_line:
+                self.mark_pc(self.__pc_line - 1, True)
+            else:
+                self.mark_pc(None)
+            self.update_bps()
+            self.needs_update = False
         else:
-            self.mark_pc(None)
-        self.update_bps()
+            _debug(debugViews, '%s: didn\'t need an update.' % self.__class__.__name__)
 
 
 class LLDBRegisterView(LLDBReadOnlyView):
