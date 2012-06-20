@@ -539,6 +539,8 @@ class LldbDriver(threading.Thread):
         elif type & lldb.SBProcess.eBroadcastBitInterrupt:
             debug('Got a process interrupt event!')
             lldbutil.get_description(ev)
+            if self.__process_stopped_callback:
+                self.__process_stopped_callback(self)
         elif type & lldb.SBProcess.eBroadcastBitStateChanged:
             self.get_process_stdout()
             self.get_process_stderr()
