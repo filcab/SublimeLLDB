@@ -74,7 +74,7 @@ class LldbDriver(threading.Thread):
         # del self._debugger
         lldb.SBDebugger.Terminate()
 
-    def input_reader_callback(self, input_reader, notification, bytes):
+    def __input_reader_callback(self, input_reader, notification, bytes):
         if (notification == lldb.eInputReaderReactivate):
             self.ready_for_command()
         elif (notification == lldb.eInputReaderGotToken):
@@ -342,7 +342,7 @@ class LldbDriver(threading.Thread):
         # m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
 
         error = lldb.SBError(self.__input_reader.Initialize(self.debugger,
-                                                            self.input_reader_callback,
+                                                            self.__input_reader_callback,
                                                             lldb.eInputReaderGranularityLine,
                                                             None,  # end token (NULL == never done)
                                                             None,  # Prompt (NULL == taken care of elsewhere)
@@ -419,13 +419,13 @@ class LldbDriver(threading.Thread):
                                     if ev_type & IOChannel.eBroadcastBitThreadDidExit:
                                         iochannel_thread_exited = True
                                     else:
-                                        # TODO: handle_io_event is not implemented
-                                        if self.handle_io_event(event):
+                                        # TODO: __handle_io_event is not implemented
+                                        if self.__handle_io_event(event):
                                             self.is_done = True
                             elif lldb.SBProcess.EventIsProcessEvent(event):
-                                self.handle_process_event(event)
+                                self.__handle_process_event(event)
                             elif lldb.SBBreakpoint.EventIsBreakpointEvent(event):
-                                self.handle_breakpoint_event(event)
+                                self.__handle_breakpoint_event(event)
                             elif event.BroadcasterMatchesRef(sb_interpreter.GetBroadcaster()):
                                 # This first one should be replaced with a CommandOverrideCallback function
                                 if ev_type & lldb.SBCommandInterpreter.eBroadcastBitQuitCommandReceived:
@@ -459,7 +459,7 @@ class LldbDriver(threading.Thread):
         if self.__on_exit_callback:
             self.__on_exit_callback()
 
-    def handle_breakpoint_event(self, ev):
+    def __handle_breakpoint_event(self, ev):
         type = lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(ev)
 
         # TODO: Remove duplicate code for adding/deleting BP
@@ -529,7 +529,7 @@ class LldbDriver(threading.Thread):
         elif type & lldb.eBreakpointEventTypeLocationsRemoved:
             None
 
-    def handle_process_event(self, ev):
+    def __handle_process_event(self, ev):
         type = ev.GetType()
 
         if type & lldb.SBProcess.eBroadcastBitSTDOUT:
