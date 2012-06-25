@@ -273,55 +273,56 @@ def unload_handler():
     cleanup(window_ref())
 
 
-def process_stopped(driver, state=None):
+def process_stopped(driver, process, state=None):
     ui_updater().process_stopped(state, lambda: driver.maybe_get_input())
 
-    debugger = driver.debugger
-    line_entry = driver.current_frame().GetLineEntry()
-    if line_entry:
-        # We don't need to run 'process status' like Driver.cpp
-        # Since we open the file and show the source line.
-        r = interpret_command(debugger, 'thread list')
-        lldb_view_send(stdout_msg(r[0].GetOutput()))
-        lldb_view_send(stderr_msg(r[0].GetError()))
-        r = interpret_command(debugger, 'frame info')
-        lldb_view_send(stdout_msg(r[0].GetOutput()))
-        lldb_view_send(stderr_msg(r[0].GetError()))
+    if process and driver.process_is_stopped(process):
+        debugger = driver.debugger
+        line_entry = driver.current_frame().GetLineEntry()
+        if line_entry:
+            # We don't need to run 'process status' like Driver.cpp
+            # Since we open the file and show the source line.
+            r = interpret_command(debugger, 'thread list')
+            lldb_view_send(stdout_msg(r[0].GetOutput()))
+            lldb_view_send(stderr_msg(r[0].GetError()))
+            r = interpret_command(debugger, 'frame info')
+            lldb_view_send(stdout_msg(r[0].GetOutput()))
+            lldb_view_send(stderr_msg(r[0].GetError()))
 
-        filespec = line_entry.GetFileSpec()
-    else:
-        # Give us some assembly to check the crash/stop
-        r = interpret_command(debugger, 'process status')
-        lldb_view_send(stdout_msg(r[0].GetOutput()))
-        lldb_view_send(stderr_msg(r[0].GetError()))
-        if not line_entry:
-            # Get ALL the SBFrames
-            t = driver.current_thread()
-            n = t.GetNumFrames()
-            for i in xrange(0, n):
-                f = t.GetFrameAtIndex(i)
-                if f:
-                    line_entry = f.GetLineEntry()
-                    if line_entry and line_entry.GetFileSpec():
-                        filespec = line_entry.GetFileSpec()
+            filespec = line_entry.GetFileSpec()
+        else:
+            # Give us some assembly to check the crash/stop
+            r = interpret_command(debugger, 'process status')
+            lldb_view_send(stdout_msg(r[0].GetOutput()))
+            lldb_view_send(stderr_msg(r[0].GetError()))
+            if not line_entry:
+                # Get ALL the SBFrames
+                t = driver.current_thread()
+                n = t.GetNumFrames()
+                for i in xrange(0, n):
+                    f = t.GetFrameAtIndex(i)
+                    if f:
+                        line_entry = f.GetLineEntry()
+                        if line_entry and line_entry.GetFileSpec():
+                            filespec = line_entry.GetFileSpec()
 
-    if filespec:
-        filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
-        # Maybe we don't need to focus the first group. The user knows
-        # what he/she wants.
+        if filespec:
+            filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
+            # Maybe we don't need to focus the first group. The user knows
+            # what he/she wants.
 
-        def to_ui_thread():
-            window_ref().focus_group(0)
-            v = window_ref().open_file(filename)
-            lldb_view = get_lldb_view_for(v)
-            if lldb_view is None:
-                lldb_view = LLDBCodeView(v, driver)
-            # TODO: Maybe bring the view to the front?
-        sublime.set_timeout(to_ui_thread, 0)
-    else:
-        # TODO: If we don't have a filespec, we can try to disassemble
-        # around the thread's PC.
-        pass
+            def to_ui_thread():
+                window_ref().focus_group(0)
+                v = window_ref().open_file(filename)
+                lldb_view = get_lldb_view_for(v)
+                if lldb_view is None:
+                    lldb_view = LLDBCodeView(v, driver)
+                # TODO: Maybe bring the view to the front?
+            sublime.set_timeout(to_ui_thread, 0)
+        else:
+            # TODO: If we don't have a filespec, we can try to disassemble
+            # around the thread's PC.
+            pass
 
 
 def initialize_lldb(w):
