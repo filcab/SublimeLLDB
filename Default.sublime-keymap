@@ -57,43 +57,4 @@
         "command": "lldb_view_memory",
         "keys": ["shift+super+m"]
     }
-    //,
-    // {
-    //     "command": "gdb_edit_register",
-    //     "keys": ["enter"],
-    //     "context": [{"key": "gdb_running"}, {"key": "gdb_register_view"}]
-    // },
-    // {
-    //     "command": "gdb_edit_variable",
-    //     "keys": ["enter"],
-    //     "context": [{"key": "gdb_running"}, {"key": "gdb_variables_view"}]
-    // },
-    // {
-    //     "command": "gdb_expand_variable",
-    //     "keys": ["right"],
-    //     "context": [{"key": "gdb_running"}, {"key": "gdb_variables_view"}]
-    // },
-    // {
-    //     "command": "gdb_collapse_variable",
-    //     "keys": ["left"],
-    //     "context": [{"key": "gdb_running"}, {"key": "gdb_variables_view"}]
-    // },
-    // {
-    //     "command": "gdb_input",
-    //     "keys": ["shift+f5"]
-    // },
-    // {
-    //     "command": "gdb_toggle_breakpoint",
-    //     "keys": ["f9"]
-    // },
-    // {
-    //     "command": "gdb_open_register_view",
-    //     "context": [{"key": "gdb_register_view_open", "operator": "equal", "operand": false }],
-    //     "keys": ["ctrl+alt+g"]
-    // },
-    // {
-    //     "command": "gdb_open_disassembly_view",
-    //     "context": [{"key": "gdb_disassembly_view_open", "operator": "equal", "operand": false }],
-    //     "keys": ["ctrl+f11"]
-    // }
 ]

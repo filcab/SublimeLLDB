@@ -30,10 +30,11 @@
                         "caption": "Stop debugging",
                         "command": "lldb_stop_debugging"
                     },
+
+                    // Debugging commands (XCode order)
                     {
                         "caption": "-"
                     },
-                    // Debugging commands (XCode order)
                     {
                         "caption": "Continue",
                         "command": "lldb_continue"
@@ -45,10 +46,11 @@
                         "caption": "Send Signal",
                         "command": "lldb_send_signal"
                     },
+
+                    // Stepping
                     {
                         "caption": "-"
                     },
-                    // Stepping
                     {
                         "caption": "Step Over",
                         "command": "lldb_step_over"
@@ -61,10 +63,11 @@
                         "caption": "Step Out",
                         "command": "lldb_step_out"
                     },
+
+                    // Instruction level stepping
                     {
                         "caption": "-"
                     },
-                    // Instruction level stepping
                     {
                         "caption": "Step Over Instruction",
                         "command": "lldb_step_over_instruction"
@@ -81,10 +84,11 @@
                         "caption": "Step Into Thread",
                         "command": "lldb_step_into_thread"
                     },
+
+                    // Breakpoints
                     {
                         "caption": "-"
                     },
-                    // Breakpoints
                     {
                         "caption": "Add a Breakpoint at Current Line",
                         "command": "lldb_break_at_line"
@@ -97,10 +101,11 @@
                         "caption": "Toggle Breakpoints",
                         "command": "lldb_toggle_enable_breakpoints"
                     },
+
+                    // Miscellaneous
                     {
                         "caption": "-"
                     },
-                    // Miscellaneous
                     {
                         "caption": "Shared Libraries",
                         "command": "lldb_view_shared_libraries"
@@ -115,6 +120,19 @@
                     },
                     {
                         "caption": "Clear Console",
+                        "command": "lldb_clear_output_view"
+                    }
+
+                    // Output view commands
+                    {
+                        "caption": "-"
+                    },
+                    {
+                        "caption": "Toggle LLDB output view",
+                        "command": "lldb_toggle_output_view"
+                    }
+                    {
+                        "caption": "Clear LLDB output view",
                         "command": "lldb_clear_output_view"
                     }
                 ]
