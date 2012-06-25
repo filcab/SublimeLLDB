@@ -133,6 +133,27 @@ class LldbDriver(threading.Thread):
     def stop(self):
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadShouldExit)
 
+    def process_is_running(self, proc=None):
+        if proc is None:
+            proc = self.current_process()
+        if proc:
+            return proc.GetState() == lldb.eStateRunning
+        return False
+
+    def process_has_exited(self, proc=None):
+        if proc is None:
+            proc = self.current_process()
+        if proc:
+            return proc.GetState() == lldb.eStateExited
+        return False
+
+    def process_is_stopped(self, proc=None):
+        if proc is None:
+            proc = self.current_process()
+        if proc:
+            return proc.GetState() == lldb.eStateStopped
+        return False
+
     def get_PC(self):
         frame = self.current_frame()
         if not frame:
@@ -265,16 +286,6 @@ class LldbDriver(threading.Thread):
         self.__to_debugger_fh_w.flush()
         # event = lldb.SBEvent(IOChannel.eBroadcastBitHasUserInput, str(cmd))
         # self.io_channel.broadcaster.BroadcastEvent(event)
-
-    def process_is_stopped(self):
-    #     target = self.debugger.GetSelectedTarget()
-    #     if target:
-    #         process = target.GetProcess()
-    #         if process:
-    #             state = process.GetState()
-    #             if lldb.SBDebugger.StateIsRunningState(state):
-    #                 return False
-        return True
 
     def is_ready_for_command(self):
         return self.__waiting_for_command
