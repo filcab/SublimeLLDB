@@ -203,10 +203,14 @@ afterwards."""
     def pre_update(self):
         """pre_update will perform lldb-related work and get our PC line"""
         old_pc_line = self.__pc_line
+        self.__pc_line = None
         _debug(debugViews, 'old pc_line: %s' % str(old_pc_line))
 
         thread = self.__driver.current_thread()
         if not thread:
+            _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
+            if self.__pc_line != old_pc_line:
+                self.needs_update = True
             return False
 
         for frame in thread:
@@ -221,7 +225,6 @@ afterwards."""
                         self.needs_update = True
                     return True
 
-        self.__pc_line = None
         _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
         if self.__pc_line != old_pc_line:
             self.needs_update = True
@@ -229,7 +232,7 @@ afterwards."""
 
     def update(self):
         if self.needs_update:
-            if self.__pc_line:
+            if self.__pc_line is not None:
                 self.__mark_pc(self.__pc_line - 1, True)
             else:
                 self.__mark_pc(None)
@@ -241,10 +244,17 @@ afterwards."""
             _debug(debugViews, 'LLDBCodeView: didn\'t need an update: %s' % repr(self))
 
     def stop(self):
+        self.pre_update()  # This will set pc_line to None
+        self.__enabled_bps = {}
+        self.__disabled_bps = {}
+
         def to_ui():
-            self.base_view().erase_regions('lldb.location')
-            self.base_view().erase_regions('lldb.breakpoint.enabled')
-            self.base_view().erase_regions('lldb.breakpoint.disabled')
+            _debug(debugViews, 'executing UI code for LLDBCodeView.stop()')
+            self.update()
+            self.__update_bps()
+            # self.base_view().erase_regions('lldb.location')
+            # self.base_view().erase_regions('lldb.breakpoint.enabled')
+            # self.base_view().erase_regions('lldb.breakpoint.disabled')
         sublime.set_timeout(to_ui, 0)
 
     # Private LLDBCodeView methods
