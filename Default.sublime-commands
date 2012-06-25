@@ -38,7 +38,8 @@
         "command": "lldb_break_at_line"
     },
     {
-        "caption": "LLDB: Create Symbolic Breakpoint"
+        "caption": "LLDB: Create Symbolic Breakpoint",
+        "command": "lldb_break_at_symbol"
     },
     {
         "caption": "LLDB: Toggle Breakpoints",
