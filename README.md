@@ -11,21 +11,46 @@ Usage
 * Menu items in Tools->LLDB
 * Quick access commands using Sublime Text 2's Command Pallette (all commands
   start with “LLDB: ”)
-* super+shift+l: Open lldb prompt (maybe starting lldb)
 
-* super+shift+k: Show/hide the lldb i/o view
-* super+shift+alt+k: Clear the lldb i/o view
 
-* Xcode-like commands:
- * super+ctrl+y: Continue
- * F6: Step over
- * F7: Step into
- * F8: Step out
- * ctrl+F6: Step over instruction
- * ctrl+shift+F6: Step over thread
- * ctrl+F7: Step into instruction
- * ctrl+shift+F7: Step into thread
- * super+shift+m: View process memory
+Useful Keybound Commands
+------------------------
+
+* super+shift+l: (LldbCommand) Open lldb prompt (maybe starting lldb)
+
+* super+shift+k: (LldbToggleOutputView) Show/hide the lldb i/o view
+* super+shift+alt+k: (LldbClearOutputView) Clear the lldb i/o view
+
+* Xcode-like commands (Mac OS X):
+ * super+ctrl+y: (LldbContinue) Continue executing the program
+ * F6: (LldbStepOver) Step over
+ * F7: (LldbStepInto) Step into
+ * F8: (LldbStepOut) Step out
+ * ctrl+F6: (LldbStepOverInstruction) Step over instruction
+ * ctrl+shift+F6: (LldbStepOverThread) Step over thread
+ * ctrl+F7: (LldbStepIntoInstruction) Step into instruction
+ * ctrl+shift+F7: (LldbStepIntoThread) Step into thread
+ * super+shift+m: (LldbViewMemory) View process memory
+
+
+Other Useful Commands
+---------------------
+
+* LldbDebugProgram
+* LldbAttachProcess
+* LldbConnectDebugserver
+
+* LldbStopDebugging
+* LldbSendSignal
+
+* LldbListBreakpoints
+* LldbBreakAt{Line,Symbol}
+* LldbToggleEnableBreakpoints
+
+* LldbViewSharedLibraries
+* LldbRegisterView
+* LldbDisassembleFrame
+
 
 Features
 --------
