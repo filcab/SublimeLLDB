@@ -551,14 +551,13 @@ class LldbDriver(threading.Thread):
             debug('Got a process interrupt event!')
             lldbutil.get_description(ev)
             if self.__process_stopped_callback:
-                self.__process_stopped_callback(self)
+                self.__process_stopped_callback(self, lldb.SBProcess.GetProcessFromEvent(ev))
         elif type & lldb.SBProcess.eBroadcastBitStateChanged:
             self.get_process_stdout()
             self.get_process_stderr()
 
             # only after printing the std* can we print our prompts
             state = lldb.SBProcess.GetStateFromEvent(ev)
-            set_process_state(state)
             if state == lldb.eStateInvalid:
                 return
 
@@ -584,7 +583,7 @@ class LldbDriver(threading.Thread):
                 lldb_view_send(stderr_msg(r[0].GetError()))
                 # Remove program counter markers
                 if self.__process_stopped_callback:
-                    self.__process_stopped_callback(self, state)
+                    self.__process_stopped_callback(self, process, state)
             elif state == lldb.eStateStopped     \
                 or state == lldb.eStateCrashed   \
                 or state == lldb.eStateSuspended:
@@ -596,7 +595,7 @@ class LldbDriver(threading.Thread):
                 else:
                     self.update_selected_thread()
                     if self.__process_stopped_callback:
-                        self.__process_stopped_callback(self, state)
+                        self.__process_stopped_callback(self, process, state)
 
     def update_selected_thread(self):
         debugger = self.debugger
@@ -825,6 +824,6 @@ def is_return_invalid(r):
     return r == lldb.eReturnStatusInvalid
 
 
-from root_objects import set_driver_instance, lldb_view_send, set_process_state, LldbInputDelegate, ui_updater
+from root_objects import set_driver_instance, lldb_view_send, LldbInputDelegate, ui_updater
 from monitors import FileMonitor
 from utilities import stderr_msg, stdout_msg

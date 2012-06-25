@@ -15,7 +15,6 @@ __ui_updater = None
 __out_view = None
 __got_input_function = None
 __window_ref = None
-_process_state = lldb.eStateInvalid
 __breakpoint_dict = {}
 _disabled_bps = []
 __lldb_views = []
@@ -79,27 +78,6 @@ def lldb_disassembly_view_name(arg):
         addr = pc.GetLoadAddress(target)
         return __lldb_disassembly_view__unkown_addr_fmt % (addr,)
     return __lldb_disassembly_view_fmt % (symbol, addr)
-
-
-def process_state():
-    return _process_state
-
-
-def set_process_state(state):
-    global _process_state
-    _process_state = state
-
-
-def process_has_started():
-    pass
-
-
-def process_is_running():
-    pass
-
-
-def process_is_stopped():
-    pass
 
 
 def breakpoint_dict():
