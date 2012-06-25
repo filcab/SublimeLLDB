@@ -21,21 +21,21 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>152</string>
+	<string>160</string>
 	<key>DTCompiler</key>
 	<string>com.apple.compilers.llvm.clang.1_0</string>
 	<key>DTPlatformBuild</key>
-	<string>4E3002</string>
+	<string>4G78z</string>
 	<key>DTPlatformVersion</key>
 	<string>GM</string>
 	<key>DTSDKBuild</key>
-	<string>11E52</string>
+	<string>12A237</string>
 	<key>DTSDKName</key>
-	<string>macosx10.7</string>
+	<string>macosx10.8</string>
 	<key>DTXcode</key>
-	<string>0433</string>
+	<string>0450</string>
 	<key>DTXcodeBuild</key>
-	<string>4E3002</string>
+	<string>4G78z</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2012 Apple Inc. All rights reserved.</string>
 	<key>XPCService</key>
