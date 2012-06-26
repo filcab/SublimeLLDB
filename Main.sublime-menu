@@ -121,7 +121,7 @@
                     {
                         "caption": "Clear Console",
                         "command": "lldb_clear_output_view"
-                    }
+                    },
 
                     // Output view commands
                     {
@@ -130,7 +130,7 @@
                     {
                         "caption": "Toggle LLDB output view",
                         "command": "lldb_toggle_output_view"
-                    }
+                    },
                     {
                         "caption": "Clear LLDB output view",
                         "command": "lldb_clear_output_view"
