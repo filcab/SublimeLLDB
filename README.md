@@ -77,6 +77,8 @@ The LLDB plugin has several settings to change its behaviour. they are listed ne
 * `lldb.layout.group.i/o` (1): Index of the group to use for the debugger I/O view
 
 ### Memory view settings
+No verifications are made on the sizes chosen. For best results, `size` should be a multiple of `width`, which should be a multiple of `grouping`.
+
 * `lldb.view.memory.size` (512): Total number of bytes to show on a “show memory” view
 * `lldb.view.memory.width` (32): Number of bytes to show on each line of a “show memory” view
 * `lldb.view.memory.grouping` (8): Number of bytes to show in each group on a “show memory” view
