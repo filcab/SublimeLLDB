@@ -4,15 +4,15 @@
         "caption": "LLDB: Surprise me! (Bogus test command)",
         "command": "lldb_bogus"
     },
-	// Starting/stopping lldb
-	{
-		"caption": "LLDB: Show LLDB prompt (starting LLDB if needed)",
-		"command": "lldb"
-	},
-	{
-		"caption": "LLDB: Start debugging default program.",
-		"command": "lldb_debug_program"
-	},
+    // Starting/stopping lldb
+    {
+        "caption": "LLDB: Show LLDB prompt (starting LLDB if needed)",
+        "command": "lldb"
+    },
+    {
+        "caption": "LLDB: Start debugging default program.",
+        "command": "lldb_debug_program"
+    },
     {
         "caption": "LLDB: Attach to process",
         "command": "lldb_attach_process"
@@ -65,12 +65,12 @@
     },
 
     // Output view related commands
-	{
-		"caption": "LLDB: Toggle LLDB output view",
-		"command": "lldb_toggle_output_view"
-	},
-	{
-		"caption": "LLDB: Clear LLDB output view",
-		"command": "lldb_clear_output_view"
-	}
+    {
+        "caption": "LLDB: Toggle LLDB output view",
+        "command": "lldb_toggle_output_view"
+    },
+    {
+        "caption": "LLDB: Clear LLDB output view",
+        "command": "lldb_clear_output_view"
+    }
 ]

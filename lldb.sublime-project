@@ -1,10 +1,10 @@
 {
-	"folders":
-	[
-		{
-			"path": "/Users/filcab/dev/softek/lldb-plugin"
-		}
-	],
+    "folders":
+    [
+        {
+            "path": "/Users/filcab/dev/softek/lldb-plugin"
+        }
+    ],
     "settings":
     {
         /* project-specific settings for lldb */
