@@ -1,9 +1,10 @@
 # -*- mode: python; coding: utf-8 -*-
 
-import sublime
 import lldb
+import sublime
+from utilities import SettingsManager
 
-__lldb_view_name = 'lldb i/o'
+default_lldb_view_name = 'lldb i/o'
 __lldb_prompt = '(lldb) '
 __lldb_register_view_fmt = 'lldb thread #%d'
 __lldb_disassembly_view__unkown_addr_fmt = 'lldb 0x%x disassembly'
@@ -43,15 +44,6 @@ def set_ui_updater(ui_updater):
 
 def lldb_prompt():
     return __lldb_prompt
-
-
-def lldb_view_name():
-    return __lldb_view_name
-
-
-def set_lldb_view_name(name):
-    global __lldb_view_name
-    __lldb_view_name = name
 
 
 def lldb_register_view_name(thread):
@@ -215,7 +207,10 @@ def lldb_view_send(string):
 def lldb_view_write(string):
     global __out_view, __window_ref
     if not (__out_view and __window_ref and __out_view.window()):
-        __out_view = get_lldb_output_view(__window_ref, lldb_view_name())
+        sm = SettingsManager.getSM()
+        name = sm.get_default('i/o.view.name', default_lldb_view_name)
+
+        __out_view = get_lldb_output_view(__window_ref, name)
         if not __window_ref:
             # Bail out and just set the first window
             __window_ref = sublime.windows()[0]
@@ -294,7 +289,8 @@ def get_lldb_view_for(v):
 def get_lldb_output_view(window, name=None):
     # Search for the lldb_view view first.
     if not name:
-        name = lldb_view_name()
+        sm = SettingsManager.getSM()
+        name = sm.get_default('i/o.view.name', default_lldb_view_name)
 
     f = maybe_get_lldb_output_view(window, name)
     if f is None:

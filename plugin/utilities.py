@@ -46,9 +46,25 @@ class SettingsManager(object):
             setting = sublime.active_window().active_view().settings().get(name)
 
         setting = setting or self.__settings.get(name)
-        debug.debug(debugSettings, '%s: %s' % (name, repr(setting)))
+        debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
         return setting
 
+    def get_default(self, name, default):
+        # Temporary name fix for when we're given a setting name with the prefix
+        # In the future, this test will be gone and no setting will have
+        # the 'lldb.' prefix
+        if not name.startswith(self.__prefix):
+            # Final code should be:
+            name = self.__prefix + name
+
+        if sublime.active_window() and sublime.active_window().active_view():
+            setting = sublime.active_window().active_view().settings().get(name, default)
+
+        if setting is default:
+            setting = self.__settings.get(name, default)
+
+        debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
+        return setting
 
     def on_change(*args):
         raise Exception('on_change was called. Check backtrace!')

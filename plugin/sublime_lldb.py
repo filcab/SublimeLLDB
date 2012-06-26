@@ -23,11 +23,11 @@ def debug(thing):
 
 from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
+                         default_lldb_view_name,                        \
                          lldb_view_write, lldb_view_send,               \
                          thread_created, window_ref, set_window_ref,    \
                          get_lldb_output_view, get_lldb_view_for,       \
                          lldb_prompt,                                   \
-                         lldb_view_name, set_lldb_view_name,            \
                          lldb_register_view_name,                       \
                          lldb_disassembly_view_name,                    \
                          disabled_bps, set_disabled_bps,                \
@@ -42,83 +42,18 @@ _initialized = False
 _is_debugging = False
 _os_not_supported = False
 _macosx_is_too_old = False
-_use_bundled_debugserver = False
 _did_not_find_debugserver = False
-_clear_view_on_startup = True
-_lldb_window_layout = {
+_default_lldb_window_layout = {
                         "cols": [0.0, 1.0],  # start, end
                         "rows": [0.0, 0.75, 1.0],  # start1, start2, end
                         "cells": [[0, 0, 1, 1], [0, 1, 1, 2]]
                        }
-_basic_layout = {  # 1 group
+_default_basic_window_layout = {  # 1 group
                     "cols": [0.0, 1.0],
                     "rows": [0.0, 1.0],
                     "cells": [[0, 0, 1, 1]]
                  }
-_default_exe = None
-_default_bps = []
-_default_args = None
-_default_arch = lldb.LLDB_ARCH_DEFAULT
-_default_wait_for_launch = False
-_default_view_mem_size = int(512)
-_default_view_mem_width = 32
-_default_view_mem_grouping = 8
-_layout_group_source_file = 0
-_prologue = []
 
-#
-# def setup_settings():
-#     global _settings
-#     _settings = sublime.load_settings('lldb.sublime-settings')
-#     for k in get_settings_keys():
-#         _settings.add_on_change(k, reload_settings)
-#
-#
-# def get_setting(name):
-#     setting_name = _setting_prefix + name
-#     if not _settings:
-#         setup_settings()
-#
-#     setting = None
-#     if sublime.active_window() and sublime.active_window().active_view():
-#         setting = sublime.active_window().active_view().settings().get(setting_name)
-#
-#     _debug(debugSettings, '%s: %s' % (name, setting or _settings.get(setting_name)))
-#     return setting or _settings.get(setting_name)
-#
-
-
-def get_setting(*args):
-    sm = SettingsManager.getSM()
-    return sm.get(*args)
-
-
-def reload_settings():
-    _debug(debugSettings, 'reloading settings')
-
-    global _use_bundled_debugserver, _lldb_window_layout, _basic_layout
-    global _clear_view_on_startup, _prologue
-    global _default_exe, _default_bps, _default_args, _default_arch
-    global _default_view_mem_size, _default_view_mem_width, _default_view_mem_grouping
-    global _layout_group_source_file, _default_wait_for_launch
-    _use_bundled_debugserver = get_setting('lldb.use_bundled_debugserver')
-    _lldb_window_layout = get_setting('lldb.layout')
-    _basic_layout = get_setting('lldb.layout.basic')
-    _clear_view_on_startup = get_setting('lldb.i/o.view.clear_on_startup')
-    set_lldb_view_name(get_setting('lldb.i/o.view.name'))
-    _prologue = get_setting('lldb.prologue')
-
-    _default_exe = get_setting('lldb.exe')
-    _default_args = get_setting('lldb.args') or None
-    _default_arch = get_setting('lldb.arch') or lldb.LLDB_ARCH_DEFAULT
-    _default_bps = get_setting('lldb.breakpoints') or []
-
-    _default_view_mem_size = int(get_setting('lldb.view.memory.size'))
-    _default_view_mem_width = get_setting('lldb.view.memory.width')
-    _default_view_mem_grouping = get_setting('lldb.view.memory.grouping')
-
-    _layout_group_source_file = get_setting('lldb.layout.group.source_file')
-    _default_wait_for_launch = get_setting('lldb.attach.wait_for_launch') or False
 
 
 def initialize_plugin():
@@ -131,10 +66,9 @@ def initialize_plugin():
     debug('python version: %s' % (sys.version_info,))
     debug('cwd: %s' % os.getcwd())
 
-    reload_settings()
-
-    global _use_bundled_debugserver
-    if not _use_bundled_debugserver:
+    sm = SettingsManager.getSM()
+    use_bundled_debugserver = sm.get_default('use_bundled_debugserver', False)
+    if not use_bundled_debugserver:
         debugserver_paths = ['/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver',
                              '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver']
         uname = os.uname()
@@ -168,8 +102,10 @@ def debug_prologue(driver):
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
     debugger = driver.debugger
-    global _prologue
-    for c in _prologue:
+    sm = SettingsManager.getSM()
+    prologue = sm.get_default('prologue', [])
+
+    for c in prologue:
         lldb_view_write(lldb_prompt() + c + '\n')
         interpret_command(debugger, c)
 
@@ -182,18 +118,22 @@ def lldb_greeting():
 
 def good_lldb_layout(window=window_ref()):
     # if the user already has two groups, it's a good layout
-    return window.num_groups() == len(_lldb_window_layout['cells'])
+    sm = SettingsManager.getSM()
+    lldb_window_layout = sm.get_default('layout', _default_lldb_window_layout)
+    return window.num_groups() == len(lldb_window_layout['cells'])
 
 
 def set_lldb_window_layout(window=window_ref()):
-    global _lldb_window_layout
-    if lldb_out_view() != None and window.num_groups() != len(_lldb_window_layout['cells']):
-        window.run_command('set_layout', _lldb_window_layout)
+    sm = SettingsManager.getSM()
+    lldb_window_layout = sm.get_default('layout', _default_lldb_window_layout)
+    if lldb_out_view() != None and window.num_groups() != len(lldb_window_layout['cells']):
+        window.run_command('set_layout', lldb_window_layout)
 
 
 def set_regular_window_layout(window=window_ref()):
-    global _basic_layout
-    window.run_command('set_layout', _basic_layout)
+    sm = SettingsManager.getSM()
+    basic_layout = sm.get_default('layout.basic', _default_basic_window_layout)
+    window.run_command('set_layout', basic_layout)
 
 
 def lldb_toggle_output_view(window, show=False, hide=False):
@@ -203,7 +143,6 @@ def lldb_toggle_output_view(window, show=False, hide=False):
             if hide=True: force hiding the view;
             Otherwise: Toggle view visibility.
     """
-    # global lldb_out_view_name
     # TODO: Set the input_panel syntax to 'lldb command'
 
     # Just show the window.
@@ -384,7 +323,9 @@ def start_debugging(w):
 
 # TODO: Search current directory for a project file or an executable
 def search_for_executable():
-    return _default_exe
+    sm = SettingsManager.getSM()
+    exe = sm.get_default('exe', None)
+    return exe
 
 
 def ensure_lldb_is_running(w=None):
@@ -399,8 +340,9 @@ def ensure_lldb_is_running(w=None):
         set_window_ref(w)
 
     if driver_instance() is None:
-        global _clear_view_on_startup
-        if _clear_view_on_startup:
+        sm = SettingsManager.getSM()
+        clear_view_on_startup = sm.get_default('i/o.view.clear_on_startup', True)
+        if clear_view_on_startup:
             clear_view(lldb_out_view())
 
         if not start_debugging(w):
@@ -429,7 +371,9 @@ bp_re_name = re.compile('^(.*\S)\s*$')
 
 def create_default_bps_for_target(target):
     n = 0
-    for bp in _default_bps:
+    sm = SettingsManager.getSM()
+    bps = sm.get_default('breakpoints', [])
+    for bp in bps:
         if not bp:
             continue
 
@@ -471,7 +415,9 @@ class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
         # global lldb_out_view
         if lldb_out_view() is None:
-            set_lldb_out_view(get_lldb_output_view(self.window, lldb_view_name()))  # for lldb output
+            sm = SettingsManager.getSM()
+            view_name = sm.get_default('i/o.view.name', default_lldb_view_name)
+            set_lldb_out_view(get_lldb_output_view(self.window, view_name))  # for lldb output
 
     def status_message(self, string):
         sublime.status_message(string)
@@ -491,9 +437,6 @@ class LldbCommand(WindowCommand):
 class LldbDebugProgram(WindowCommand):
     # Only enabled when we have a default program to run.
     def is_enabled(self):
-        if not _default_exe:
-            reload_settings()
-
         exe = search_for_executable()
 
         return exe is not None
@@ -504,15 +447,17 @@ class LldbDebugProgram(WindowCommand):
         lldb_toggle_output_view(self.window, show=True)
 
         exe = search_for_executable()
-        global _default_arch
-        arch = _default_arch
+        sm = SettingsManager.getSM()
+        arch = sm.get_default('arch', lldb.LLDB_ARCH_DEFAULT)
 
         if exe:
-            debug('Launching program: ' + exe + ' (' + arch + '), with args: ' + str(_default_args))
+            args = sm.get_default('args', [])
+
+            debug('Launching program: ' + exe + ' (' + arch + '), with args: ' + str(args))
             t = driver_instance().debugger.CreateTargetWithFileAndArch(str(exe), str(arch))
             driver_instance().debugger.SetSelectedTarget(t)
             create_default_bps_for_target(t)
-            t.LaunchSimple(_default_args, [], os.getcwd())
+            t.LaunchSimple(args, [], os.getcwd())
             driver_instance().debugger.SetSelectedTarget(t)
 
         # driver_instance().maybe_get_input()
@@ -554,6 +499,9 @@ class LldbAttachProcess(WindowCommand):
                 #         return
                 # else:
                 error = lldb.SBError()
+                sm = SettingsManager.getSM()
+                wait_for_launch = sm.get_default('attach.wait_for_launch', False)
+
                 try:
                     pid = int(string)
                     # attach_info.SetProcessID(pid)
@@ -564,10 +512,10 @@ class LldbAttachProcess(WindowCommand):
                     # pid = lldb.LLDB_INVALID_PROCESS_ID
                     # attach_info.SetExecutable(str(string))
                     name = str(string) if string != '' else old_exec_module
-                    debug('Attaching to process: %s (wait=%s)' % (name, str(_default_wait_for_launch)))
-                    process = target.AttachToProcessWithName(lldb.SBListener(), name, _default_wait_for_launch, error)
+                    debug('Attaching to process: %s (wait=%s)' % (name, str(wait_for_launch)))
+                    process = target.AttachToProcessWithName(lldb.SBListener(), name, wait_for_launch, error)
 
-                # attach_info.SetWaitForLaunch(_default_wait_for_launch)
+                # attach_info.SetWaitForLaunch(wait_for_launch)
 
                 # error = lldb.SBError()
                 # debug(attach_info)
@@ -1017,7 +965,12 @@ class LldbViewMemory(WindowCommand):
             if self.__process:  # Check if it's still valid
                 addr = int(string, 0)
                 error = lldb.SBError()
-                content = self.__process.ReadMemory(addr, _default_view_mem_size, error)
+                sm = SettingsManager.getSM()
+                view_mem_size = sm.get_default('view.memory.size', 512)
+                view_mem_width = sm.get_default('view.memory.width', 32)
+                view_mem_grouping = sm.get_default('view.memory.grouping', 8)
+
+                content = self.__process.ReadMemory(addr, view_mem_size, error)
                 if error.Fail():
                     sublime.error_message(error.GetCString())
                     return None
@@ -1025,7 +978,7 @@ class LldbViewMemory(WindowCommand):
                 # Use 'ascii' encoding as each byte of 'content' is within [0..255].
                 new_bytes = bytearray(content, 'latin1')
 
-                result = generate_memory_view_for(addr, new_bytes, _default_view_mem_width, _default_view_mem_grouping)
+                result = generate_memory_view_for(addr, new_bytes, view_mem_width, view_mem_grouping)
                 # Re-use a view, if we already have one.
                 v = None
                 name = self.__owner._view_memory_view_prefix + hex(addr)
@@ -1035,7 +988,8 @@ class LldbViewMemory(WindowCommand):
                         break
 
                 if v is None:
-                    self.__owner.window.focus_group(_layout_group_source_file)
+                    layout_group_source_file = sm.get_default('layout.group.source_file', 0)
+                    self.__owner.window.focus_group(layout_group_source_file)
                     v = self.__owner.window.new_file()
                     v.set_name(name)
 
@@ -1070,8 +1024,9 @@ class LldbToggleOutputView(WindowCommand):
     def run(self):
         self.setup()
 
-        global _basic_layout
-        if good_lldb_layout(window=self.window) and _basic_layout != None:
+        sm = SettingsManager.getSM()
+        basic_layout = sm.get_default('layout.basic', _default_basic_window_layout)
+        if good_lldb_layout(window=self.window) and basic_layout != None:
             # restore backup_layout (groups and views)
             lldb_toggle_output_view(self.window, hide=True)
         else:
