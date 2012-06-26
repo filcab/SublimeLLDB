@@ -45,14 +45,18 @@
     /*
         Configuration for breakpoint and program counter markers.
      */
-    "lldb.markers.current_line.region_name": "lldb-location",
+    "lldb.markers.current_line.region_name": "lldb.location",
     "lldb.markers.current_line.scope": "bookmark",
     "lldb.markers.current_line.scope.crashed": "invalid",
     "lldb.markers.current_line.type": "bookmark",
 
-    "lldb.markers.breakpoint.region_name": "lldb-breakpoint",
-    "lldb.markers.breakpoint.scope": "string",  // Good color for the breakpoints on this color scheme. TODO: Create new scopes
-    "lldb.markers.breakpoint.type": "circle",
+    "lldb.markers.breakpoint.enabled.region_name": "lldb.breakpoint.enabled",
+    "lldb.markers.breakpoint.enabled.scope": "string",  // Good color for the breakpoints on this color scheme. TODO: Create new scopes
+    "lldb.markers.breakpoint.enabled.type": "circle",
+
+    "lldb.markers.breakpoint.disabled.region_name": "lldb.breakpoint.disabled",
+    "lldb.markers.breakpoint.disabled.scope": "bookmark",  // Good color for the disabled breakpoints on this color scheme. TODO: Create new scopes
+    "lldb.markers.breakpoint.disabled.type": "circle",
 
     /*
         Configurations for the view memory command.
@@ -60,9 +64,9 @@
             width: number of bytes to show in each line
             grouping: number of bytes in each group
      */
-    "lldb.view_memory.size": 512,
-    "lldb.view_memory.width": 32,
-    "lldb.view_memory.grouping": 8,
+    "lldb.view.memory.size": 512,
+    "lldb.view.memory.width": 32,
+    "lldb.view.memory.grouping": 8,
 
     "lldb.last.setting": null
 }

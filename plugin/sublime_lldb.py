@@ -111,9 +111,9 @@ def reload_settings():
     _default_arch = get_setting('lldb.arch') or lldb.LLDB_ARCH_DEFAULT
     _default_bps = get_setting('lldb.breakpoints') or []
 
-    _default_view_mem_size = int(get_setting('lldb.view_memory.size'))
-    _default_view_mem_width = get_setting('lldb.view_memory.width')
-    _default_view_mem_grouping = get_setting('lldb.view_memory.grouping')
+    _default_view_mem_size = int(get_setting('lldb.view.memory.size'))
+    _default_view_mem_width = get_setting('lldb.view.memory.width')
+    _default_view_mem_grouping = get_setting('lldb.view.memory.grouping')
 
     _layout_group_source_file = get_setting('lldb.layout.group.source_file')
     _default_wait_for_launch = get_setting('lldb.attach.wait_for_launch') or False
