@@ -31,17 +31,13 @@ from root_objects import driver_instance, set_driver_instance,          \
                          lldb_register_view_name,                       \
                          lldb_disassembly_view_name,                    \
                          disabled_bps, set_disabled_bps,                \
-                         get_settings_keys,                             \
                          InputPanelDelegate,                            \
                          set_ui_updater, ui_updater
 
-from utilities import generate_memory_view_for
+from utilities import generate_memory_view_for, SettingsManager
 
 from monitors import LLDBUIUpdater
 
-_settings = None
-# _setting_prefix = 'lldb.'
-_setting_prefix = ''
 _initialized = False
 _is_debugging = False
 _os_not_supported = False
@@ -70,25 +66,31 @@ _default_view_mem_grouping = 8
 _layout_group_source_file = 0
 _prologue = []
 
+#
+# def setup_settings():
+#     global _settings
+#     _settings = sublime.load_settings('lldb.sublime-settings')
+#     for k in get_settings_keys():
+#         _settings.add_on_change(k, reload_settings)
+#
+#
+# def get_setting(name):
+#     setting_name = _setting_prefix + name
+#     if not _settings:
+#         setup_settings()
+#
+#     setting = None
+#     if sublime.active_window() and sublime.active_window().active_view():
+#         setting = sublime.active_window().active_view().settings().get(setting_name)
+#
+#     _debug(debugSettings, '%s: %s' % (name, setting or _settings.get(setting_name)))
+#     return setting or _settings.get(setting_name)
+#
 
-def setup_settings():
-    global _settings
-    _settings = sublime.load_settings('lldb.sublime-settings')
-    for k in get_settings_keys():
-        _settings.add_on_change(k, reload_settings)
 
-
-def get_setting(name):
-    setting_name = _setting_prefix + name
-    if not _settings:
-        setup_settings()
-
-    setting = None
-    if sublime.active_window() and sublime.active_window().active_view():
-        setting = sublime.active_window().active_view().settings().get(setting_name)
-
-    _debug(debugSettings, '%s: %s' % (name, setting or _settings.get(setting_name)))
-    return setting or _settings.get(setting_name)
+def get_setting(*args):
+    sm = SettingsManager.getSM()
+    return sm.get(*args)
 
 
 def reload_settings():

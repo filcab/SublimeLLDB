@@ -1,7 +1,62 @@
-# utilities for the sublime lldb plugin
-import string
-
+# Utilities for the sublime lldb plugin
 import sys
+import string
+import sublime
+
+import root_objects
+import debug
+from debug import debugSettings
+
+# This class is not thread-safe, but has everything we need for our
+# settings' management, and we can guarantee that we won't have any race
+# condition when creating the instance.
+class SettingsManager(object):
+    __sm = None
+    __prefix = 'lldb.'
+
+    @classmethod
+    def getSM(cls):
+        if cls.__sm is None:
+            cls.__sm = SettingsManager()
+        return cls.__sm
+
+    def __init__(self):
+        self.setup()
+
+    def setup(self):
+        self.__settings = sublime.load_settings('lldb.sublime-settings')
+        self.__settings_keys = root_objects.get_settings_keys()
+        for k in self.__settings_keys:
+            self.__settings.add_on_change(k, self.on_change)
+
+    def get(self, *args):  # name, default=None, error=True):
+        if len(args) > 1:
+            return self.get_default(*args)
+
+        # Temporary name fix for when we're given a setting name with the prefix
+        if args[0].startswith(self.__prefix):
+            name = args[0]
+        else:
+            # Final code should be:
+            name = self.__prefix + args[0]
+
+        setting = None
+        # Is this test needed or do we always have an active window and view
+        if sublime.active_window() and sublime.active_window().active_view():
+            setting = sublime.active_window().active_view().settings().get(name)
+
+        setting = setting or self.__settings.get(name)
+        debug.debug(debugSettings, '%s: %s' % (name, repr(setting)))
+        return setting
+
+
+    def on_change(*args):
+        raise Exception('on_change was called. Check backtrace!')
+        #print args
+
+    # def put(name, scope='project'):
+    #     pass
+
 
 
 def stderr_msg(str):
