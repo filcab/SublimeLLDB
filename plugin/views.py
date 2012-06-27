@@ -2,11 +2,15 @@ import re
 import lldb
 import lldbutil
 
+from multiprocessing import Lock
+
 import sublime
 # import sublime_plugin
 
 from root_objects import lldb_register_view_name, lldb_disassembly_view_name,   \
                          driver_instance, add_lldb_view
+
+from utilities import SettingsManager
 
 
 import sys
@@ -118,10 +122,27 @@ class LLDBCodeView(LLDBView):
     eRegionBreakpointDisabled = 1 << 2
 
     __pc_line = None
+    __bp_lock = Lock()
+
+    # Settings for the whole class
+    __sm = SettingsManager.getSM()
+    eMarkerPCName = __sm.get_default('markers.current_line.region_name', 'lldb.location')
+    eMarkerPCScope = __sm.get_default('markers.current_line.scope', 'bookmark')
+    eMarkerPCScopeCrashed = __sm.get_default('markers.current_line.scope.crashed', 'invalid')
+    eMarkerPCIcon = __sm.get_default('markers.current_line.icon', 'bookmark')
+    eMarkerBreakpointEnabledName = __sm.get_default('markers.breakpoint.enabled.region_name',
+                                                  'lldb.breakpoint.enabled')
+    eMarkerBreakpointEnabledScope = __sm.get_default('markers.breakpoint.enabled.scope', 'string')
+    eMarkerBreakpointEnabledIcon = __sm.get_default('markers.breakpoint.enabled.type', 'circle')
+    eMarkerBreakpointDisabledName = __sm.get_default('markers.breakpoint.disabled.region_name',
+                                                   'lldb.breakpoint.disabled')
+    eMarkerBreakpointDisabledScope = __sm.get_default('markers.breakpoint.disabled.scope', 'bookmark')
+    eMarkerBreakpointDisabledIcon = __sm.get_default('markers.breakpoint.disabled.type', 'circle')
 
     # FIXME: Split stuff that doesn't have to run on the UI thread.
     def __init__(self, view, driver):
         super(LLDBCodeView, self).__init__(view)
+
         self._needs_update = False
         self.__driver = driver
         self.__enabled_bps = {}
@@ -169,17 +190,19 @@ its region."""
             remove_from = self.__enabled_bps
             add_to = self.__disabled_bps
 
-        existing = remove_from[line]
-        if existing == 1:
-            del remove_from[line]
-        else:
-            remove_from[line] = existing - 1
+        with self.__bp_lock:
+            # The breakpoint must exist in remove_from
+            existing = remove_from[line]
+            if existing == 1:
+                del remove_from[line]
+            else:
+                remove_from[line] = existing - 1
 
-        if line in add_to:
-            existing = add_to[line]
-        else:
-            existing = 0
-        add_to[line] = existing + 1
+            if line in add_to:
+                existing = add_to[line]
+            else:
+                existing = 0
+            add_to[line] = existing + 1
 
         v = self.base_view()
         regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
@@ -252,9 +275,6 @@ afterwards."""
             _debug(debugViews, 'executing UI code for LLDBCodeView.stop()')
             self.update()
             self.__update_bps()
-            # self.base_view().erase_regions('lldb.location')
-            # self.base_view().erase_regions('lldb.breakpoint.enabled')
-            # self.base_view().erase_regions('lldb.breakpoint.disabled')
         sublime.set_timeout(to_ui, 0)
 
     # Private LLDBCodeView methods
@@ -278,37 +298,33 @@ afterwards."""
 
 
     def __mark_regions(self, regions, type):
-        eMarkerPCScope = 'bookmark'
-        eMarkerPCIcon = 'bookmark'
-        eMarkerBreakpointScope = 'string'
-        eMarkerBreakpointIcon = 'circle'
         if type == self.eRegionPC:
             if len(regions) > 0:
-                debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.location', regions,
-                      eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)))
-                self.base_view().add_regions('lldb.location', regions,
-                                             eMarkerPCScope, eMarkerPCIcon, sublime.HIDDEN)
+                debug('(' + self.file_name() + ') adding regions: ' + str((self.eMarkerPCName, regions,
+                      self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)))
+                self.base_view().add_regions(self.eMarkerPCName, regions,
+                                             self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)
             else:
-                _debug(debugViews, 'erasing region: lldb.location')
-                self.base_view().erase_regions('lldb.location')
+                _debug(debugViews, 'erasing region: %s' % self.eMarkerPCName)
+                self.base_view().erase_regions(self.eMarkerPCName)
         elif type == self.eRegionBreakpointEnabled:
             if len(regions) > 0:
-                debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.breakpoint.enabled', regions,
-                      eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
-                self.base_view().add_regions('lldb.breakpoint.enabled', regions, eMarkerBreakpointScope,
-                              eMarkerBreakpointIcon, sublime.HIDDEN)
+                debug('(' + self.file_name() + ') adding regions: ' + str((self.eMarkerBreakpointEnabledName, regions,
+                      self.eMarkerBreakpointEnabledScope, self.eMarkerBreakpointEnabledIcon, sublime.HIDDEN)))
+                self.base_view().add_regions(self.eMarkerBreakpointEnabledName, regions, self.eMarkerBreakpointEnabledScope,
+                              self.eMarkerBreakpointEnabledIcon, sublime.HIDDEN)
             else:
-                _debug(debugViews, 'erasing regions:lldb.breakpoint.enabled')
-                self.base_view().erase_regions('lldb.breakpoint.enabled')
+                _debug(debugViews, 'erasing regions: %s' % self.eMarkerBreakpointEnabledName)
+                self.base_view().erase_regions(self.eMarkerBreakpointEnabledName)
         elif type == self.eRegionBreakpointDisabled:
             if len(regions) > 0:
-                debug('(' + self.file_name() + ') adding regions: ' + str(('lldb.breakpoint.disabled', regions,
-                      eMarkerBreakpointScope, eMarkerBreakpointIcon, sublime.HIDDEN)))
-                self.base_view().add_regions('lldb.breakpoint.disabled', regions, eMarkerBreakpointScope,
-                              eMarkerBreakpointIcon, sublime.HIDDEN)
+                debug('(' + self.file_name() + ') adding regions: ' + str((self.eMarkerBreakpointDisabledName, regions,
+                      self.eMarkerBreakpointDisabledScope, self.eMarkerBreakpointDisabledIcon, sublime.HIDDEN)))
+                self.base_view().add_regions(self.eMarkerBreakpointDisabledName, regions, self.eMarkerBreakpointDisabledScope,
+                              self.eMarkerBreakpointDisabledIcon, sublime.HIDDEN)
             else:
-                _debug(debugViews, 'erasing regions:lldb.breakpoint.disabled')
-                self.base_view().erase_regions('lldb.breakpoint.disabled')
+                _debug(debugViews, 'erasing regions: %s' % self.eMarkerBreakpointDisabledName)
+                self.base_view().erase_regions(self.eMarkerBreakpointDisabledName)
 
     def __mark_pc(self, line, show=False):
         v = self.base_view()
@@ -338,13 +354,17 @@ __update_bps() must be called afterwards to refresh the UI."""
         else:
             add_to = self.__disabled_bps
 
-        for line in lines:
-            if line in add_to:
-                existing = add_to[line]
-            else:
-                existing = 0
+        with self.__bp_lock:
+            # We shouldn't have that many breakpoints for this to be a
+            # problem. If the lock becomes a problem, we can lock for each
+            # breakpoint.
+            for line in lines:
+                if line in add_to:
+                    existing = add_to[line]
+                else:
+                    existing = 0
 
-            add_to[line] = existing + 1
+                add_to[line] = existing + 1
 
     def __remove_bps(self, lines, are_enabled=True):
         """Removes breakpoints (enabled or disabled) from the view.
@@ -357,12 +377,13 @@ __update_bps() must be called afterwards to refresh the UI."""
         else:
             remove_from = self.__disabled_bps
 
-        for line in lines:
-            existing = remove_from[line]
-            if existing == 1:
-                del remove_from[line]
-            else:
-                remove_from[line] = existing - 1
+        with self.__bp_lock:
+            for line in lines:
+                existing = remove_from[line]
+                if existing == 1:
+                    del remove_from[line]
+                else:
+                    remove_from[line] = existing - 1
 
 
 class LLDBRegisterView(LLDBReadOnlyView):
