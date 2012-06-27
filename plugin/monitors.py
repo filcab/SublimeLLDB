@@ -106,7 +106,11 @@ class LLDBUIUpdater(threading.Thread):
 
                 v = self.maybe_get_view_for_file(filename)
                 if v is not None:
-                    sublime.set_timeout(lambda: v.change_bp(line, is_enabled), 0)
+                    # Create a new scope so we don't get the line changed
+                    # before change_bp is executed.
+                    def scope(view, line):
+                        sublime.set_timeout(lambda: view.change_bp(line, is_enabled), 0)
+                    scope(v, line)
 
             elif packet[0] == self.eBreakpointRemoved:
                 filename = packet[1]
