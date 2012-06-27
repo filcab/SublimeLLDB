@@ -57,6 +57,8 @@ class SettingsManager(object):
             # Final code should be:
             name = self.__prefix + name
 
+        setting = default
+
         if sublime.active_window() and sublime.active_window().active_view():
             setting = sublime.active_window().active_view().settings().get(name, default)
 
