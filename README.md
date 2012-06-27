@@ -134,20 +134,11 @@ Installation
 
 Known bugs
 ----------
-* `stdin` to the debugged program (or debugger queries) has to be passed using
-  the console (yes, to use `stdin` in your program, you have to either redirect
-  it using the debugger or start Sublime Text 2 using the console). Executing
-  the `process launch` command while the program is running will hang lldb
-  until you reply with `y` or `n` to the `stdin` (usually the Terminal).
-* The plugin is very new and doesn't export a lot of functionality. But simple
-  usage shold be fine.
-* The input reader thread is named (for Python) Dummy-N (N=1, ...). This
-  is a Python problem (the LLDB library uses `pthread_setname_np` to name
-  the thread).
+* The input reader thread is named (for Python) Dummy-N (N=1, ...). This is a Python problem (the LLDB library uses `pthread_setname_np` to name the thread).
+* Sometimes Sublime Text 2 won't update the markers. For example, executing the LLDB command 'breakpoint disable' to disable all breakpoints may make the breakpoints disappear. They should reappear on the next step instruction.
 * ...
 
-Please feel free to ask for additional functionalities either in the
-forums or through github.
+Feel free to ask for additional functionalities, preferably through github's issues.
 
 
 `debugserver` binary
@@ -155,7 +146,7 @@ forums or through github.
 The default `debugserver` binary that is used is the system one (when XCode
 or the command line tools are installed).
 If the bundled `debugserver` is to be used (e.g: newer `debugserver` with
-protocol enhancements), change the variable `__use_bundled_debugserver` in
-`sublime_lldb.py` to `True` and sign the
+protocol enhancements), change the setting `lldb.use_bundled_debugserver`,
+in your settings `True` and sign the
 `<plugin folder>/lldb_plugin/LLDB.framework/Resources/debugserver` binary
 as instructed in the `docs/code-signing.txt` file in lldb's sources.
