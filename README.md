@@ -62,7 +62,7 @@ Each default program breakpoint may be represented in several ways:
 
 
 ### Deprecated project settings
-* ~~`lldb.prologue`~~ ([]): Array of commands to run at debugger startup. (Use `.lldbinit` files, instead)
+* `lldb.prologue` ([]): Array of commands to run at debugger startup. (Use `.lldbinit` files, instead)
 
 
 Useful Settings
