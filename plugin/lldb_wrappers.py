@@ -663,18 +663,6 @@ class LldbDriver(threading.Thread):
                 GetProcess().GetSTDOUT(1024))
 
 
-# def get_breakpoints(debugger):
-#     bps = []
-#     target = debugger.GetSelectedTarget()
-#     if target:
-#         n = target.GetNumBreakpoints()
-#         for i in xrange(n):
-#             bps.insert(i, BreakpointWrapper(debugger.GetSelectedTarget()
-#                                                     .GetBreakpointAtIndex(i)))
-
-#     return bps
-
-
 class IOChannel(threading.Thread):
     eBroadcastBitHasUserInput = 1 << 0
     eBroadcastBitUserInterrupt = 1 << 1
@@ -782,54 +770,6 @@ class IOChannel(threading.Thread):
         self.__driver = None
         debug('leaving')
 
-
-def interpret_command(debugger, cmd, add_to_history=False):
-    result = lldb.SBCommandReturnObject()
-    ci = debugger.GetCommandInterpreter()
-
-    r = ci.HandleCommand(str(cmd), result, add_to_history)
-
-    return (result, r)
-
-
-_success_returns = [lldb.eReturnStatusSuccessFinishNoResult,        \
-                    lldb.eReturnStatusSuccessFinishResult,          \
-                    lldb.eReturnStatusSuccessContinuingNoResult,    \
-                    lldb.eReturnStatusSuccessContinuingResult]
-                    # lldb.eReturnStatusStarted]
-_finished_returns = [lldb.eReturnStatusSuccessFinishNoResult,       \
-                     lldb.eReturnStatusSuccessFinishResult]
-
-_continuing_returns = [lldb.eReturnStatusSuccessContinuingNoResult, \
-                       lldb.eReturnStatusSuccessContinuingResult]
-
-
-def is_return_success(r):
-    return r in _success_returns
-
-
-def is_return_finished(r):
-    return r in _finished_returns
-
-
-def is_return_continuing(r):
-    return r in _continuing_returns
-
-
-def is_return_started(r):
-    return r == lldb.eReturnStatusStarted
-
-
-def is_return_quit(r):
-    return r == lldb.eReturnStatusQuit
-
-
-def is_return_failed(r):
-    return r == lldb.eReturnStatusFailed
-
-
-def is_return_invalid(r):
-    return r == lldb.eReturnStatusInvalid
 
 
 from root_objects import set_driver_instance, lldb_view_send, LldbInputDelegate, ui_updater
