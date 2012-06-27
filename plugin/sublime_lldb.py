@@ -902,7 +902,7 @@ class LldbToggleEnableBreakpoints(WindowCommand):
                     assert(len(disabled_bps()) == 0)
                     for bp in target.breakpoint_iter():
                         if bp and bp.IsEnabled():
-                            LldbToggleEnableBreakpoints._disabled_bps.append(bp)
+                            disabled_bps().append(bp)
                             bp.SetEnabled(False)
 
         if len(disabled_bps()) == 0:
