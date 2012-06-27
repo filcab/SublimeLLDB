@@ -578,7 +578,7 @@ class LldbDriver(threading.Thread):
                 None  # Don't be too chatty
             elif state == lldb.eStateExited:
                 debug('process state: ' + lldbutil.state_type_to_str(state))
-                r = interpret_command(self.debugger, 'process status')
+                r = self.interpret_command(self.debugger, 'process status')
                 lldb_view_send(stdout_msg(r[0].GetOutput()))
                 lldb_view_send(stderr_msg(r[0].GetError()))
                 # Remove program counter markers
@@ -596,6 +596,14 @@ class LldbDriver(threading.Thread):
                     self.update_selected_thread()
                     if self.__process_stopped_callback:
                         self.__process_stopped_callback(self, process, state)
+
+    def interpret_command(debugger, cmd, add_to_history=False):
+        result = lldb.SBCommandReturnObject()
+        ci = debugger.GetCommandInterpreter()
+
+        r = ci.HandleCommand(str(cmd), result, add_to_history)
+
+        return (result, r)
 
     def update_selected_thread(self):
         debugger = self.debugger
