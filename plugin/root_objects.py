@@ -247,7 +247,7 @@ def add_lldb_view(v):
 
 
 def del_lldb_view(v):
-    __lldb_views.delete(v)
+    __lldb_views.remove(v)
 
 
 def lldb_views():
