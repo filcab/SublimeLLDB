@@ -21,13 +21,35 @@ class SettingsManager(object):
         return cls.__sm
 
     def __init__(self):
-        self.setup()
-
-    def setup(self):
         self.__settings = sublime.load_settings('lldb.sublime-settings')
         self.__settings_keys = root_objects.get_settings_keys()
         for k in self.__settings_keys:
             self.__settings.add_on_change(k, self.on_change)
+
+        self.__observers = {}
+
+    def add_observer(self, key, observer):
+        """Observer is a function of two arguments: key and new value. It
+will be called whenever the key is changed."""
+        if key in self.__observers:
+            self.__observers[key].append(observer)
+
+    def del_observer(self, observer, key=None):
+        if key is None:
+            new_observers = {}
+            for k, os in self.__observers:
+                os.remove(observer)
+                if len(os) > 0:
+                    new_observers[k] = os
+            self.__observers = new_observers
+        else:
+            if k in self.__observers:
+                os = self.__observers[k]
+                os.remove(observer)
+                if len(os) > 0:
+                    self.__observers[k] = os
+                else:
+                    del self.__observers[k]
 
     def get(self, *args):  # name, default=None, error=True):
         if len(args) > 1:
@@ -54,6 +76,9 @@ class SettingsManager(object):
         # In the future, this test will be gone and no setting will have
         # the 'lldb.' prefix
         if not name.startswith(self.__prefix):
+            debug.debug(debugSettings, 'Setting name has lldb prefix: ' % name)
+            import traceback
+            traceback.print_stack()
             # Final code should be:
             name = self.__prefix + name
 
@@ -70,11 +95,13 @@ class SettingsManager(object):
 
     def on_change(*args):
         raise Exception('on_change was called. Check backtrace!')
-        #print args
+        key= 'lldb'
+        value = ''
+        if key in self.__observers:
+            obs = self.__observers[key]
 
-    # def put(name, scope='project'):
-    #     pass
-
+            for o in obs:
+                o(key, value)
 
 
 def stderr_msg(str):
