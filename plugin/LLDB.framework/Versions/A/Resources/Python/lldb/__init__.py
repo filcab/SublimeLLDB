@@ -996,6 +996,10 @@ class SBBlock(_object):
             count = len(self)
             if type(key) is int:
                 return self.sbblock.get_range_at_index (key);
+            if isinstance(key, SBAddress):
+                range_idx = self.sbblock.GetRangeIndexForBlockAddress(key);
+                if range_idx < len(self):
+                    return [self.sbblock.GetRangeStartAddress(range_idx), self.sbblock.GetRangeEndAddress(range_idx)]
             else:
                 print "error: unsupported item type: %s" % type(key)
             return None
@@ -1717,6 +1721,10 @@ class SBCommandReturnObject(_object):
     def Clear(self):
         """Clear(self)"""
         return _lldb.SBCommandReturnObject_Clear(self)
+
+    def SetStatus(self, *args):
+        """SetStatus(self, ReturnStatus status)"""
+        return _lldb.SBCommandReturnObject_SetStatus(self, *args)
 
     def GetStatus(self):
         """GetStatus(self) -> ReturnStatus"""
@@ -5123,7 +5131,7 @@ class SBProcess(_object):
         '''An accessor function that returns a list() that contains all threads in a lldb.SBProcess object.'''
         threads = []
         for idx in range(self.GetNumThreads()):
-            threads.append(GetThreadAtIndex(idx))
+            threads.append(self.threads_access(idx))
         return threads
 
     __swig_getmethods__["threads"] = get_process_thread_list
@@ -5262,6 +5270,10 @@ class SBSection(_object):
     def GetFileAddress(self):
         """GetFileAddress(self) -> addr_t"""
         return _lldb.SBSection_GetFileAddress(self)
+
+    def GetLoadAddress(self, *args):
+        """GetLoadAddress(self, SBTarget target) -> addr_t"""
+        return _lldb.SBSection_GetLoadAddress(self, *args)
 
     def GetByteSize(self):
         """GetByteSize(self) -> addr_t"""

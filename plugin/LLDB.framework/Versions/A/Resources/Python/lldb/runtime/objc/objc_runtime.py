@@ -522,7 +522,6 @@ class InvalidClass_Data:
 	def is_valid(self):
 		return 0
 
-# @functools.total_ordering
 class Version:
 	def __init__(self, major, minor, release, build_string):
 		self._major = major
