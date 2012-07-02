@@ -155,10 +155,4 @@ Feel free to ask for additional functionalities, preferably through github's iss
 
 `debugserver` binary
 --------------------
-The default `debugserver` binary that is used is the system one (when XCode
-or the command line tools are installed).
-If the bundled `debugserver` is to be used (e.g: newer `debugserver` with
-protocol enhancements), change the setting `lldb.use_bundled_debugserver`,
-in your settings `True` and sign the
-`<plugin folder>/lldb_plugin/LLDB.framework/Resources/debugserver` binary
-as instructed in the `docs/code-signing.txt` file in lldb's sources.
+The default `debugserver` binary that is used is the system one (when XCode or the command line tools are installed). If the bundled `debugserver` is to be used (e.g: newer `debugserver` with protocol enhancements), change the setting `lldb.use_bundled_debugserver`, in your settings `True` and sign the `<plugin folder>/lldb_plugin/LLDB.framework/Resources/debugserver` binary as instructed in the `docs/code-signing.txt` file in lldb's sources.
