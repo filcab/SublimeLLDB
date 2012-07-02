@@ -62,21 +62,21 @@ Project Settings
 ----------------
 Several settings are available to a Sublime Text 2 project, to allow it to specify a default executable, as well as command line arguments, architecture, and breakpoints to set.
 
-* `lldb.exe` (""): Default program to run when executing `LldbDebugProgram`
-* `lldb.args` ([]): Default command line arguments for the default program
+* `lldb.exe` (`""`): Default program to run when executing `LldbDebugProgram`
+* `lldb.args` (`[]`): Default command line arguments for the default program
 * `lldb.arch` (`lldb.LLDB_ARCH_DEFAULT`): Default architecture for the default program
-* `lldb.attach.wait_for_launch` (false): When attaching to a program, the plugin should wait for a command with the provided name, if no running program exists
-* `lldb.breakpoints` ([]): Breakpoints to set for the default program
+* `lldb.attach.wait_for_launch` (`false`): When attaching to a program, the plugin should wait for a command with the provided name, if no running program exists
+* `lldb.breakpoints` (`[]`): Breakpoints to set for the default program
 
 
 ### Default program breakpoints
 Each default program breakpoint may be represented in several ways:
-* `"main"`: Breaks on a symbol named `main`
+* `"main"`: Breaks on a symbol named `main` (gdb-like variations with file+line are also available)
 * `{ "file": "main.c", "line": 42 }`: Breaks on line 42 of file `main.c`
 
 
 ### Deprecated project settings
-* `lldb.prologue` ([]): Array of commands to run at debugger startup. (Use `.lldbinit` files, instead)
+* `lldb.prologue` (`[]`): Array of commands to run at debugger startup. (Use `.lldbinit` files, instead)
 
 
 Useful Settings
@@ -84,35 +84,35 @@ Useful Settings
 The LLDB plugin has several settings to change its behaviour. they are listed next, along with their default values and an explanation of what they change in the plugin.
 
 ### View settings
-* `lldb.i/o.view.name` ("lldb i/o"): Name of the debugger I/O view
-* `lldb.i/o.view.clear_on_startup` (true): Whether to clear the debugger I/O view at the start of a debugging session
-* `lldb.layout.basic` (`{ ... }`): Default layout for the views when the debugger starts. It should contain groups for the source files and the debugger I/O view (they may be the same group).
-* `lldb.layout.group.source_file` (0): Index of the group to use for source file views
-* `lldb.layout.group.i/o` (1): Index of the group to use for the debugger I/O view
+* `lldb.i/o.view.name` (`"lldb i/o"`): Name of the debugger I/O view
+* `lldb.i/o.view.clear_on_startup` (`true`): Whether to clear the debugger I/O view at the start of a debugging session
+* `lldb.layout.basic` (`{ ... }`): Default layout for the views when the debugger starts. It should contain groups for the source files and the debugger I/O view (they may be the same group). The default layout created two groups of tabs, with one spanning a majority of the screen.
+* `lldb.layout.group.source_file` (`0`): Index of the group to use for source file views
+* `lldb.layout.group.i/o` (`1`): Index of the group to use for the debugger I/O view
 
 ### Memory view settings
-No verifications are made on the sizes chosen. For best results, `size` should be a multiple of `width`, which should be a multiple of `grouping`.
+No verifications are made on the chosen sizes. For best results, `size` should be a multiple of `width`, which should be a multiple of `grouping`.
 
-* `lldb.view.memory.size` (512): Total number of bytes to show on a “show memory” view
-* `lldb.view.memory.width` (32): Number of bytes to show on each line of a “show memory” view
-* `lldb.view.memory.grouping` (8): Number of bytes to show in each group on a “show memory” view
+* `lldb.view.memory.size` (`512`): Total number of bytes to show on a “show memory” view
+* `lldb.view.memory.width` (`32`): Number of bytes to show on each line of a “show memory” view
+* `lldb.view.memory.grouping` (`8`): Number of bytes to show in each group on a “show memory” view
 
 ### View marker settings
-* `lldb.markers.current_line.region_name` ("lldb.location"): Region name for current source line markers
-* `lldb.markers.current_line.scope` ("bookmark"): Scope for current source line markers
-* `lldb.markers.current_line.scope.crashed` ("invalid"): Scope for current source line markerswhen the program crashes
-* `lldb.markers.current_line.type` ("bookmark"): Type for current source line markers
+* `lldb.markers.current_line.region_name` (`"lldb.location"`): Region name for current source line markers
+* `lldb.markers.current_line.scope` (`"bookmark"`): Scope for current source line markers
+* `lldb.markers.current_line.scope.crashed` (`"invalid"`): Scope for current source line markerswhen the program crashes
+* `lldb.markers.current_line.type` (`"bookmark"`): Type for current source line markers
 
-* `lldb.markers.breakpoint.enabled.region_name` ("lldb.breakpoint.enabled"): Region name for enabled breakpoints
-* `lldb.markers.breakpoint.enabled.scope` ("string"): Scope for enabled breakpoints
-* `lldb.markers.breakpoint.enabled.type` ("circle"): Type for enabled breakpoints
+* `lldb.markers.breakpoint.enabled.region_name` (`"lldb.breakpoint.enabled"`): Region name for enabled breakpoints
+* `lldb.markers.breakpoint.enabled.scope` (`"string"`): Scope for enabled breakpoints
+* `lldb.markers.breakpoint.enabled.type` (`"circle"`): Type for enabled breakpoints
 
-* `lldb.markers.breakpoint.disabled.region_name` ("lldb.breakpoint.disabled"): Region name for disabled breakpoints
-* `lldb.markers.breakpoint.disabled.scope` ("bookmark"): Scope for disabled breakpoints
-* `lldb.markers.breakpoint.disabled.type` ("circle"): Type for disabled breakpoints
+* `lldb.markers.breakpoint.disabled.region_name` (`"lldb.breakpoint.disabled"`): Region name for disabled breakpoints
+* `lldb.markers.breakpoint.disabled.scope` (`"bookmark"`): Scope for disabled breakpoints
+* `lldb.markers.breakpoint.disabled.type` (`"circle"`): Type for disabled breakpoints
 
 ### Backend settings
-* `lldb.use_bundled_debugserver` (false): Whether to use the bundled LLDB.framework debugserver (more up-to-date) or an Apple provided one (Xcode required).
+* `lldb.use_bundled_debugserver` (`false`): Whether to use the bundled LLDB.framework debugserver (more up-to-date) or an Apple provided one (Xcode required).
 
 
 Other Useful Commands
