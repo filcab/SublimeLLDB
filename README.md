@@ -38,7 +38,7 @@ Installation
 
 Usage
 -----
-Access plugin functionality using the menu items in Tools->LLDB or quickly access commands using Sublime Text 2's Command Pallette (all commands start with “LLDB: ”).
+Access plugin functionality using the menu items in Tools->LLDB or quickly access commands using Sublime Text 2's Command Pallette (all commands start with “LLDB: ”). All commands mentioned in this document are avilable in Sublime Text 2. To use, e.g. LldbDebugProgram with their lower-cased, underscore-separated names, e.g. `lldb_debug_program`.
 
 
 Main Commands
@@ -147,6 +147,7 @@ Known bugs
 ----------
 * The input reader thread is named (for Python) Dummy-N (N=1, ...). This is a Python problem (the LLDB library uses `pthread_setname_np` to name the thread).
 * Sometimes Sublime Text 2 won't update the markers. For example, executing the LLDB command 'breakpoint disable' to disable all breakpoints may make the breakpoints disappear. They should reappear on the next step instruction.
+* Lldb's `script` command may not work. A workaround is being devised for it.
 * ...
 
 Feel free to ask for additional functionalities, preferably through github's issues.
