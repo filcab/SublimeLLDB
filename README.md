@@ -3,15 +3,29 @@ Sublime Text 2 LLDB plugin
 
 (last updated: 2012/06/26)
 
-This is a plugin that allows users to debug programs in Sublime Text 2
-using lldb.
+This is a plugin that allows users to debug programs in Sublime Text 2 using lldb. This plugin enabled command-line interaction with the lldb debugger, as well as Sublime Text 2 integration.
+
+### Features (All visible on menus and Sublime Text's command pallette)
+* Start an lldb session with a predefined program, architecture, arguments, breakpoints, and lldb command prologue
+* Attach to a program, and waiting for a program to start before an attach
+* Connect to a running lldb debugserver
+* Step over, into, and out of source lines/functions. Stepping a single thread.
+* Send signals to the debugged process
+* Set and toggle enabled state on breakpoints
+* Process memory view
+* Thread disassembly view
+* Register view
+* View loaded shared libraries
+* Breakpoint and program counter markings on the source file buffer
+* Execute any lldb command
+
+* Xcode keybindings
+* VS keybindings will be added on request. Please open a bug report with the equivalent keybindings in Visual Studio (Check the Xcode keybindings in the *Useful Keybound Commands* section)
 
 
 Usage
 -----
-* Menu items in Tools->LLDB
-* Quick access commands using Sublime Text 2's Command Pallette (all commands
-  start with “LLDB: ”)
+Access plugin functionality using the menu items in Tools->LLDB or quickly access commands using Sublime Text 2's Command Pallette (all commands start with “LLDB: ”).
 
 
 Main Commands
@@ -103,9 +117,6 @@ No verifications are made on the sizes chosen. For best results, `size` should b
 
 Other Useful Commands
 ---------------------
-* LldbDebugProgram
-* LldbAttachProcess
-* LldbConnectDebugserver
 
 * LldbStopDebugging
 * LldbSendSignal
