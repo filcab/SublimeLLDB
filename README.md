@@ -5,7 +5,12 @@ Sublime Text 2 LLDB plugin
 
 This is a plugin that allows users to debug programs in Sublime Text 2 using lldb. This plugin enabled command-line interaction with the lldb debugger, as well as Sublime Text 2 integration.
 
-### Features (All visible on menus and Sublime Text's command pallette)
+
+Features
+--------
+All features are available on menus and/or Sublime Text's command pallette.
+
+* Command-line interface to the lldb tool
 * Start an lldb session with a predefined program, architecture, arguments, breakpoints, and lldb command prologue
 * Attach to a program, and waiting for a program to start before an attach
 * Connect to a running lldb debugserver
