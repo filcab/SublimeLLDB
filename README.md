@@ -27,6 +27,14 @@ All features are available on menus and/or Sublime Text's command pallette.
 * Xcode keybindings
 * VS keybindings will be added on request. Please open a bug report with the equivalent keybindings in Visual Studio (Check the Xcode keybindings in the *Useful Keybound Commands* section)
 
+* Event-driven to avoid any editing slow-downs due to the plugin
+
+
+Installation
+------------
+* Clone github repository to Sublime Text 2's “Packages” directory
+* Restart Sublime Text 2
+
 
 Usage
 -----
@@ -123,29 +131,16 @@ No verifications are made on the chosen sizes. For best results, `size` should b
 Other Useful Commands
 ---------------------
 
-* LldbStopDebugging
-* LldbSendSignal
+* LldbStopDebugging: Stops the inferior debug loop, killing (or detaching) the program being debugged
+* LldbSendSignal: Asks the user for a signal number and sends that signal to the inferior program
 
-* LldbListBreakpoints
-* LldbBreakAt{Line,Symbol}
-* LldbToggleEnableBreakpoints
+* LldbListBreakpoints: Lists all defined breakpoints, in a format suitable for the `lldb.breakpoints` setting for a default program
+* LldbBreakAt{Line,Symbol}: Breaks at the current line or symbol (Currently LldbBreakAtSymbol is not defined)
+* LldbToggleEnableBreakpoints: For the first call disables every enabled breakpoint. The next time, it will enable every breakpoint it disabled.
 
-* LldbViewSharedLibraries
-* LldbRegisterView
-* LldbDisassembleFrame
-
-
-Features
---------
-* Command-line interface like the lldb tool
-* Line-level markers for the program counter and breakpoints
-* Event-driven to avoid any editing slow-downs due to the plugin
-
-
-Installation
-------------
-* Clone github repository to Sublime Text 2's “Packages” directory
-* Restart Sublime Text 2
+* LldbViewSharedLibraries: Opens a view with a list of the loaded shared libraries
+* LldbRegisterView: Opens a view with the current values for the machine registers in the current thread
+* LldbDisassembleFrame: Opens a view with the disassembly of the current frame
 
 
 Known bugs
