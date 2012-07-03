@@ -436,9 +436,6 @@ class LldbDebugProgram(WindowCommand):
             driver_instance().debugger.SetSelectedTarget(t)
             create_default_bps_for_target(t)
             t.LaunchSimple(args, [], os.getcwd())
-            driver_instance().debugger.SetSelectedTarget(t)
-
-        # driver_instance().maybe_get_input()
 
 
 class LldbAttachProcess(WindowCommand):
