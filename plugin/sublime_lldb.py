@@ -198,7 +198,7 @@ def process_stopped(driver, process, state=None):
 
     if process and driver.process_is_stopped(process):
         debugger = driver.debugger
-        line_entry = process.GetSelectedThread().GetLineEntry()
+        line_entry = process.GetSelectedThread().GetSelectedFrame().GetLineEntry()
         if line_entry:
             # We don't need to run 'process status' like Driver.cpp
             # Since we open the file and show the source line.
@@ -983,6 +983,7 @@ class LldbViewMemory(WindowCommand):
                 v.set_read_only(True)
 
     def is_enabled(self):
+        driver = driver_instance()
         if driver and driver.current_target():
             return driver.process_is_stopped()
         return False
