@@ -76,11 +76,12 @@ will be called whenever the key is changed."""
         # In the future, this test will be gone and no setting will have
         # the 'lldb.' prefix
         if not name.startswith(self.__prefix):
-            debug.debug(debugSettings, 'Setting name has lldb prefix: ' % name)
-            import traceback
-            traceback.print_stack()
             # Final code should be:
             name = self.__prefix + name
+        else:
+            debug.debug(debugSettings, 'Setting name has lldb prefix: %s' % name)
+            import traceback
+            traceback.print_stack()
 
         setting = default
 
