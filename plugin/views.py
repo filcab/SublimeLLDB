@@ -172,7 +172,7 @@ class LLDBCodeView(LLDBView):
         self._needs_update = value
 
     # {mark,change,unmark}_bp don't update needs_update because they
-    # immediately update what was touched.
+    # immediately update the breakpoint markers
     def mark_bp(self, line, is_enabled=True):
         """Mark a new breakpoint as enabled/disabled and immediately mark
 its region."""
@@ -283,7 +283,7 @@ afterwards."""
             # self.__update_bps()
             self.needs_update = False
         else:
-            _debug(debugViews, 'LLDBCodeView: didn\'t need an update: %s' % repr(self))
+            _debug(debugViews, 'LLDBCodeView: didn\'t need an update (or view was loading): %s' % repr(self))
 
     def stop(self):
         self.pre_update()  # This will set pc_line to None
@@ -346,6 +346,7 @@ afterwards."""
                 self.base_view().erase_regions(self.eMarkerBreakpointDisabledName)
 
     def __mark_pc(self, line, show=False):
+        _debug(debugViews, 'Marking PC for LLDBCodeView: %s' % repr(self))
         v = self.base_view()
         if line is None:
             to_mark = []
