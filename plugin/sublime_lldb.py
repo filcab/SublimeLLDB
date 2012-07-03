@@ -910,7 +910,8 @@ class LldbViewSharedLibraries(WindowCommand):
 
         if target:
             for i in xrange(0, target.GetNumModules()):
-                result += debug(lldbutil.get_description(target.GetModuleAtIndex(i))) + '\n'
+                _debug(debugPlugin | debugVerbose, lldbutil.get_description(target.GetModuleAtIndex(i)))
+                result += lldbutil.get_description(target.GetModuleAtIndex(i)) + '\n'
 
             # Re-use a view, if we already have one.
             v = None
