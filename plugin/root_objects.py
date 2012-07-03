@@ -247,6 +247,7 @@ def add_lldb_view(v):
 
 
 def del_lldb_view(v):
+    _debug(debugRoot, 'Removing %s from lldb_views.' % str(v))
     __lldb_views.remove(v)
 
 
@@ -256,6 +257,7 @@ def lldb_views():
 
 
 def lldb_views_update(epilogue):
+    _debug(debugRoot, 'lldb_views_update')
     for v in __lldb_views:
         v.pre_update()
 
