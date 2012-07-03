@@ -608,7 +608,7 @@ class LldbSendSignal(WindowCommand):
         self.setup()
         driver = driver_instance()
         if driver:
-            is process is None:
+            if process is None:
                 target = driver.debugger.GetSelectedTarget()
                 if target:
                     process = target.GetProcess()
@@ -983,7 +983,7 @@ class LldbViewMemory(WindowCommand):
                 v.set_read_only(True)
 
     def is_enabled(self):
-        if driver and driver.current_target()
+        if driver and driver.current_target():
             return driver.process_is_stopped()
         return False
 
