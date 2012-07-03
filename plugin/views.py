@@ -151,9 +151,13 @@ class LLDBCodeView(LLDBView):
         self.__populate_breakpoint_lists()
         if not view.is_loading():
             self.__update_bps()
+            self.pre_update()
         else:
             debug('Skipped LLDBCodeView.__update_bps() because view.is_loading is True')
-        self.pre_update()
+            self.pre_update()
+            self.needs_update = 'full'  # Horrible hack to update the bp
+                                        # markers as well as the pc marker when the on_load
+                                        # method calls update on this object
 
     def __repr__(self):
         return 'file_name: %s, needs_update: %s, pc_line: %s, enabled_bps: %s, disable_bps: %s' % \
@@ -225,6 +229,16 @@ afterwards."""
 
     def pre_update(self):
         """pre_update will perform lldb-related work and get our PC line"""
+        # FIXME: We can't use base_view().is_loading() because Sublime
+        # Text 2 won't even let us query views on another thread (even
+        # read-only properties!!).
+        # This 'full' hack is here to make us wait for the on_load() call
+        # on the LLDBUIListener.
+        # This variable will make us keep needs_update == 'full' if it was
+        # like that before we ran this function.
+        old_needs_update = self.needs_update
+        self.needs_update = False
+
         old_pc_line = self.__pc_line
         self.__pc_line = None
         _debug(debugViews, 'old pc_line: %s' % str(old_pc_line))
@@ -233,7 +247,7 @@ afterwards."""
         if not thread:
             _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
             if self.__pc_line != old_pc_line:
-                self.needs_update = True
+                self.needs_update = old_needs_update or True
             return False
 
         for frame in thread:
@@ -244,17 +258,22 @@ afterwards."""
                 if filename == self.file_name():
                     self.__pc_line = line_entry.GetLine()
                     _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
-                    if self.__pc_line != old_pc_line:
-                        self.needs_update = True
+                    if self.__pc_line != old_pc_line or old_needs_update == 'full':
+                        self.needs_update = old_needs_update or True
                     return True
 
         _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
-        if self.__pc_line != old_pc_line:
-            self.needs_update = True
+        if self.__pc_line != old_pc_line or old_needs_update == 'full':
+            self.needs_update = old_needs_update or True
         return False
 
     def update(self):
-        if self.needs_update:
+        _debug(debugViews, 'Updating LLDBCodeView. needs_update: %s' % str(self.needs_update))
+        if self.needs_update and not self.base_view().is_loading():
+            # Hack so we update the bps when updating the view for the first time.
+            if self.needs_update == 'full':
+                self.__update_bps()
+
             if self.__pc_line is not None:
                 self.__mark_pc(self.__pc_line - 1, True)
             else:
