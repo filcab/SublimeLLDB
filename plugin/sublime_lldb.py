@@ -170,33 +170,12 @@ def clear_view(v):
     v.show(v.size())
 
 
-# def lldb_in_panel_on_done(cmd):
-#     # debug_thr()
-
-#     # global prompt
-#     if cmd is None:
-#         cmd = ''
-#     if driver_instance():
-#         lldb_view_write(lldb_prompt() + cmd + '\n')
-#         driver_instance().send_input(cmd)
-
-#         # We don't have a window, so let's re-use the one active on lldb launch
-#         # lldb_toggle_output_view(window_ref(), show=True)
-
-#         v = lldb_out_view()
-#         v.show_at_center(v.size() + 1)
-
-#         show_lldb_panel()
-
-
 def cleanup(w=None):
     global _is_debugging
     _is_debugging = False
 
     set_disabled_bps([])
-    # TODO: Stop LLDBUIUpdater, FileMonitor, etc.
     ui_updater().stop()
-    #stop_markers_monitor()
     driver = driver_instance()
     if driver:
         driver.stop()
@@ -321,7 +300,7 @@ def start_debugging(w):
     return True
 
 
-# TODO: Search current directory for a project file or an executable
+# TODO: Search current directory for an executable
 def search_for_executable():
     sm = SettingsManager.getSM()
     exe = sm.get_default('exe', None)
@@ -438,7 +417,6 @@ class LldbDebugProgram(WindowCommand):
     # Only enabled when we have a default program to run.
     def is_enabled(self):
         exe = search_for_executable()
-
         return exe is not None
 
     def run(self):
@@ -857,6 +835,7 @@ class LldbBreakAtLine(WindowCommand):
 class LldbBreakAtSymbol(WindowCommand):
     class BreakAtSymbolDelegate(InputPanelDelegate):
         def __init__(self, owner, target):
+            # TODO: Default text should be the current symbol, if any
             self.__owner = owner
             self.__target = target
 
