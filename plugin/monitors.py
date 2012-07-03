@@ -177,14 +177,15 @@ class LLDBUIListener(sublime_plugin.EventListener):
 
     def on_close(self, v):
         lldb_view = get_lldb_view_for(v)
+        # TODO: Check if there are other views for the same buffer
+        # I blame Sublime Text for mixing both concepts into “something”.
         if lldb_view:
-            del_lldb_view(v)
+            del_lldb_view(lldb_view)
 
     def on_load(self, v):
         lldb_view = get_lldb_view_for(v)
         if lldb_view:
-            _debug(debugMonitors, 'on_load: %s' % str((repr(lldb_view), lldb_view.file_name())))
-            # TODO: Instead of updating it here, send a message to the
-            # LLDBUIUpdater
-            _debug(debugViews | debugMonitors, 'on_load for: %s' % repr(lldb_view))
+            _debug(debugMonitors, 'on_load: isloading: %s, %s' % (str(v.is_loading()), str((repr(lldb_view), lldb_view.file_name()))))
+            # TODO: Instead of updating it here (pre_update will execute
+            # on the main thread), send a message to the LLDBUIUpdater
             lldb_view.full_update()
