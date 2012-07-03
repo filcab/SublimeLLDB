@@ -197,6 +197,7 @@ def process_stopped(driver, process, state=None):
     ui_updater().process_stopped(state, lambda: driver.maybe_get_input())
 
     if process and driver.process_is_stopped(process):
+        filespec = None
         debugger = driver.debugger
         line_entry = process.GetSelectedThread().GetSelectedFrame().GetLineEntry()
         if line_entry:
@@ -242,6 +243,8 @@ def process_stopped(driver, process, state=None):
         else:
             # TODO: If we don't have a filespec, we can try to disassemble
             # around the thread's PC.
+            sublime.set_timeout(lambda:
+                window_ref().run_command('lldb_disassemble_frame', { 'thread': process.GetSelectedThread()}), 0)
             pass
 
 
@@ -392,6 +395,7 @@ def create_default_bps_for_target(target):
 # TODO: Check when each command should be enabled.
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
+        _debug(debugPlugin, 'Command: %s, identity: %x' % (self.__class__.__name__, id(self)))
         # global lldb_out_view
         if lldb_out_view() is None:
             sm = SettingsManager.getSM()
