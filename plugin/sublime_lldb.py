@@ -198,7 +198,7 @@ def process_stopped(driver, process, state=None):
 
     if process and driver.process_is_stopped(process):
         debugger = driver.debugger
-        line_entry = driver.current_frame().GetLineEntry()
+        line_entry = process.GetSelectedThread().GetLineEntry()
         if line_entry:
             # We don't need to run 'process status' like Driver.cpp
             # Since we open the file and show the source line.
@@ -217,7 +217,7 @@ def process_stopped(driver, process, state=None):
             lldb_view_send(stderr_msg(r[0].GetError()))
             if not line_entry:
                 # Get ALL the SBFrames
-                t = driver.current_thread()
+                t = process.GetSelectedThread()
                 n = t.GetNumFrames()
                 for i in xrange(0, n):
                     f = t.GetFrameAtIndex(i)
@@ -573,15 +573,17 @@ class LldbContinue(WindowCommand):
             return driver.process_is_stopped()
         return False
 
-    def run(self):
+    def run(self, process=None):
         self.setup()
         driver = driver_instance()
         if driver:
-            target = driver.debugger.GetSelectedTarget()
-            if target:
-                process = target.GetProcess()
-                if process:
-                    process.Continue()
+            if process is None:
+                target = driver.debugger.GetSelectedTarget()
+                if target:
+                    process = target.GetProcess()
+
+            if process:
+                process.Continue()
         # TODO: Decide what to do in case of errors.
         # e.g: Warn about no running program, etc.
 
@@ -605,30 +607,20 @@ class LldbSendSignal(WindowCommand):
             target = driver.debugger.GetSelectedTarget()
             return target and target.GetProcess()
 
-    def run(self):
+    def run(self, process=None):
         self.setup()
         driver = driver_instance()
         if driver:
-            target = driver.debugger.GetSelectedTarget()
-            if target:
-                process = target.GetProcess()
-                if process:
-                    delegate = self.SendSignalDelegate(self, process)
-                    delegate.show_on_window(self.window, 'Signal number')
-                    # TODO: check what happens. From our standpoint, it seems the process terminated successfully.
-                    #       on the lldb CLI interface, we see the signal.
+            is process is None:
+                target = driver.debugger.GetSelectedTarget()
+                if target:
+                    process = target.GetProcess()
 
-
-def get_selected_thread(driver):
-    if driver:
-        debugger = driver.debugger
-        if debugger:
-            target = debugger.GetSelectedTarget()
-            if target:
-                process = target.GetProcess()
-                if process:
-                    return process.GetSelectedThread()
-    return None
+            if process:
+                delegate = self.SendSignalDelegate(self, process)
+                delegate.show_on_window(self.window, 'Signal number')
+                # TODO: check what happens. From our standpoint, it seems the process terminated successfully.
+                #       on the lldb CLI interface, we see the signal.
 
 
 class LldbStepOver(WindowCommand):
@@ -638,10 +630,11 @@ class LldbStepOver(WindowCommand):
             return driver.process_is_stopped()
         return False
 
-    def run(self):
+    def run(self, thread=None):
         self.setup()
-        driver = driver_instance()
-        thread = get_selected_thread(driver)
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if thread:
             thread.StepOver()
 
@@ -653,10 +646,11 @@ class LldbStepInto(WindowCommand):
             return driver.process_is_stopped()
         return False
 
-    def run(self):
+    def run(self, thread=None):
         self.setup()
-        driver = driver_instance()
-        thread = get_selected_thread(driver)
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if thread:
             thread.StepInto()
 
@@ -668,10 +662,11 @@ class LldbStepOut(WindowCommand):
             return driver.process_is_stopped()
         return False
 
-    def run(self):
+    def run(self, thread=None):
         self.setup()
-        driver = driver_instance()
-        thread = get_selected_thread(driver)
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if thread:
             thread.StepOut()
 
@@ -683,10 +678,11 @@ class LldbStepOverInstruction(WindowCommand):
             return driver.process_is_stopped()
         return False
 
-    def run(self):
+    def run(self, thread=None):
         self.setup()
-        driver = driver_instance()
-        thread = get_selected_thread(driver)
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if thread:
             thread.StepInstruction(True)
 
@@ -698,10 +694,11 @@ class LldbStepOverThread(WindowCommand):
             return driver.process_is_stopped()
         return False
 
-    def run(self):
+    def run(self, thread=None):
         self.setup()
-        driver = driver_instance()
-        thread = get_selected_thread(driver)
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if thread:
             thread.StepOver(lldb.eOnlyThisThread)
 
@@ -713,10 +710,11 @@ class LldbStepIntoInstruction(WindowCommand):
             return driver.process_is_stopped()
         return False
 
-    def run(self):
+    def run(self, thread=None):
         self.setup()
-        driver = driver_instance()
-        thread = get_selected_thread(driver)
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if thread:
             thread.StepInstruction(False)
 
@@ -728,10 +726,11 @@ class LldbStepIntoThread(WindowCommand):
             return driver.process_is_stopped()
         return False
 
-    def run(self):
+    def run(self, thread=None):
         self.setup()
-        driver = driver_instance()
-        thread = get_selected_thread(driver)
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if thread:
             thread.StepInto(lldb.eOnlyThisThread)
 
@@ -789,31 +788,32 @@ class LldbListBreakpoints(WindowCommand):
             json = '{ "regex": "%s" }' % m.group(1)
             return json
 
-    def run(self):
+    def run(self, target=None):
         self.setup()
-        driver = driver_instance()
-        if driver:
-            target = driver.debugger.GetSelectedTarget()
-            if not target:
-                return
 
-            bp_list = []
-            for bp in target.breakpoint_iter():
-                # We're going to have to parse the description to know which kind
-                # of breakpoint we have, since lldb doesn't reify that information.
-                bp_list.append(self.parse_description(lldbutil.get_description(bp)))
+        if target is None:
+            target = driver_instance().debugger.GetSelectedTarget()
 
-            string = ', '.join(bp_list)
-            v = self.window.get_output_panel('breakpoint list')
+        if not target:
+            return
 
-            clear_view(v)
-            v.set_read_only(False)
-            edit = v.begin_edit('bp-list-view-clear')
-            v.replace(edit, sublime.Region(0, v.size()), string)
-            v.end_edit(edit)
-            v.set_read_only(True)
+        bp_list = []
+        for bp in target.breakpoint_iter():
+            # We're going to have to parse the description to know which kind
+            # of breakpoint we have, since lldb doesn't reify that information.
+            bp_list.append(self.parse_description(lldbutil.get_description(bp)))
 
-            self.window.run_command('show_panel', {"panel": 'output.breakpoint list'})
+        string = ', '.join(bp_list)
+        v = self.window.get_output_panel('breakpoint list')
+
+        clear_view(v)
+        v.set_read_only(False)
+        edit = v.begin_edit('bp-list-view-clear')
+        v.replace(edit, sublime.Region(0, v.size()), string)
+        v.end_edit(edit)
+        v.set_read_only(True)
+
+        self.window.run_command('show_panel', {"panel": 'output.breakpoint list'})
 
 
 class LldbBreakAtLine(WindowCommand):
@@ -821,15 +821,17 @@ class LldbBreakAtLine(WindowCommand):
         driver = driver_instance()
         return driver is not None and driver.debugger.GetSelectedTarget()
 
-    def run(self):
+    def run(self, target=None):
         self.setup()
 
-        driver = driver_instance()
+        if target is None:
+            target = driver_instance().current_target()
+
         v = self.window.active_view()
-        if driver and v:
+        if target and v:
             file = v.file_name()
             (line, col) = v.rowcol(v.sel()[0].begin())
-            driver.debugger.GetSelectedTarget().BreakpointCreateByLocation(str(file), line + 1)
+            target.BreakpointCreateByLocation(str(file), line + 1)
 
 
 class LldbBreakAtSymbol(WindowCommand):
@@ -847,14 +849,15 @@ class LldbBreakAtSymbol(WindowCommand):
         driver = driver_instance()
         return driver is not None and driver.debugger.GetSelectedTarget()
 
-    def run(self):
+    def run(self, target=None):
         self.setup()
-        driver = driver_instance()
-        if driver:
-            target = driver.debugger.GetSelectedTarget()
-            if target:
-                delegate = self.BreakAtSymbolDelegate(self, target)
-                delegate.show_on_window(self.window, 'Symbol to break at')
+
+        if target is None:
+            target = driver_instance().current_target()
+
+        if target:
+            delegate = self.BreakAtSymbolDelegate(self, target)
+            delegate.show_on_window(self.window, 'Symbol to break at')
 
 
 class LldbToggleEnableBreakpoints(WindowCommand):
@@ -862,7 +865,7 @@ class LldbToggleEnableBreakpoints(WindowCommand):
         driver = driver_instance()
         return driver is not None and driver.debugger.GetSelectedTarget()
 
-    def run(self):
+    def run(self, target=None):
         self.setup()
 
         if len(disabled_bps()) > 0:
@@ -874,15 +877,15 @@ class LldbToggleEnableBreakpoints(WindowCommand):
 
         else:
             # bps are enabled. Disable them
-            driver = driver_instance()
-            if driver:
-                target = driver.debugger.GetSelectedTarget()
-                if target:
-                    assert(len(disabled_bps()) == 0)
-                    for bp in target.breakpoint_iter():
-                        if bp and bp.IsEnabled():
-                            disabled_bps().append(bp)
-                            bp.SetEnabled(False)
+            if target is None:
+                target = driver_instance().current_target()
+
+            if target:
+                assert(len(disabled_bps()) == 0)
+                for bp in target.breakpoint_iter():
+                    if bp and bp.IsEnabled():
+                        disabled_bps().append(bp)
+                        bp.SetEnabled(False)
 
         if len(disabled_bps()) == 0:
             msg = 'Breakpoints disabled.'
@@ -898,13 +901,14 @@ class LldbViewSharedLibraries(WindowCommand):
 
     def is_enabled(self):
         driver = driver_instance()
-        return driver is not None and driver.debugger.GetSelectedTarget()
+        return driver is not None and driver.current_target()
 
-    def run(self):
+    def run(self, target=None):
         self.setup()
 
-        driver = driver_instance()
-        target = driver.debugger.GetSelectedTarget()
+        if target is None:
+            target = driver_instance().current_target()
+
         result = ''
 
         if target:
@@ -982,20 +986,17 @@ class LldbViewMemory(WindowCommand):
                 v.set_read_only(True)
 
     def is_enabled(self):
-        driver = driver_instance()
-        if driver and driver.debugger.GetSelectedTarget():
+        if driver and driver.current_target()
             return driver.process_is_stopped()
         return False
 
-    def run(self):
-        driver = driver_instance()
-        if driver:
-            target = driver.debugger.GetSelectedTarget()
-            if target:
-                process = target.GetProcess()
-                if process:
-                    delegate = self.ViewMemoryDelegate(self, process)
-                    delegate.show_on_window(self.window, 'Address to inspect')
+    def run(self, process=None):
+        if process is None:
+            process = driver_instance().current_process()
+
+        if process:
+            delegate = self.ViewMemoryDelegate(self, process)
+            delegate.show_on_window(self.window, 'Address to inspect')
 
 
 # Output view related commands
@@ -1015,16 +1016,17 @@ class LldbToggleOutputView(WindowCommand):
 class LldbClearOutputView(WindowCommand):
     def run(self):
         self.setup()
-        # TODO: Test variable to know if we should clear the view when starting a debug session
 
         clear_view(lldb_out_view())
 
 
 class LldbRegisterView(WindowCommand):
-    def run(self):
+    def run(self, thread=None):
         self.setup()
         ensure_lldb_is_running(self.window)
-        thread = driver_instance().current_thread()
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if not thread:
             return False
 
@@ -1038,10 +1040,12 @@ class LldbRegisterView(WindowCommand):
 
 
 class LldbDisassembleFrame(WindowCommand):
-    def run(self):
+    def run(self, thread=None):
         self.setup()
         ensure_lldb_is_running(self.window)
-        thread = driver_instance().current_thread()
+        if thread is None:
+            thread = driver_instance().current_thread()
+
         if not thread:
             return False
 
