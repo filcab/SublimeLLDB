@@ -597,7 +597,7 @@ class LldbDriver(threading.Thread):
                     if self.__process_stopped_callback:
                         self.__process_stopped_callback(self, process, state)
 
-    def interpret_command(cmd, add_to_history=False):
+    def interpret_command(self, cmd, add_to_history=False):
         result = lldb.SBCommandReturnObject()
         ci = self.debugger.GetCommandInterpreter()
 
