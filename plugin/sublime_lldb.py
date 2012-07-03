@@ -107,7 +107,7 @@ def debug_prologue(driver):
 
     for c in prologue:
         lldb_view_write(lldb_prompt() + c + '\n')
-        interpret_command(debugger, c)
+        driver.interpret_command(c)
 
 
 def lldb_greeting():
@@ -202,17 +202,17 @@ def process_stopped(driver, process, state=None):
         if line_entry:
             # We don't need to run 'process status' like Driver.cpp
             # Since we open the file and show the source line.
-            r = interpret_command(debugger, 'thread list')
+            r = driver.interpret_command('thread list')
             lldb_view_send(stdout_msg(r[0].GetOutput()))
             lldb_view_send(stderr_msg(r[0].GetError()))
-            r = interpret_command(debugger, 'frame info')
+            r = driver.interpret_command('frame info')
             lldb_view_send(stdout_msg(r[0].GetOutput()))
             lldb_view_send(stderr_msg(r[0].GetError()))
 
             filespec = line_entry.GetFileSpec()
         else:
             # Give us some assembly to check the crash/stop
-            r = interpret_command(debugger, 'process status')
+            r = driver.interpret_command('process status')
             lldb_view_send(stdout_msg(r[0].GetOutput()))
             lldb_view_send(stderr_msg(r[0].GetError()))
             if not line_entry:
@@ -1056,7 +1056,7 @@ class LldbDisassembleFrame(WindowCommand):
 
 
 # import this specific names without the prefix
-from lldb_wrappers import LldbDriver, interpret_command, START_LLDB_TIMEOUT
+from lldb_wrappers import LldbDriver, START_LLDB_TIMEOUT
 from utilities import stderr_msg, stdout_msg
 from views import LLDBRegisterView, LLDBThreadDisassemblyView, LLDBCodeView
 import lldb_wrappers
