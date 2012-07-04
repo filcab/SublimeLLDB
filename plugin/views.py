@@ -160,8 +160,9 @@ class LLDBCodeView(LLDBView):
                                         # method calls update on this object
 
     def __repr__(self):
-        return 'file_name: %s, needs_update: %s, pc_line: %s, enabled_bps: %s, disable_bps: %s' % \
-            (self.file_name(), str(self._needs_update), str(self.__pc_line), str(self.__enabled_bps), str(self.__disabled_bps))
+        return '<%s: file_name: %s, needs_update: %s, pc_line: %s, enabled_bps: %s, disable_bps: %s>' % \
+            (self.__class__.__name__, self.file_name(), str(self._needs_update),
+             str(self.__pc_line), str(self.__enabled_bps), str(self.__disabled_bps))
 
     @property
     def needs_update(self):
@@ -461,6 +462,10 @@ class LLDBDisassemblyView(LLDBReadOnlyView):
         self.set_name(lldb_disassembly_view_name(frame))
         self.set_scratch()
 
+    def __repr__(self):
+        return '<%s: name: %s, frame: %s, pc_line: %d, content: %s>' % \
+            (self.__class__.__name__, self.name(), self.frame, self.pc_line, self.content())
+
     @property
     def frame(self):
         return self.__frame
@@ -474,6 +479,7 @@ class LLDBDisassemblyView(LLDBReadOnlyView):
         self.show(r, True)
 
     def updated_content(self):
+        _debug(debugViews, 'Updating content for: %s' % repr(self))
         frame = self.__frame
         if not frame.IsValid():
             return 'Invalid frame. Has it finished its work?'
@@ -539,6 +545,10 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         self.set_name(lldb_disassembly_view_name(thread.GetThreadID()))
         self.set_scratch()
 
+    def __repr__(self):
+        return '<%s: name: %s, thread %s, pc_line: %d, content: %s>' % \
+            (self.__class__.__name__, self.name(), self.thread, self.pc_line, self.content())
+
     @property
     def thread(self):
         return self.__thread
@@ -552,6 +562,7 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         self.show(r, True)
 
     def updated_content(self):
+        _debug(debugViews, 'Updating content for: %s' % repr(self))
         thread = self.__thread
         if not thread.IsValid():
             return 'Invalid thread. Has it finished its work?'
