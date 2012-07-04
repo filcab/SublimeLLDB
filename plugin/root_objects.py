@@ -282,8 +282,8 @@ def get_lldb_view_for(v):
     name = v.name()
     file_name = v.file_name()
     for lldb_view in __lldb_views:
-        if (len(name) > 0 and name == lldb_view.name()) \
-            or (len(file_name) > 0 and file_name == lldb_view.file_name()):
+        if (name is not None and len(name) > 0 and name == lldb_view.name()) \
+            or (file_name is not None and len(file_name) > 0 and file_name == lldb_view.file_name()):
             return lldb_view
     return None
 
