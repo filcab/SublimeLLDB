@@ -196,6 +196,7 @@ def unload_handler():
 def process_stopped(driver, process, state=None):
     ui_updater().process_stopped(state, lambda: driver.maybe_get_input())
 
+    # Open a new view on source code/disassembly, if needed.
     if process and driver.process_is_stopped(process):
         filespec = None
         debugger = driver.debugger
@@ -245,7 +246,6 @@ def process_stopped(driver, process, state=None):
             # around the thread's PC.
             sublime.set_timeout(lambda:
                 window_ref().run_command('lldb_disassemble_frame', { 'thread': process.GetSelectedThread()}), 0)
-            pass
 
 
 def initialize_lldb(w):

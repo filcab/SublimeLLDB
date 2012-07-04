@@ -89,7 +89,7 @@ class LLDBUIUpdater(threading.Thread):
                 # instead of the input box
 
                 # Focus the best view
-                # Ask for input, if appropriate
+                # Ask for input, if appropriate (epilogue)
             elif packet[0] == self.eBreakpointAdded:
                 filename = packet[1]
                 line = packet[2]
