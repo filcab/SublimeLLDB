@@ -14,7 +14,7 @@ import lldbutil
 
 
 from debug import debug as _debug
-from debug import debugPlugin, debugSettings
+from debug import debugPlugin, debugVerbose
 
 
 def debug(thing):
