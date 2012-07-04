@@ -90,13 +90,10 @@ class LLDBReadOnlyView(LLDBView):
         return self.__content
 
     def pre_update(self):
-        self.updated_content()
+        self.__content = self.updated_content()
 
     def updated_content(self):
         assert False, "%s.updated_content() wasn't overridden." % self.__class__.__name__
-
-    def update_content(self):
-        self.__content = self.updated_content()
 
     # Method that is run in the end of an update
     def epilogue(self):
