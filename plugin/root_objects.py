@@ -9,7 +9,7 @@ __lldb_prompt = '(lldb) '
 __lldb_register_view_fmt = 'lldb thread #%d'
 __lldb_disassembly_view__unkown_addr_fmt = 'lldb 0x%x disassembly'
 __lldb_disassembly_view_fmt = 'lldb %s@0x%x disassembly'
-__lldb_thread_disassembly_view_fmt = 'lldb disassembly of TID %d'
+__lldb_thread_disassembly_view_fmt = 'lldb disassembly of TID 0x%x'
 
 __driver = None
 __ui_updater = None

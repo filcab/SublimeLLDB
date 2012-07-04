@@ -516,7 +516,7 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
 
         instrs = driver_instance().disassemble_frame(thread.GetSelectedFrame())
         if not instrs:
-            return 'Error getting instructions for thread %s: No instructions available.' % str(thread)
+            return 'Error getting instructions for thread 0x%x: No instructions available.' % thread.GetThreadID()
 
         pc = driver_instance().get_PC()
 
