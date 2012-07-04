@@ -192,7 +192,9 @@ class LldbDriver(threading.Thread):
 
     def disassemble_frame(self, frame):
         if not frame:
+            _debug(debugDriver, 'Driver.disassemble_frame: not frame == True')
             return None
+
         target = frame.GetThread().GetProcess().GetTarget()
         pc = frame.GetPCAddress()
         function = pc.GetFunction()

@@ -466,8 +466,8 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         self.set_scratch()
 
     def __repr__(self):
-        return '<%s: name: %s, thread %s, pc_line: %d, content: %s>' % \
-            (self.__class__.__name__, self.name(), self.thread, self.pc_line, self.content())
+        return '<%s: name: %s, thread %s, pc_line: %d, content size: %d>' % \
+            (self.__class__.__name__, self.name(), self.thread, self.pc_line, len(self.content()))
 
     @property
     def thread(self):
@@ -513,11 +513,10 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         else:
             name = pc.GetModule().GetFileSpec().GetFilename()
             start_addr = pc.GetLoadAddress(target)
-            # assert False, "Neither symbol nor the function are valid!"
 
         instrs = driver_instance().disassemble_frame(thread.GetSelectedFrame())
         if not instrs:
-            return 'Error getting instructions for thread ' + str(thread)
+            return 'Error getting instructions for thread %s: No instructions available.' % str(thread)
 
         pc = driver_instance().get_PC()
 
