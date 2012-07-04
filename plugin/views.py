@@ -533,7 +533,12 @@ class LLDBDisassemblyView(LLDBReadOnlyView):
 
 class LLDBThreadDisassemblyView(LLDBReadOnlyView):
     __pc_line = 0
-    # __frame = lldb.SBFrame()
+
+    __sm = SettingsManager.getSM()
+    eMarkerPCName = __sm.get_default('markers.current_line.region_name', 'lldb.location')
+    eMarkerPCScope = __sm.get_default('markers.current_line.scope', 'bookmark')
+    eMarkerPCScopeCrashed = __sm.get_default('markers.current_line.scope.crashed', 'invalid')
+    eMarkerPCIcon = __sm.get_default('markers.current_line.icon', 'bookmark')
 
     def __init__(self, view, thread):
         self.__thread = thread
@@ -555,11 +560,24 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         return self.__pc_line
 
     def epilogue(self):
-        r = self.base_view().text_point(self.pc_line, 0)
-        self.show(r, True)
+        if self.pc_line != 0:
+            _debug(debugViews, 'Marking PC for LLDBDisassemblyView %s' % repr(self))
+            v = self.base_view()
+            r = v.text_point(self.pc_line, 0)
+            to_mark = [v.line(r)]
+
+            debug('(' + self.name() + ') adding region: ' + str((self.eMarkerPCName, to_mark, self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)))
+            self.base_view().add_regions(self.eMarkerPCName, to_mark, self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)
+            self.show(to_mark[0], True)
+        else:
+            _debug(debugViews, 'erasing region: %s' % self.eMarkerPCName)
+            self.base_view().erase_regions(self.eMarkerPCName)
 
     def updated_content(self):
         _debug(debugViews, 'Updating content for: %s' % repr(self))
+        # Reset the PC line number
+        self.__pc_line = 0
+
         thread = self.__thread
         if not thread.IsValid():
             return 'Invalid thread. Has it finished its work?'
