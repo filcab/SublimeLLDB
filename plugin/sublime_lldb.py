@@ -191,6 +191,7 @@ def cleanup(w=None):
     if driver:
         driver.stop()
         set_driver_instance(None)
+    lldb_view_send('\nDebugging session ended.\n')
 
 
 @atexit.register
