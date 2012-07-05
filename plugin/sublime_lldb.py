@@ -105,6 +105,7 @@ def debug_prologue(driver):
     sm = SettingsManager.getSM()
     prologue = sm.get_default('prologue', [])
 
+    _debug(debugPlugin, 'LLDB prologue: %s' % str(prologue))
     for c in prologue:
         lldb_view_write(lldb_prompt() + c + '\n')
         driver.interpret_command(c)
