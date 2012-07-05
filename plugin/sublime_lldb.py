@@ -67,8 +67,18 @@ def initialize_plugin():
     debug('cwd: %s' % os.getcwd())
 
     sm = SettingsManager.getSM()
-    use_bundled_debugserver = sm.get_default('use_bundled_debugserver', False)
-    if not use_bundled_debugserver:
+    use_bundled_debugserver = sm.get_default('debugserver.use_bundled', False)
+    debugserver_path = sm.get_default('debugerver.path', None)
+    if debugserver_path is not None:
+        # TODO: Check that it is a file
+        if os.access(debugserver_path, os.X_OK):
+            os.environ['LLDB_DEBUGSERVER_PATH'] = debugserver_path
+            found = True
+        else:
+            # FIXME: Warn the user that the debugserver isn't executable
+            global _did_not_find_debugserver
+            _did_not_find_debugserver = True
+    elif not use_bundled_debugserver:
         debugserver_paths = ['/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver',
                              '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver']
         uname = os.uname()

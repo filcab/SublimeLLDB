@@ -6,9 +6,17 @@
 
     /*
         Should we use the bundled debugserver (it has to be signed and trusted)?
-        Otherwise, use the system debugserver (XCode or CLI tools have to be installed).
+        Otherwise, use the system debugserver (XCode or Xcode CLI tools have to be installed).
      */
-    "lldb.use_bundled_debugserver": false,
+    "lldb.debugserver.use_bundled": false,
+
+    /*
+        What is the path to the debugserver binary? If this setting has a value,
+        the specified file path will be given to lldb as the debugserver to execute.
+        If the setting is not defined, the plugin will look at the debugserver.use_bundled
+        setting and, if false, will try to search for the debugserver binary.
+     */
+    // "lldb.debugerver.path": null,
 
     /*
         Name to be used for the lldb i/o view.
