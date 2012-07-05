@@ -69,6 +69,7 @@ def initialize_plugin():
     sm = SettingsManager.getSM()
     use_bundled_debugserver = sm.get_default('debugserver.use_bundled', False)
     debugserver_path = sm.get_default('debugerver.path', None)
+    global _did_not_find_debugserver
     if debugserver_path is not None:
         # TODO: Check that it is a file
         if os.access(debugserver_path, os.X_OK):
@@ -76,7 +77,6 @@ def initialize_plugin():
             found = True
         else:
             # FIXME: Warn the user that the debugserver isn't executable
-            global _did_not_find_debugserver
             _did_not_find_debugserver = True
     elif not use_bundled_debugserver:
         debugserver_paths = ['/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver',
@@ -91,7 +91,6 @@ def initialize_plugin():
                         found = True
                         break
                 if not found:  # XCode has to be installed, signal the plugin.
-                    global _did_not_find_debugserver
                     _did_not_find_debugserver = True
             else:  # Snow Leopard, etc...
                 # This will only work with XCode 4+ (that includes lldb) which is a paid software for OS X < 10.7
@@ -103,6 +102,7 @@ def initialize_plugin():
             global _os_not_supported
             _os_not_supported = True
 
+    _debug(debugPlugin, 'debugserver path: %s' % os.environ['LLDB_DEBUGSERVER_PATH'])
     _initialized = True
 
 
