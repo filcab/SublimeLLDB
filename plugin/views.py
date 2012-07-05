@@ -523,7 +523,7 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         def get_max_sizes(accum, next):
             return (max(accum[0], len(next[1])), max(accum[1], len(next[2])))
         (max_mnemonic, max_operands) = reduce(get_max_sizes, instrs, (0, 0))
-        format_str = '%2.2s%.10s: %*s %*s%s\n'
+        format_str = '%.10s: %*s %*s%s\n'
         max_mnemonic, max_operands = (int(max_mnemonic), int(max_operands))
 
         result = '%s @ 0x%s:\n' % (name, start_addr)
@@ -539,11 +539,9 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
             else:
                 assert False
 
-            pc_str = ''
             if pc == addr:
                 self.__pc_line = n_instrs
-                pc_str = '=>'
 
-            result += format_str % (pc_str, hex(addr), max_mnemonic, mnemonic, max_operands, ops, comment_str)
+            result += format_str % (hex(addr), max_mnemonic, mnemonic, max_operands, ops, comment_str)
 
         return result
