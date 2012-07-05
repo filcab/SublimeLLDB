@@ -147,8 +147,10 @@ Known bugs
 ----------
 * The current version of Xcode (4.3.3) has a non-working debugserver (bugs may occur, such as a crash when restarting a program). LLDB.framework version LLDB-153 (or newer) will work.
 * The input reader thread is named (for Python) Dummy-N (N=1, ...). This is a Python problem (the LLDB library uses `pthread_setname_np` to name the thread).
-* Sometimes Sublime Text 2 won't update the markers. For example, executing the LLDB command 'breakpoint disable' to disable all breakpoints may make the breakpoints disappear. They should reappear on the next step instruction.
 * Lldb's `script` command may not work. A workaround is being devised for it.
+* Sometimes Sublime Text 2 won't update the markers. For example, executing the LLDB command 'breakpoint disable' to disable all breakpoints may make the breakpoints disappear. They should reappear on the next step instruction.
+* Depending on which view is selected, project settings may not propagate to the plugin's commands. This is a Sublime Text 2 limitation.
+* The process being debugged has to be stopped before quitting Sublime Text 2 (otherwise, the program will crash). This is a bug with Sublime Text 2 not running the plugin's cleanup function when exiting..
 * ...
 
 Feel free to ask for additional functionalities, preferably through github's issues.
