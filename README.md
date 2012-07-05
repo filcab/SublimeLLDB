@@ -150,7 +150,8 @@ Known bugs
 * Lldb's `script` command may not work. A workaround is being devised for it.
 * Sometimes Sublime Text 2 won't update the markers. For example, executing the LLDB command 'breakpoint disable' to disable all breakpoints may make the breakpoints disappear. They should reappear on the next step instruction.
 * Depending on which view is selected, project settings may not propagate to the plugin's commands. This is a Sublime Text 2 limitation.
-* The process being debugged has to be stopped before quitting Sublime Text 2 (otherwise, the program will crash). This is a bug with Sublime Text 2 not running the plugin's cleanup function when exiting..
+* The process being debugged has to be stopped before quitting Sublime Text 2 (otherwise, the program will crash). This is a bug with Sublime Text 2 not running the plugin's cleanup function when exiting.
+* Disassembly views don't have breakpoint markers, yet.
 * ...
 
 Feel free to ask for additional functionalities, preferably through github's issues.
