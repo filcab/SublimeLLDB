@@ -314,32 +314,32 @@ def set_disabled_bps(bps):
     _disabled_bps = bps
 
 
-__settings_keys = ['lldb.prologue'
-                   'lldb.use_bundled_debugserver'
-                   'lldb.i/o.view.name'
-                   'lldb.i/o.view.clear_on_startup'
-                   'lldb.layout'
-                   'lldb.layout.basic'
-                   'lldb.layout.group.source_file'
-                   'lldb.layout.group.i/o'
-                   'lldb.markers.current_line.region_name'
-                   'lldb.markers.current_line.scope'
-                   'lldb.markers.current_line.scope.crashed'
-                   'lldb.markers.current_line.type'
-                   'lldb.markers.breakpoint.enabled.region_name'
-                   'lldb.markers.breakpoint.enabled.scope'
-                   'lldb.markers.breakpoint.enabled.type'
-                   'lldb.markers.breakpoint.disabled.region_name'
-                   'lldb.markers.breakpoint.disabled.scope'
-                   'lldb.markers.breakpoint.disabled.type'
-                   'lldb.exe'
-                   'lldb.args'
-                   'lldb.arch'
-                   'lldb.breakpoints'
-                   'lldb.view.memory.size'
-                   'lldb.view.memory.width'
-                   'lldb.view.memory.grouping'
-                   'lldb.layout.group.source_file'
+__settings_keys = ['lldb.prologue',
+                   'lldb.use_bundled_debugserver',
+                   'lldb.i/o.view.name',
+                   'lldb.i/o.view.clear_on_startup',
+                   'lldb.layout',
+                   'lldb.layout.basic',
+                   'lldb.layout.group.source_file',
+                   'lldb.layout.group.i/o',
+                   'lldb.markers.current_line.region_name',
+                   'lldb.markers.current_line.scope',
+                   'lldb.markers.current_line.scope.crashed',
+                   'lldb.markers.current_line.type',
+                   'lldb.markers.breakpoint.enabled.region_name',
+                   'lldb.markers.breakpoint.enabled.scope',
+                   'lldb.markers.breakpoint.enabled.type',
+                   'lldb.markers.breakpoint.disabled.region_name',
+                   'lldb.markers.breakpoint.disabled.scope',
+                   'lldb.markers.breakpoint.disabled.type',
+                   'lldb.exe',
+                   'lldb.args',
+                   'lldb.arch',
+                   'lldb.breakpoints',
+                   'lldb.view.memory.size',
+                   'lldb.view.memory.width',
+                   'lldb.view.memory.grouping',
+                   'lldb.layout.group.source_file',
                    'lldb.attach.wait_for_launch']
 
 
