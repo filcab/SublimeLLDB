@@ -159,3 +159,8 @@ Feel free to ask for additional functionalities, preferably through github's iss
 `debugserver` binary
 --------------------
 The default `debugserver` binary that is used is the system one (when XCode or the command line tools are installed). If the bundled `debugserver` is to be used (e.g: newer `debugserver` with protocol enhancements), change the setting `lldb.use_bundled_debugserver`, in your settings `True` and sign the `<plugin folder>/lldb_plugin/LLDB.framework/Resources/debugserver` binary as instructed in the `docs/code-signing.txt` file in lldb's sources.
+
+
+Debugging the plugin
+--------------------
+If, for some reason, you want some debug messages from the plugin, call, on plugin initialization, the `debug.set_debug` function, with some of the constants defined at the start of the plugin/debug.py file as argument (you can combine several constants with `|`).
