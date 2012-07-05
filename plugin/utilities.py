@@ -23,10 +23,35 @@ class SettingsManager(object):
     def __init__(self):
         self.__settings = sublime.load_settings('lldb.sublime-settings')
         self.__settings_keys = root_objects.get_settings_keys()
+
         for k in self.__settings_keys:
-            self.__settings.add_on_change(k, self.on_change)
+            listener = self.create_listener(k)
+            self.__settings.add_on_change(k, listener.on_change)
 
         self.__observers = {}
+
+    def create_listener(self, key):
+        return self.Listener(self, key)
+
+    # Listener class, to work around Sublime Text 2's lack of decent
+    # on_change functionality (it doesn't even tell you what setting was
+    # changed!)
+    class Listener(object):
+        def __init__(self, owner, key):
+            self.__owner = owner
+            self.__key = key
+
+        @property
+        def key(self):
+            return self.__key
+
+        def on_change(self):
+            self.__owner.on_change(self.key)
+
+        # TODO: If this doesn't work, just create a destroy method that
+        # does the same.
+        def __del__(self):
+            self.__owner.clear_on_change(self.__key)
 
     def add_observer(self, key, observer):
         """Observer is a function of two arguments: key and new value. It
@@ -51,6 +76,7 @@ will be called whenever the key is changed."""
                 else:
                     del self.__observers[k]
 
+    # TODO: Record the settings that we get in a dict for subsequent gets
     def get(self, *args):  # name, default=None, error=True):
         if len(args) > 1:
             return self.get_default(*args)
@@ -71,6 +97,7 @@ will be called whenever the key is changed."""
         debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
         return setting
 
+    # TODO: Record the settings that we get in a dict for subsequent gets
     def get_default(self, name, default):
         # Temporary name fix for when we're given a setting name with the prefix
         # In the future, this test will be gone and no setting will have
@@ -94,8 +121,11 @@ will be called whenever the key is changed."""
         debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
         return setting
 
-    def on_change(*args):
-        raise Exception('on_change was called. Check backtrace!')
+    # TODO: Cache settings on get{,_default}() and use that to see if the
+    # setting really was changed
+    def on_change(self, key):
+        # TODO: Fix this, get the value
+        debug.debug(debugSettings, 'on_change was called for key: ' + key)
         key= 'lldb'
         value = ''
         if key in self.__observers:
