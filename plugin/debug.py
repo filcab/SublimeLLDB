@@ -4,6 +4,7 @@ import threading
 DFILE = sys.__stderr__
 _active = 0
 
+debugAny = 0  # Prints the message regardless of debug level.
 debugVerbose = 1 << 0
 debugViews = 1 << 1
 debugMonitors = 1 << 2
