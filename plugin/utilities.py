@@ -1,16 +1,14 @@
 # Utilities for the sublime lldb plugin
-import sys
 import string
 import sublime
 
-import root_objects
-import debug
-from debug import debugSettings, debugVerbose
+from debug import debug, debugSettings, debugAny
 
+
+class SettingsManager(object):
 # This class is not thread-safe, but has everything we need for our
 # settings' management, and we can guarantee that we won't have any race
 # condition when creating the instance.
-class SettingsManager(object):
     __sm = None
     __prefix = 'lldb.'
 
@@ -61,19 +59,19 @@ will be called whenever the key is changed."""
     def del_observer(self, observer, key=None):
         if key is None:
             new_observers = {}
-            for k, os in self.__observers:
+            for k, obs in self.__observers:
                 # FIXME: call Settings.clean_on_change() if we go down to 0
                 # observers on a key.
-                os.remove(observer)
-                if len(os) > 0:
-                    new_observers[k] = os
+                obs.remove(observer)
+                if len(obs) > 0:
+                    new_observers[k] = obs
             self.__observers = new_observers
         else:
             if k in self.__observers:
-                os = self.__observers[k]
-                os.remove(observer)
-                if len(os) > 0:
-                    self.__observers[k] = os
+                obs = self.__observers[k]
+                obs.remove(observer)
+                if len(obs) > 0:
+                    self.__observers[k] = obs
                 else:
                     # FIXME: call Settings.clean_on_change() if we go down to 0
                     # observers on a key.

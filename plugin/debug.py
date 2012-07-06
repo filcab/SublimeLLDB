@@ -19,22 +19,27 @@ debugAll = 0xff
 from multiprocessing import Lock
 mutex = Lock()
 
+
 def debug(level, thing):
     if _active & level == level:
         with mutex:
             print >> DFILE, threading.current_thread().name, str(thing)
 
+
 def toggle_debug(level):
     global _active
     _active = _active ^ level
+
 
 def set_debug(level):
     global _active
     _active = _active | level
 
+
 def unset_debug(level):
     global _active
     _active = _active & (~ level)
+
 
 def clear_debug():
     global _active

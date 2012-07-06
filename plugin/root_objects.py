@@ -1,6 +1,5 @@
 # -*- mode: python; coding: utf-8 -*-
 
-import lldb
 import sublime
 from utilities import SettingsManager
 
@@ -25,7 +24,6 @@ __output_fh = None
 __error_fh = None
 
 
-import sys
 from debug import debug, debugRoot
 
 
@@ -268,6 +266,7 @@ def lldb_views_destroy():
     global __lldb_views
     views = __lldb_views
     __lldb_views = []
+
     def stop_visitor(thing):
         thing.stop()
     map(stop_visitor, views)

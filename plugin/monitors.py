@@ -12,16 +12,12 @@ import threading
 
 
 from lldb_wrappers import thread_created
-from root_objects import breakpoint_dict, reset_breakpoint_dict,        \
-                         bps_for_file, add_bp_loc, del_bp_loc,          \
-                         lldb_views_update, del_lldb_view,              \
+from root_objects import lldb_views_update, del_lldb_view,              \
                          lldb_views_destroy,                            \
                          get_lldb_view_for, maybe_get_lldb_output_view
 
-import sys
 
-
-from debug import debug, debugMonitors, debugViews
+from debug import debug, debugMonitors
 
 
 class LLDBUIUpdater(threading.Thread):
@@ -70,7 +66,6 @@ class LLDBUIUpdater(threading.Thread):
     def maybe_get_view_for_file(self, filename):
         return maybe_get_lldb_output_view(None, filename)
 
-
     def run(self):
         thread_created('<' + self.name + '>')
 
@@ -78,7 +73,7 @@ class LLDBUIUpdater(threading.Thread):
         while packet:
             debug(debugMonitors, 'LLDBUIUpdater: ' + str(packet))
             if packet[0] == self.eProcessStopped:
-                state = packet[1]
+                # state = packet[1]
                 epilogue = packet[2]
                 lldb_views_update(epilogue)
                 # Should we wait or signal ourselves from lldb_views_refresh?
@@ -123,6 +118,7 @@ class LLDBUIUpdater(threading.Thread):
                 return
 
             packet = self.get_next_packet()
+
 
 class FileMonitor(threading.Thread):
     TIMEOUT = 10  # Our default select timeout is 10 secs

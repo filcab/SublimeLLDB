@@ -50,7 +50,6 @@ _default_basic_window_layout = {  # 1 group
                  }
 
 
-
 def initialize_plugin():
     global _initialized
     if _initialized:
@@ -108,7 +107,6 @@ def debug_prologue(driver):
     Prologue for the debugging session during the development of the plugin.
     Loads a simple program in the debugger and sets a breakpoint in main()
     """
-    debugger = driver.debugger
     sm = SettingsManager.getSM()
     prologue = sm.get_default('prologue', [])
 
@@ -208,7 +206,6 @@ def process_stopped(driver, process, state=None):
     # Open a new view on source code/disassembly, if needed.
     if process and driver.process_is_stopped(process):
         filespec = None
-        debugger = driver.debugger
         line_entry = process.GetSelectedThread().GetSelectedFrame().GetLineEntry()
         if line_entry:
             # We don't need to run 'process status' like Driver.cpp
@@ -254,7 +251,7 @@ def process_stopped(driver, process, state=None):
             # TODO: If we don't have a filespec, we can try to disassemble
             # around the thread's PC.
             sublime.set_timeout(lambda:
-                window_ref().run_command('lldb_disassemble_frame', { 'thread': process.GetSelectedThread()}), 0)
+                window_ref().run_command('lldb_disassemble_frame', {'thread': process.GetSelectedThread()}), 0)
 
 
 def initialize_lldb(w):

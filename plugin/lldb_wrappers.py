@@ -12,9 +12,6 @@ import utilities
 BIG_TIMEOUT = 42000000
 START_LLDB_TIMEOUT = 5
 
-
-import sys
-
 from debug import debug, debugDriver
 
 
@@ -224,6 +221,7 @@ class LldbDriver(threading.Thread):
 
     def get_breakpoint_locations_for_file(self, filename):
         bp_iter = self.current_target().breakpoint_iter()
+
         def filter(bp_loc):
             addr = bp_loc.GetAddress()
             if addr:
@@ -236,7 +234,6 @@ class LldbDriver(threading.Thread):
 
         lst = [bp_loc for bp in bp_iter for bp_loc in bp if filter(bp_loc)]
         return lst
-
 
     @property
     def debugger(self):
@@ -767,7 +764,6 @@ class IOChannel(threading.Thread):
         self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadDidExit)
         self.__driver = None
         debug(debugDriver, 'leaving')
-
 
 
 from root_objects import set_driver_instance, lldb_view_send, LldbInputDelegate, ui_updater

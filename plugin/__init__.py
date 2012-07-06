@@ -1,1 +1,1 @@
-__all__ = [ "sublime_lldb" ]
+__all__ = ["sublime_lldb"]
