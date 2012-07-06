@@ -1,7 +1,7 @@
 Sublime Text 2 LLDB plugin
 ==========================
 
-(last updated: 2012/07/05)
+(last updated: 2012/07/06)
 
 This is a plugin that allows users to debug programs in Sublime Text 2 using lldb. This plugin enabled command-line interaction with the lldb debugger, as well as Sublime Text 2 integration.
 
@@ -27,7 +27,8 @@ All features are available on menus and/or Sublime Text's command pallette.
 * Xcode keybindings
 * VS keybindings will be added on request. Please open a bug report with the equivalent keybindings in Visual Studio (Check the Xcode keybindings in the *Useful Keybound Commands* section)
 
-* Event-driven to avoid any editing slow-downs due to the plugin
+* Event-driven to avoid any editing slow-downs due to the plugin.
+* Lazy loading architecture so you won't notice the lldb is loaded until you call one of its commands.
 
 
 Installation
