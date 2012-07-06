@@ -9,6 +9,7 @@ import threading
 import sublime
 import sublime_plugin
 
+from lldb_wrappers import thread_created
 from debug import debug, debugMonitors
 from root_objects import lldb_views_update, del_lldb_view,              \
                          lldb_views_destroy,                            \
@@ -177,5 +178,3 @@ class LLDBUIListener(sublime_plugin.EventListener):
             # TODO: Instead of updating it here (pre_update will execute
             # on the main thread), send a message to the LLDBUIUpdater
             lldb_view.full_update()
-
-from lldb_wrappers import thread_created
