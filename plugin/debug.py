@@ -18,6 +18,7 @@ debugSettings = 1 << 7
 
 debugAll = 0xff
 
+# Mutex to lock our debug function.
 mutex = Lock()
 
 
