@@ -338,7 +338,7 @@ def ensure_lldb_is_running(w=None):
             clear_view(lldb_out_view())
 
         if not start_debugging(w):
-            return
+            return False
 
         set_ui_updater(LLDBUIUpdater())
         g = lldb_greeting()
@@ -404,8 +404,6 @@ def create_default_bps_for_target(target):
 # TODO: Check when each command should be enabled.
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
-        debug(debugPlugin, 'Command: %s, identity: %x' % (self.__class__.__name__, id(self)))
-        # global lldb_out_view
         if lldb_out_view() is None:
             sm = SettingsManager.getSM()
             view_name = sm.get_default('i/o.view.name', default_lldb_view_name)
