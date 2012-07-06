@@ -1,26 +1,34 @@
 # -*- mode: python; coding: utf-8 -*-
 
-import sublime
-import sublime_plugin
-
+import re
 import os
 import sys
 import atexit
 import datetime
 import threading
 
+import sublime
+import sublime_plugin
+
 import lldb
 import lldbutil
 
+import lldb_wrappers
 
+from monitors import LLDBUIUpdater
+from lldb_wrappers import thread_created
 from debug import debug, debugPlugin, debugVerbose, debugAny
+from views import LLDBRegisterView, LLDBThreadDisassemblyView, LLDBCodeView
+from utilities import stderr_msg, stdout_msg, generate_memory_view_for, SettingsManager
 
+# import these specific names without the prefix
+from lldb_wrappers import LldbDriver, START_LLDB_TIMEOUT
 
 from root_objects import driver_instance, set_driver_instance,          \
                          lldb_out_view, set_lldb_out_view,              \
                          default_lldb_view_name,                        \
                          lldb_view_write, lldb_view_send,               \
-                         thread_created, window_ref, set_window_ref,    \
+                         window_ref, set_window_ref,                    \
                          get_lldb_output_view, get_lldb_view_for,       \
                          lldb_prompt,                                   \
                          lldb_register_view_name,                       \
@@ -28,10 +36,6 @@ from root_objects import driver_instance, set_driver_instance,          \
                          disabled_bps, set_disabled_bps,                \
                          InputPanelDelegate,                            \
                          set_ui_updater, ui_updater
-
-from utilities import generate_memory_view_for, SettingsManager
-
-from monitors import LLDBUIUpdater
 
 _initialized = False
 _is_debugging = False
@@ -350,7 +354,6 @@ def ensure_lldb_is_running(w=None):
     return False
 
 
-import re
 bp_re_file_line = re.compile('^(.*\S)\s*:\s*(\d+)\s*$')
 bp_re_address = re.compile('^(0x[0-9A-Fa-f]+)\s*$')
 # bp_re_abbrev = re.compile('^(-.*)$')
@@ -1065,10 +1068,3 @@ class LldbDisassembleFrame(WindowCommand):
             disasm_view = LLDBThreadDisassemblyView(base_disasm_view, thread)
         disasm_view.full_update()
         self.window.focus_view(disasm_view.base_view())
-
-
-# import this specific names without the prefix
-from lldb_wrappers import LldbDriver, START_LLDB_TIMEOUT
-from utilities import stderr_msg, stdout_msg
-from views import LLDBRegisterView, LLDBThreadDisassemblyView, LLDBCodeView
-import lldb_wrappers

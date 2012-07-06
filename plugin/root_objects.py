@@ -1,6 +1,8 @@
 # -*- mode: python; coding: utf-8 -*-
 
 import sublime
+
+from debug import debug, debugRoot
 from utilities import SettingsManager
 
 default_lldb_view_name = 'lldb i/o'
@@ -22,9 +24,6 @@ __lldb_views = []
 __input_fh = None
 __output_fh = None
 __error_fh = None
-
-
-from debug import debug, debugRoot
 
 
 def ui_updater():
@@ -392,7 +391,3 @@ class LldbInputDelegate(InputPanelDelegate):
     def on_cancel(self):
         LldbInputDelegate._lldb_input_panel_is_active = False
         debug(debugRoot, 'canceled input panel')
-
-
-import lldb_wrappers
-thread_created = lldb_wrappers.thread_created

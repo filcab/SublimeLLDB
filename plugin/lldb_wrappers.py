@@ -1,18 +1,17 @@
 # -*- mode: python; coding: utf-8 -*-
 
-# import time
-
 import os
 import lldb
 import lldbutil
 import sublime
 import threading
-import utilities
+
+from debug import debug, debugDriver
+from utilities import stderr_msg, stdout_msg
+from root_objects import set_driver_instance, lldb_view_send, LldbInputDelegate, ui_updater
 
 BIG_TIMEOUT = 42000000
 START_LLDB_TIMEOUT = 5
-
-from debug import debug, debugDriver
 
 
 def version():
@@ -765,7 +764,4 @@ class IOChannel(threading.Thread):
         self.__driver = None
         debug(debugDriver, 'leaving')
 
-
-from root_objects import set_driver_instance, lldb_view_send, LldbInputDelegate, ui_updater
 from monitors import FileMonitor
-from utilities import stderr_msg, stdout_msg

@@ -1,6 +1,8 @@
 import sys
 import threading
 
+from multiprocessing import Lock
+
 DFILE = sys.__stderr__
 _active = 0
 
@@ -16,7 +18,6 @@ debugSettings = 1 << 7
 
 debugAll = 0xff
 
-from multiprocessing import Lock
 mutex = Lock()
 
 

@@ -1,21 +1,16 @@
 import re
+
+import sublime
+
 import lldb
 import lldbutil
 
 from multiprocessing import Lock
 
-import sublime
-# import sublime_plugin
-
+from debug import debug, debugViews
+from utilities import SettingsManager
 from root_objects import lldb_register_view_name, lldb_disassembly_view_name,   \
                          driver_instance, add_lldb_view
-
-from utilities import SettingsManager
-
-
-import sys
-import threading
-from debug import debug, debugViews
 
 
 class LLDBView(object):
@@ -307,7 +302,6 @@ afterwards."""
 
         self.__add_bps(enabled_bp_lines, True)
         self.__add_bps(disabled_bp_lines, False)
-
 
     def __mark_regions(self, regions, type):
         if type == self.eRegionPC:
