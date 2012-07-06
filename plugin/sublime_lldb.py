@@ -321,7 +321,8 @@ def search_for_executable():
 
 
 def ensure_lldb_is_running(w=None):
-    """Returns True if lldb was started. False if it was already running"""
+    """Returns True if lldb is running (we don't care if we started it or not).
+Returns False on error"""
     # Ensure we reflect any changes to saved settings (including project settings)
     # reload_settings()
 
@@ -351,7 +352,7 @@ def ensure_lldb_is_running(w=None):
         debug_prologue(driver_instance())
         return True
 
-    return False
+    return True
 
 
 bp_re_file_line = re.compile('^(.*\S)\s*:\s*(\d+)\s*$')
@@ -574,7 +575,7 @@ class LldbConnectDebugserver(WindowCommand):
                 error = lldb.SBError()
                 target = driver.debugger.CreateTargetWithFileAndArch(None, None)
 
-                sublime.status_message('Connecting to debugserver at: %s' % string))
+                sublime.status_message('Connecting to debugserver at: %s' % string)
                 process = target.ConnectRemote(invalidListener, str(string), None, error)
                 debug(debugPlugin, process)
                 if error.Fail():
