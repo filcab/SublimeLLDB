@@ -70,6 +70,7 @@ def initialize_plugin():
     use_bundled_debugserver = sm.get_default('debugserver.use_bundled', False)
     debugserver_path = sm.get_default('debugerver.path', None)
     global _did_not_find_debugserver
+    found = False
     if debugserver_path is not None:
         # TODO: Check that it is a file
         if os.access(debugserver_path, os.X_OK):
@@ -102,7 +103,8 @@ def initialize_plugin():
             global _os_not_supported
             _os_not_supported = True
 
-    _debug(debugPlugin, 'debugserver path: %s' % os.environ['LLDB_DEBUGSERVER_PATH'])
+    if found:
+        _debug(debugPlugin, 'debugserver path: %s' % os.environ['LLDB_DEBUGSERVER_PATH'])
     _initialized = True
 
 
