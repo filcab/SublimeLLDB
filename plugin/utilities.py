@@ -22,12 +22,9 @@ class SettingsManager(object):
 
     def __init__(self):
         self.__settings = sublime.load_settings('lldb.sublime-settings')
-        self.__settings_keys = root_objects.get_settings_keys()
-
-        for k in self.__settings_keys:
-            listener = self.create_listener(k)
-            self.__settings.add_on_change(k, listener.on_change)
-
+        self.__settings_keys = []
+        # self.__settings_keys = root_objects.get_settings_keys()
+        self.__values = {}
         self.__observers = {}
 
     def create_listener(self, key):
@@ -84,16 +81,28 @@ will be called whenever the key is changed."""
         # Temporary name fix for when we're given a setting name with the prefix
         if args[0].startswith(self.__prefix):
             name = args[0]
+            debug.debug(debugSettings, 'Setting name has lldb prefix: %s' % name)
+            import traceback
+            traceback.print_stack()
         else:
             # Final code should be:
             name = self.__prefix + args[0]
+
+        if name in self.__values:
+            return self.__values[name]
 
         setting = None
         # Is this test needed or do we always have an active window and view
         if sublime.active_window() and sublime.active_window().active_view():
             setting = sublime.active_window().active_view().settings().get(name)
-
         setting = setting or self.__settings.get(name)
+
+        self.__values[name] = setting
+        if name not in self.__settings_keys:
+            self.__settings_keys.append(name)
+            listener = self.create_listener(name)
+            self.__settings.add_on_change(name, listener.on_change)
+
         debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
         return setting
 
@@ -110,6 +119,9 @@ will be called whenever the key is changed."""
             import traceback
             traceback.print_stack()
 
+        if name in self.__values:
+            return self.__values[name]
+
         setting = default
 
         if sublime.active_window() and sublime.active_window().active_view():
@@ -118,21 +130,30 @@ will be called whenever the key is changed."""
         if setting is default:
             setting = self.__settings.get(name, default)
 
+        self.__values[name] = setting
+        if name not in self.__settings_keys:
+            self.__settings_keys.append(name)
+            listener = self.create_listener(name)
+            self.__settings.add_on_change(name, listener.on_change)
+
         debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
         return setting
 
     # TODO: Cache settings on get{,_default}() and use that to see if the
     # setting really was changed
     def on_change(self, key):
-        # TODO: Fix this, get the value
-        debug.debug(debugSettings, 'on_change was called for key: ' + key)
-        key= 'lldb'
-        value = ''
-        if key in self.__observers:
-            obs = self.__observers[key]
+        debug.debug(debugSettings | debugVerbose, 'on_change was called for key: ' + key)
 
-            for o in obs:
-                o(key, value)
+        if key in self.__settings_keys and key in self.__observers:
+            # if key in self.__settings_keys => key in self.__values
+            old_value = self.__values[key]
+            new_value = self.get_default(key, old_value)
+
+            debug.debug(debugSettings, 'Triggering observers for: ' + key)
+            obs = self.__observers[key]
+            if old_value != new_value:
+                for o in obs:
+                    o(key, old_value, new_value)
 
 
 def stderr_msg(str):
