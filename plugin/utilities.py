@@ -84,7 +84,7 @@ will be called whenever the key is changed."""
     #     # Temporary name fix for when we're given a setting name with the prefix
     #     if args[0].startswith(self.__prefix):
     #         name = args[0]
-    #         debug.debug(debugSettings, 'Setting name has lldb prefix: %s' % name)
+    #         debug(debugSettings, 'Setting name has lldb prefix: %s' % name)
     #         import traceback
     #         traceback.print_stack()
     #     else:
@@ -106,7 +106,7 @@ will be called whenever the key is changed."""
     #         listener = self.create_listener(name)
     #         self.__settings.add_on_change(name, listener.on_change)
     #
-    #     debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
+    #     debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
     #     return setting
 
     def get_default(self, name, default, force=False):
@@ -117,7 +117,7 @@ will be called whenever the key is changed."""
             # Final code should be:
             name = self.__prefix + name
         else:
-            debug.debug(debugAny, 'Setting name has lldb prefix: %s' % name)
+            debug(debugAny, 'Setting name has lldb prefix: %s' % name)
             import traceback
             traceback.print_stack()
 
@@ -139,7 +139,7 @@ will be called whenever the key is changed."""
             listener = self.create_listener(name)
             self.__settings.add_on_change(name, listener.on_change)
 
-        debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
+        debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
         return setting
 
     def on_change(self, key):
@@ -152,7 +152,7 @@ will be called whenever the key is changed."""
             new_value = self.get_default(key, old_value, force=True)
 
             if old_value != new_value:
-                debug.debug(debugSettings, 'Triggering on_change observers for: ' + key)
+                debug(debugSettings, 'Triggering on_change observers for: ' + key)
                 for o in obs:
                     o(key, old_value, new_value)
 
