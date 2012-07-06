@@ -57,8 +57,6 @@ class LldbDriver(threading.Thread):
         self.__io_channel = IOChannel(self, self.__io_channel_r_fh, lldb_view_send)
         # self._debugger.SetCloseInputOnEOF(False)
         self.__input_reader = lldb.SBInputReader()
-        self.__input_pty = utilities.PseudoTerminal()
-        self.__output_pty = utilities.PseudoTerminal()
 
     def __del__(self):
         # del self.__io_channel
@@ -324,12 +322,6 @@ class LldbDriver(threading.Thread):
 
         # Warn whoever started us that we can start working
         self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitThreadDidStart)
-
-        # in_pty = self.__input_pty
-        # in_pty.open_first_available_master(os.O_RDWR | os.O_NOCTTY)
-
-        # out_pty = self.__output_pty
-        # out_pty.open_first_available_master(os.O_RDWR | os.O_NOCTTY)
 
         # Create pipes for communicating with the debugger
         in_pipe_fd, out_pipe_fd = os.pipe()
