@@ -15,12 +15,7 @@ from utilities import SettingsManager
 
 import sys
 import threading
-
-from debug import debug as _debug
-from debug import debugViews
-
-def debug(thing):
-    _debug(debugViews, thing)
+from debug import debug, debugViews
 
 
 class LLDBView(object):
@@ -32,7 +27,7 @@ class LLDBView(object):
         # TODO: What happens when a file is renamed?
         self.__file_name = view.file_name()
         add_lldb_view(self)
-        debug("Created an LLDBView with (class, view, name, file_name) == %s" %
+        debug(debugViews, "Created an LLDBView with (class, view, name, file_name) == %s" %
               str((self.__class__.__name__, self.__view, self.__name, self.__file_name)))
 
     def base_view(self):
@@ -150,7 +145,7 @@ class LLDBCodeView(LLDBView):
             self.__update_bps()
             self.pre_update()
         else:
-            debug('Skipped LLDBCodeView.__update_bps() because view.is_loading is True')
+            debug(debugViews, 'Skipped LLDBCodeView.__update_bps() because view.is_loading is True')
             self.pre_update()
             self.needs_update = 'full'  # Horrible hack to update the bp
                                         # markers as well as the pc marker when the on_load
@@ -239,11 +234,11 @@ afterwards."""
 
         old_pc_line = self.__pc_line
         self.__pc_line = None
-        _debug(debugViews, 'old pc_line: %s' % str(old_pc_line))
+        debug(debugViews, 'old pc_line: %s' % str(old_pc_line))
 
         thread = self.__driver.current_thread()
         if not thread:
-            _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
+            debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
             if self.__pc_line != old_pc_line:
                 self.needs_update = old_needs_update or True
             return False
@@ -255,18 +250,18 @@ afterwards."""
                 filename = filespec.GetDirectory() + '/' + filespec.GetFilename()
                 if filename == self.file_name():
                     self.__pc_line = line_entry.GetLine()
-                    _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
+                    debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
                     if self.__pc_line != old_pc_line or old_needs_update == 'full':
                         self.needs_update = old_needs_update or True
                     return True
 
-        _debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
+        debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
         if self.__pc_line != old_pc_line or old_needs_update == 'full':
             self.needs_update = old_needs_update or True
         return False
 
     def update(self):
-        _debug(debugViews, 'Updating LLDBCodeView. needs_update: %s' % str(self.needs_update))
+        debug(debugViews, 'Updating LLDBCodeView. needs_update: %s' % str(self.needs_update))
         if self.needs_update and not self.base_view().is_loading():
             # Hack so we update the bps when updating the view for the first time.
             if self.needs_update == 'full':
@@ -281,7 +276,7 @@ afterwards."""
             # self.__update_bps()
             self.needs_update = False
         else:
-            _debug(debugViews, 'LLDBCodeView: didn\'t need an update (or view was loading): %s' % repr(self))
+            debug(debugViews, 'LLDBCodeView: didn\'t need an update (or view was loading): %s' % repr(self))
 
     def stop(self):
         self.pre_update()  # This will set pc_line to None
@@ -289,7 +284,7 @@ afterwards."""
         self.__disabled_bps = {}
 
         def to_ui():
-            _debug(debugViews, 'executing UI code for LLDBCodeView.stop()')
+            debug(debugViews, 'executing UI code for LLDBCodeView.stop()')
             self.update()
             self.__update_bps()
         sublime.set_timeout(to_ui, 0)
@@ -317,34 +312,34 @@ afterwards."""
     def __mark_regions(self, regions, type):
         if type == self.eRegionPC:
             if len(regions) > 0:
-                debug('(' + self.file_name() + ') adding regions: ' + str((self.eMarkerPCName, regions,
+                debug(debugViews, '(' + self.file_name() + ') adding regions: ' + str((self.eMarkerPCName, regions,
                       self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)))
                 self.base_view().add_regions(self.eMarkerPCName, regions,
                                              self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)
             else:
-                _debug(debugViews, 'erasing region: %s' % self.eMarkerPCName)
+                debug(debugViews, 'erasing region: %s' % self.eMarkerPCName)
                 self.base_view().erase_regions(self.eMarkerPCName)
         elif type == self.eRegionBreakpointEnabled:
             if len(regions) > 0:
-                debug('(' + self.file_name() + ') adding regions: ' + str((self.eMarkerBreakpointEnabledName, regions,
+                debug(debugViews, '(' + self.file_name() + ') adding regions: ' + str((self.eMarkerBreakpointEnabledName, regions,
                       self.eMarkerBreakpointEnabledScope, self.eMarkerBreakpointEnabledIcon, sublime.HIDDEN)))
                 self.base_view().add_regions(self.eMarkerBreakpointEnabledName, regions, self.eMarkerBreakpointEnabledScope,
                               self.eMarkerBreakpointEnabledIcon, sublime.HIDDEN)
             else:
-                _debug(debugViews, 'erasing regions: %s' % self.eMarkerBreakpointEnabledName)
+                debug(debugViews, 'erasing regions: %s' % self.eMarkerBreakpointEnabledName)
                 self.base_view().erase_regions(self.eMarkerBreakpointEnabledName)
         elif type == self.eRegionBreakpointDisabled:
             if len(regions) > 0:
-                debug('(' + self.file_name() + ') adding regions: ' + str((self.eMarkerBreakpointDisabledName, regions,
+                debug(debugViews, '(' + self.file_name() + ') adding regions: ' + str((self.eMarkerBreakpointDisabledName, regions,
                       self.eMarkerBreakpointDisabledScope, self.eMarkerBreakpointDisabledIcon, sublime.HIDDEN)))
                 self.base_view().add_regions(self.eMarkerBreakpointDisabledName, regions, self.eMarkerBreakpointDisabledScope,
                               self.eMarkerBreakpointDisabledIcon, sublime.HIDDEN)
             else:
-                _debug(debugViews, 'erasing regions: %s' % self.eMarkerBreakpointDisabledName)
+                debug(debugViews, 'erasing regions: %s' % self.eMarkerBreakpointDisabledName)
                 self.base_view().erase_regions(self.eMarkerBreakpointDisabledName)
 
     def __mark_pc(self, line, show=False):
-        _debug(debugViews, 'Marking PC for LLDBCodeView: %s' % repr(self))
+        debug(debugViews, 'Marking PC for LLDBCodeView: %s' % repr(self))
         v = self.base_view()
         if line is None:
             to_mark = []
@@ -479,20 +474,20 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
 
     def epilogue(self):
         if self.pc_line != 0:
-            _debug(debugViews, 'Marking PC for LLDBDisassemblyView %s' % repr(self))
+            debug(debugViews, 'Marking PC for LLDBDisassemblyView %s' % repr(self))
             v = self.base_view()
             r = v.text_point(self.pc_line, 0)
             to_mark = [v.line(r)]
 
-            debug('(' + self.name() + ') adding region: ' + str((self.eMarkerPCName, to_mark, self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)))
+            debug(debugViews, '(' + self.name() + ') adding region: ' + str((self.eMarkerPCName, to_mark, self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)))
             self.base_view().add_regions(self.eMarkerPCName, to_mark, self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)
             self.show(to_mark[0], True)
         else:
-            _debug(debugViews, 'erasing region: %s' % self.eMarkerPCName)
+            debug(debugViews, 'erasing region: %s' % self.eMarkerPCName)
             self.base_view().erase_regions(self.eMarkerPCName)
 
     def updated_content(self):
-        _debug(debugViews, 'Updating content for: %s' % repr(self))
+        debug(debugViews, 'Updating content for: %s' % repr(self))
         # Reset the PC line number
         self.__pc_line = 0
 

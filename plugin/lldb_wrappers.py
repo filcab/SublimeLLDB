@@ -15,11 +15,7 @@ START_LLDB_TIMEOUT = 5
 
 import sys
 
-from debug import debug as _debug
-from debug import debugDriver
-
-def debug(thing):
-    _debug(debugDriver, thing)
+from debug import debug, debugDriver
 
 
 def version():
@@ -192,7 +188,7 @@ class LldbDriver(threading.Thread):
 
     def disassemble_frame(self, frame):
         if not frame:
-            _debug(debugDriver, 'Driver.disassemble_frame: not frame == True')
+            debug(debugDriver, 'Driver.disassemble_frame: not frame == True')
             return None
 
         target = frame.GetThread().GetProcess().GetTarget()
@@ -294,7 +290,7 @@ class LldbDriver(threading.Thread):
 
     def ready_for_command(self):
         """Send an eBroadcastBitReadyForInput if the debugger wasn't ready before this call."""
-        debug('ready for command. was waiting: ' + str(self.__waiting_for_command))
+        debug(debugDriver, 'ready for command. was waiting: ' + str(self.__waiting_for_command))
         if not self.__waiting_for_command:
             self.__waiting_for_command = True
             self.broadcaster.BroadcastEventByType(LldbDriver.eBroadcastBitReadyForInput, False)
@@ -421,7 +417,7 @@ class LldbDriver(threading.Thread):
                                     if result.GetErrorSize() > 0:
                                         self.io_channel.err_write(result.GetError(), IOChannel.NO_ASYNC)
 
-                                    debug('waiting_for_command = False')
+                                    debug(debugDriver, 'waiting_for_command = False')
                                     self.__waiting_for_command = False
                                     if self.__input_reader.IsActive():
                                         self.ready_for_command()
@@ -467,7 +463,7 @@ class LldbDriver(threading.Thread):
                 listener = None
                 lldb.SBDebugger.Destroy(self.debugger)
 
-        debug('leaving')
+        debug(debugDriver, 'leaving')
         set_driver_instance(None)
         if self.__on_exit_callback:
             self.__on_exit_callback()
@@ -550,7 +546,7 @@ class LldbDriver(threading.Thread):
         elif type & lldb.SBProcess.eBroadcastBitSTDOUT:
             self.get_process_stderr()
         elif type & lldb.SBProcess.eBroadcastBitInterrupt:
-            debug('Got a process interrupt event!')
+            debug(debugDriver, 'Got a process interrupt event!')
             lldbutil.get_description(ev)
             if self.__process_stopped_callback:
                 self.__process_stopped_callback(self, lldb.SBProcess.GetProcessFromEvent(ev))
@@ -579,7 +575,7 @@ class LldbDriver(threading.Thread):
             elif state == lldb.eStateRunning:
                 None  # Don't be too chatty
             elif state == lldb.eStateExited:
-                debug('process state: ' + lldbutil.state_type_to_str(state))
+                debug(debugDriver, 'process state: ' + lldbutil.state_type_to_str(state))
                 r = self.interpret_command('process status')
                 lldb_view_send(stdout_msg(r[0].GetOutput()))
                 lldb_view_send(stderr_msg(r[0].GetError()))
@@ -589,7 +585,7 @@ class LldbDriver(threading.Thread):
             elif state == lldb.eStateStopped     \
                 or state == lldb.eStateCrashed   \
                 or state == lldb.eStateSuspended:
-                debug('process state: ' + lldbutil.state_type_to_str(state)) if state != lldb.eStateStopped else None
+                debug(debugDriver, 'process state: ' + lldbutil.state_type_to_str(state)) if state != lldb.eStateStopped else None
 
                 if lldb.SBProcess.GetRestartedFromEvent(ev):
                     lldb_view_send('Process %llu stopped and was programmatically restarted.' %
@@ -629,7 +625,7 @@ class LldbDriver(threading.Thread):
                         or t_stop_reason == lldb.eStopReasonWatchpoint \
                         or t_stop_reason == lldb.eStopReasonSignal \
                         or t_stop_reason == lldb.eStopReasonException:
-                        debug('thread stop reason: ' + lldbutil.stop_reason_to_str(current_thread_stop_reason))
+                        debug(debugDriver, 'thread stop reason: ' + lldbutil.stop_reason_to_str(current_thread_stop_reason))
                         if not other_thread:
                             other_thread = t
                         elif t_stop_reason == lldb.eStopReasonPlanComplete:
@@ -770,7 +766,7 @@ class IOChannel(threading.Thread):
 
         self.broadcaster.BroadcastEventByType(IOChannel.eBroadcastBitThreadDidExit)
         self.__driver = None
-        debug('leaving')
+        debug(debugDriver, 'leaving')
 
 
 

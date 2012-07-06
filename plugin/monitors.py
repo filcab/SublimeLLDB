@@ -21,10 +21,7 @@ from root_objects import breakpoint_dict, reset_breakpoint_dict,        \
 import sys
 
 
-from debug import debug as _debug
-from debug import debugMonitors, debugViews
-def debug(thing):
-    _debug(debugMonitors, thing)
+from debug import debug, debugMonitors, debugViews
 
 
 class LLDBUIUpdater(threading.Thread):
@@ -79,7 +76,7 @@ class LLDBUIUpdater(threading.Thread):
 
         packet = self.get_next_packet()
         while packet:
-            debug('LLDBUIUpdater: ' + str(packet))
+            debug(debugMonitors, 'LLDBUIUpdater: ' + str(packet))
             if packet[0] == self.eProcessStopped:
                 state = packet[1]
                 epilogue = packet[2]
@@ -163,7 +160,7 @@ class FileMonitor(threading.Thread):
             for f in r:
                 data = f.read()
                 if data == '':
-                    debug('removing ' + str(f) + ' from FileMonitor')
+                    debug(debugMonitors, 'removing ' + str(f) + ' from FileMonitor')
                     rlist.remove(f)
                 self._callback(data)
 
@@ -173,7 +170,7 @@ class FileMonitor(threading.Thread):
 class LLDBUIListener(sublime_plugin.EventListener):
     def __init__(self):
         super(LLDBUIListener, self).__init__()
-        _debug(debugMonitors, 'Started UIListener')
+        debug(debugMonitors, 'Started UIListener')
 
     def on_close(self, v):
         lldb_view = get_lldb_view_for(v)
@@ -185,7 +182,7 @@ class LLDBUIListener(sublime_plugin.EventListener):
     def on_load(self, v):
         lldb_view = get_lldb_view_for(v)
         if lldb_view:
-            _debug(debugMonitors, 'on_load: isloading: %s, %s' % (str(v.is_loading()), str((repr(lldb_view), lldb_view.file_name()))))
+            debug(debugMonitors, 'on_load: isloading: %s, %s' % (str(v.is_loading()), str((repr(lldb_view), lldb_view.file_name()))))
             # TODO: Instead of updating it here (pre_update will execute
             # on the main thread), send a message to the LLDBUIUpdater
             lldb_view.full_update()

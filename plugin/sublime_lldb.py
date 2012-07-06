@@ -13,12 +13,7 @@ import lldb
 import lldbutil
 
 
-from debug import debug as _debug
-from debug import debugPlugin, debugVerbose
-
-
-def debug(thing):
-    _debug(debugPlugin, thing)
+from debug import debug, debugPlugin, debugVerbose, debugAny
 
 
 from root_objects import driver_instance, set_driver_instance,          \
@@ -62,9 +57,9 @@ def initialize_plugin():
         return
 
     thread_created('<' + threading.current_thread().name + '>')
-    debug('Loading LLDB Sublime Text 2 plugin')
-    debug('python version: %s' % (sys.version_info,))
-    debug('cwd: %s' % os.getcwd())
+    debug(debugAny, 'Loading LLDB Sublime Text 2 plugin')
+    debug(debugAny, 'python version: %s' % (sys.version_info,))
+    debug(debugAny, 'cwd: %s' % os.getcwd())
 
     sm = SettingsManager.getSM()
     use_bundled_debugserver = sm.get_default('debugserver.use_bundled', False)
@@ -104,7 +99,7 @@ def initialize_plugin():
             _os_not_supported = True
 
     if found:
-        _debug(debugPlugin, 'debugserver path: %s' % os.environ['LLDB_DEBUGSERVER_PATH'])
+        debug(debugPlugin, 'debugserver path: %s' % os.environ['LLDB_DEBUGSERVER_PATH'])
     _initialized = True
 
 
@@ -117,7 +112,7 @@ def debug_prologue(driver):
     sm = SettingsManager.getSM()
     prologue = sm.get_default('prologue', [])
 
-    _debug(debugPlugin, 'LLDB prologue: %s' % str(prologue))
+    debug(debugPlugin, 'LLDB prologue: %s' % str(prologue))
     for c in prologue:
         lldb_view_write(lldb_prompt() + c + '\n')
         driver.interpret_command(c)
@@ -198,12 +193,12 @@ def cleanup(w=None):
 
 @atexit.register
 def atexit_function():
-    debug('running atexit_function')
+    debug(debugPlugin, 'running atexit_function')
     cleanup(window_ref())
 
 
 def unload_handler():
-    debug('unloading lldb plugin')
+    debug(debugPlugin, 'unloading lldb plugin')
     cleanup(window_ref())
 
 
@@ -393,7 +388,7 @@ def create_default_bps_for_target(target):
                 ++n
                 continue
 
-            debug("couldn't tell where the bp spec '" + bp + "' should break.")
+            debug(debugPlugin, "couldn't tell where the bp spec '" + bp + "' should break.")
 
         # bp isn't an str. It should be a dict
         elif 'file' in bp and 'line' in bp:
@@ -403,13 +398,13 @@ def create_default_bps_for_target(target):
             target.BreakpointCreateByAddress(bp['address'])
             ++n
         else:
-            debug('unrecognized breakpoint type: ' + str(bp))
+            debug(debugPlugin, 'unrecognized breakpoint type: ' + str(bp))
 
 
 # TODO: Check when each command should be enabled.
 class WindowCommand(sublime_plugin.WindowCommand):
     def setup(self):
-        _debug(debugPlugin, 'Command: %s, identity: %x' % (self.__class__.__name__, id(self)))
+        debug(debugPlugin, 'Command: %s, identity: %x' % (self.__class__.__name__, id(self)))
         # global lldb_out_view
         if lldb_out_view() is None:
             sm = SettingsManager.getSM()
@@ -449,7 +444,7 @@ class LldbDebugProgram(WindowCommand):
         if exe:
             args = sm.get_default('args', [])
 
-            debug('Launching program: ' + exe + ' (' + arch + '), with args: ' + str(args))
+            debug(debugPlugin, 'Launching program: ' + exe + ' (' + arch + '), with args: ' + str(args))
             t = driver_instance().debugger.CreateTargetWithFileAndArch(str(exe), str(arch))
             driver_instance().debugger.SetSelectedTarget(t)
             create_default_bps_for_target(t)
@@ -498,34 +493,34 @@ class LldbAttachProcess(WindowCommand):
                 try:
                     pid = int(string)
                     # attach_info.SetProcessID(pid)
-                    debug('Attaching to pid: %d' % pid)
+                    debug(debugPlugin, 'Attaching to pid: %d' % pid)
                     process = target.AttachToProcessWithID(lldb.SBListener(), pid, error)
                 except ValueError:
                     # We have a process name, not a pid.
                     # pid = lldb.LLDB_INVALID_PROCESS_ID
                     # attach_info.SetExecutable(str(string))
                     name = str(string) if string != '' else old_exec_module
-                    debug('Attaching to process: %s (wait=%s)' % (name, str(wait_for_launch)))
+                    debug(debugPlugin, 'Attaching to process: %s (wait=%s)' % (name, str(wait_for_launch)))
                     process = target.AttachToProcessWithName(lldb.SBListener(), name, wait_for_launch, error)
 
                 # attach_info.SetWaitForLaunch(wait_for_launch)
 
                 # error = lldb.SBError()
-                # debug(attach_info)
+                # debug(debugPlugin, attach_info)
                 # process = target.Attach(attach_info, error)
 
-                debug(process)
+                debug(debugPlugin, process)
                 if error.Fail():
                     sublime.error_message("Attach failed: %s" % error.GetCString())
 
                 new_exec_module = target.GetExecutable()
                 if new_exec_module != old_exec_module:
-                    debug('Executable module changed from "%s" to "%s".' % \
+                    debug(debugPlugin, 'Executable module changed from "%s" to "%s".' % \
                         (old_exec_module, new_exec_module))
 
                 new_triple = target.GetTriple()
                 if new_triple != old_triple:
-                    debug('Target triple changed from "%s" to "%s".' % (old_triple, new_triple))
+                    debug(debugPlugin, 'Target triple changed from "%s" to "%s".' % (old_triple, new_triple))
 
                 # How can we setup the default breakpoints?
                 # We *could* start a new thread with a listener, just for that...
@@ -553,7 +548,7 @@ class LldbConnectDebugserver(WindowCommand):
                 error = lldb.SBError()
                 target = driver.debugger.CreateTargetWithFileAndArch(None, None)
                 process = target.ConnectRemote(invalidListener, str(string), None, error)
-                debug(process)
+                debug(debugPlugin, process)
                 if error.Fail():
                     sublime.error_message("Connect failed: %s" % error.GetCString())
                 else:
@@ -928,7 +923,7 @@ class LldbViewSharedLibraries(WindowCommand):
 
         if target:
             for i in xrange(0, target.GetNumModules()):
-                _debug(debugPlugin | debugVerbose, lldbutil.get_description(target.GetModuleAtIndex(i)))
+                debug(debugPlugin | debugVerbose, lldbutil.get_description(target.GetModuleAtIndex(i)))
                 result += lldbutil.get_description(target.GetModuleAtIndex(i)) + '\n'
 
             # Re-use a view, if we already have one.

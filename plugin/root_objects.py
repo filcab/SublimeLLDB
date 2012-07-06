@@ -26,11 +26,7 @@ __error_fh = None
 
 
 import sys
-
-from debug import debug as _debug
-from debug import debugRoot
-def debug(thing):
-    _debug(debugRoot, thing)
+from debug import debug, debugRoot
 
 
 def ui_updater():
@@ -114,9 +110,9 @@ def del_bp_loc(filename, line):
             else:
                 bps_file.append((l, n - 1))
                 return False
-    debug('Error: asked to remove a non-existing breakpoint?')
-    debug('filename: %s, line: %d' % (filename, line))
-    debug(__breakpoint_dict)
+    debug(debugRoot, 'Error: asked to remove a non-existing breakpoint?')
+    debug(debugRoot, 'filename: %s, line: %d' % (filename, line))
+    debug(debugRoot, __breakpoint_dict)
     return False
 
 
@@ -247,7 +243,7 @@ def add_lldb_view(v):
 
 
 def del_lldb_view(v):
-    _debug(debugRoot, 'Removing %s from lldb_views.' % str(v))
+    debug(debugRoot, 'Removing %s from lldb_views.' % str(v))
     __lldb_views.remove(v)
 
 
@@ -257,7 +253,7 @@ def lldb_views():
 
 
 def lldb_views_update(epilogue):
-    _debug(debugRoot, 'lldb_views_update')
+    debug(debugRoot, 'lldb_views_update')
     for v in __lldb_views:
         v.pre_update()
 
@@ -278,7 +274,7 @@ def lldb_views_destroy():
 
 
 def get_lldb_view_for(v):
-    _debug(debugRoot, 'lldb_views: %s' % repr(__lldb_views))
+    debug(debugRoot, 'lldb_views: %s' % repr(__lldb_views))
     name = v.name()
     file_name = v.file_name()
     for lldb_view in __lldb_views:
@@ -396,7 +392,7 @@ class LldbInputDelegate(InputPanelDelegate):
 
     def on_cancel(self):
         LldbInputDelegate._lldb_input_panel_is_active = False
-        debug('canceled input panel')
+        debug(debugRoot, 'canceled input panel')
 
 
 import lldb_wrappers
