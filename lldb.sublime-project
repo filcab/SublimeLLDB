@@ -2,13 +2,13 @@
     "folders":
     [
         {
-            "path": "/Users/filcab/dev/softek/lldb-plugin"
+            "path": "/Users/filcab/dev/softek/SublimeLLDB"
         }
     ],
     "settings":
     {
         /* project-specific settings for lldb */
-        "lldb.exe": "/Users/filcab/dev/softek/lldb-plugin/tests",
+        "lldb.exe": "/Users/filcab/dev/softek/SublimeLLDB/tests",
         // "lldb.args": [],
         // "lldb.arch": lldb.LLDB_ARCH_DEFAULT
         "lldb.attach.wait_for_launch": false,
