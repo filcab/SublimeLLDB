@@ -418,10 +418,15 @@ class LldbCommand(WindowCommand):
     def run(self):
         self.setup()
         lldb_toggle_output_view(self.window, show=True)
-        if not ensure_lldb_is_running(self.window):
-            # lldb wasn't started by us. show the input panel if possible
-            if not driver_instance().maybe_get_input():
-                sublime.status_message('Unable to send commands to the debugger')
+        if ensure_lldb_is_running(self.window):
+            sublime.status_message('Debugging session started.')
+        else:
+            sublime.error_message('Couldn\'t get a debugging session.')
+            return False
+
+        # lldb wasn't started by us. show the input panel if possible
+        if not driver_instance().maybe_get_input():
+            sublime.error_message('Unable to send commands to the debugger.')
 
 
 class LldbDebugProgram(WindowCommand):
@@ -432,7 +437,12 @@ class LldbDebugProgram(WindowCommand):
 
     def run(self):
         self.setup()
-        ensure_lldb_is_running(self.window)
+        if ensure_lldb_is_running(self.window):
+            sublime.status_message('Debugging session started.')
+        else:
+            sublime.error_message('Couldn\'t get a debugging session.')
+            return False
+
         lldb_toggle_output_view(self.window, show=True)
 
         exe = search_for_executable()
@@ -445,8 +455,15 @@ class LldbDebugProgram(WindowCommand):
             debug(debugPlugin, 'Launching program: ' + exe + ' (' + arch + '), with args: ' + str(args))
             t = driver_instance().debugger.CreateTargetWithFileAndArch(str(exe), str(arch))
             driver_instance().debugger.SetSelectedTarget(t)
+
+            sublime.status_message('Setting default breakpoints.')
             create_default_bps_for_target(t)
-            t.LaunchSimple(args, [], os.getcwd())
+
+            sublime.status_message('Launching program (%s): %s %s' % (arch, exe, args))
+            if t.LaunchSimple(args, [], os.getcwd()):
+                sublime.status_message('Program successfully launched.')
+            else:
+                sublime.error_message('Program failed to launch.')
 
 
 class LldbAttachProcess(WindowCommand):
@@ -456,8 +473,11 @@ class LldbAttachProcess(WindowCommand):
             self.__owner = owner
 
         def on_done(self, string):
-            ensure_lldb_is_running(self.__owner.window)
-            lldb_toggle_output_view(self.__owner.window, show=True)
+            if ensure_lldb_is_running(self.window):
+                sublime.status_message('Debugging session started.')
+            else:
+                sublime.error_message('Couldn\'t get a debugging session.')
+                return False
 
             driver = driver_instance()
             if driver:
@@ -492,6 +512,7 @@ class LldbAttachProcess(WindowCommand):
                     pid = int(string)
                     # attach_info.SetProcessID(pid)
                     debug(debugPlugin, 'Attaching to pid: %d' % pid)
+                    sublime.status_message('Attaching to pid: %d' % pid)
                     process = target.AttachToProcessWithID(lldb.SBListener(), pid, error)
                 except ValueError:
                     # We have a process name, not a pid.
@@ -499,6 +520,7 @@ class LldbAttachProcess(WindowCommand):
                     # attach_info.SetExecutable(str(string))
                     name = str(string) if string != '' else old_exec_module
                     debug(debugPlugin, 'Attaching to process: %s (wait=%s)' % (name, str(wait_for_launch)))
+                    sublime.status_message('Attaching to process: %s (wait=%s)' % (name, wait_for_launch))
                     process = target.AttachToProcessWithName(lldb.SBListener(), name, wait_for_launch, error)
 
                 # attach_info.SetWaitForLaunch(wait_for_launch)
@@ -522,6 +544,8 @@ class LldbAttachProcess(WindowCommand):
 
                 # How can we setup the default breakpoints?
                 # We *could* start a new thread with a listener, just for that...
+            else:
+                sublime.error_message('Couldn\'t get a debugging session.')
 
     def run(self):
         self.setup()
@@ -537,7 +561,11 @@ class LldbConnectDebugserver(WindowCommand):
             self.__owner = owner
 
         def on_done(self, string):
-            ensure_lldb_is_running(self.__owner.window)
+            if ensure_lldb_is_running(self.window):
+                sublime.status_message('Debugging session started.')
+            else:
+                sublime.error_message('Couldn\'t get a debugging session.')
+                return False
             lldb_toggle_output_view(self.__owner.window, show=True)
 
             driver = driver_instance()
@@ -545,12 +573,15 @@ class LldbConnectDebugserver(WindowCommand):
                 invalidListener = lldb.SBListener()
                 error = lldb.SBError()
                 target = driver.debugger.CreateTargetWithFileAndArch(None, None)
+
+                sublime.status_message('Connecting to debugserver at: %s' % string))
                 process = target.ConnectRemote(invalidListener, str(string), None, error)
                 debug(debugPlugin, process)
                 if error.Fail():
                     sublime.error_message("Connect failed: %s" % error.GetCString())
                 else:
                     driver.debugger.SetSelectedTarget(target)
+                    sublime.status_message('Connected to debugserver.')
 
             # How can we setup the default breakpoints?
             # We *could* start a new thread with a listener, just for that...
@@ -571,7 +602,11 @@ class LldbStopDebugging(WindowCommand):
         self.setup()
         driver = driver_instance()
         if driver:
+            sublime.status_message('Stopping the debugger.')
             cleanup(self.window)
+            sublime.status_message('Debugging session stopped.')
+        else:
+            sublime.error_message('Nothing to stop. Debugger not running.')
 
 
 class LldbContinue(WindowCommand):
@@ -594,6 +629,8 @@ class LldbContinue(WindowCommand):
                 process.Continue()
         # TODO: Decide what to do in case of errors.
         # e.g: Warn about no running program, etc.
+        else:
+            sublime.error_message('Nothing to continue. Debugger not running.')
 
 
 class LldbSendSignal(WindowCommand):
@@ -605,9 +642,12 @@ class LldbSendSignal(WindowCommand):
         def on_done(self, string):
             if self.__process:  # Check if it's still valid
                 # TODO: Allow specification of signals by name.
-                error = self.__process.Signal(int(string))
+                signo = int(string)
+                error = self.__process.Signal(signo)
                 if error.Fail():
                     sublime.error_message(error.GetCString())
+                else:
+                    sublime.status_message('Sent signal number %d' % signo)
 
     def is_enabled(self):
         driver = driver_instance()
@@ -629,6 +669,8 @@ class LldbSendSignal(WindowCommand):
                 delegate.show_on_window(self.window, 'Signal number')
                 # TODO: check what happens. From our standpoint, it seems the process terminated successfully.
                 #       on the lldb CLI interface, we see the signal.
+            else:
+                sublime.error_message('No running process.')
 
 
 class LldbStepOver(WindowCommand):
@@ -803,6 +845,7 @@ class LldbListBreakpoints(WindowCommand):
             target = driver_instance().debugger.GetSelectedTarget()
 
         if not target:
+            sublime.error_message('No selected target.')
             return
 
         bp_list = []
@@ -839,7 +882,10 @@ class LldbBreakAtLine(WindowCommand):
         if target and v:
             file = v.file_name()
             (line, col) = v.rowcol(v.sel()[0].begin())
-            target.BreakpointCreateByLocation(str(file), line + 1)
+            if target.BreakpointCreateByLocation(str(file), line + 1):
+                sublime.status_message('Breakpoint set at %s:%d' % (file, line))
+            else:
+                sublime.error_message('Couldn\'t set breakpoint at %s:%d' % (file, line))
 
 
 class LldbBreakAtSymbol(WindowCommand):
@@ -851,7 +897,8 @@ class LldbBreakAtSymbol(WindowCommand):
 
         def on_done(self, string):
             if self.__target:  # Check if it's still valid
-                self.__target.BreakpointCreateByName(str(string))
+                if self.__target.BreakpointCreateByName(str(string)):
+                    sublime.status_message('Breakpoint set at symbol `%s\'' % (string))
 
     def is_enabled(self):
         driver = driver_instance()
@@ -882,6 +929,7 @@ class LldbToggleEnableBreakpoints(WindowCommand):
                     bp.SetEnabled(True)
 
             set_disabled_bps([])
+            msg = 'Breakpoints disabled.'
 
         else:
             # bps are enabled. Disable them
@@ -895,10 +943,7 @@ class LldbToggleEnableBreakpoints(WindowCommand):
                         disabled_bps().append(bp)
                         bp.SetEnabled(False)
 
-        if len(disabled_bps()) == 0:
-            msg = 'Breakpoints disabled.'
-        else:
-            msg = 'Breakpoints enabled.'
+                msg = 'Breakpoints enabled.'
 
         self.status_message(msg)
 
@@ -1033,7 +1078,12 @@ class LldbClearOutputView(WindowCommand):
 class LldbRegisterView(WindowCommand):
     def run(self, thread=None):
         self.setup()
-        ensure_lldb_is_running(self.window)
+        if ensure_lldb_is_running(self.window):
+            sublime.status_message('Debugging session started.')
+        else:
+            sublime.error_message('Couldn\'t get a debugging session.')
+            return False
+
         if thread is None:
             thread = driver_instance().current_thread()
 
@@ -1052,7 +1102,12 @@ class LldbRegisterView(WindowCommand):
 class LldbDisassembleFrame(WindowCommand):
     def run(self, thread=None):
         self.setup()
-        ensure_lldb_is_running(self.window)
+        if ensure_lldb_is_running(self.window):
+            sublime.status_message('Debugging session started.')
+        else:
+            sublime.error_message('Couldn\'t get a debugging session.')
+            return False
+
         if thread is None:
             thread = driver_instance().current_thread()
 
