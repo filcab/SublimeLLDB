@@ -5,7 +5,7 @@ import sublime
 
 import root_objects
 import debug
-from debug import debugSettings
+from debug import debugSettings, debugVerbose
 
 # This class is not thread-safe, but has everything we need for our
 # settings' management, and we can guarantee that we won't have any race
@@ -55,11 +55,15 @@ class SettingsManager(object):
 will be called whenever the key is changed."""
         if key in self.__observers:
             self.__observers[key].append(observer)
+        else:
+            self.__observers[key] = [observer]
 
     def del_observer(self, observer, key=None):
         if key is None:
             new_observers = {}
             for k, os in self.__observers:
+                # FIXME: call Settings.clean_on_change() if we go down to 0
+                # observers on a key.
                 os.remove(observer)
                 if len(os) > 0:
                     new_observers[k] = os
@@ -71,43 +75,43 @@ will be called whenever the key is changed."""
                 if len(os) > 0:
                     self.__observers[k] = os
                 else:
+                    # FIXME: call Settings.clean_on_change() if we go down to 0
+                    # observers on a key.
                     del self.__observers[k]
 
-    # TODO: Record the settings that we get in a dict for subsequent gets
-    def get(self, *args):  # name, default=None, error=True):
-        if len(args) > 1:
-            return self.get_default(*args)
+    # def get(self, *args, **dargs):  # name, default=None, error=True, force=False):
+    #     if len(args) > 1:
+    #         return self.get_default(*args, **dargs)
+    #
+    #     # Temporary name fix for when we're given a setting name with the prefix
+    #     if args[0].startswith(self.__prefix):
+    #         name = args[0]
+    #         debug.debug(debugSettings, 'Setting name has lldb prefix: %s' % name)
+    #         import traceback
+    #         traceback.print_stack()
+    #     else:
+    #         # Final code should be:
+    #         name = self.__prefix + args[0]
+    #
+    #     if not ('force' in dargs and dargs[force]) and name in self.__values:
+    #         return self.__values[name]
+    #
+    #     setting = None
+    #     # Is this test needed or do we always have an active window and view
+    #     if sublime.active_window() and sublime.active_window().active_view():
+    #         setting = sublime.active_window().active_view().settings().get(name)
+    #     setting = setting or self.__settings.get(name)
+    #
+    #     self.__values[name] = setting
+    #     if name not in self.__settings_keys:
+    #         self.__settings_keys.append(name)
+    #         listener = self.create_listener(name)
+    #         self.__settings.add_on_change(name, listener.on_change)
+    #
+    #     debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
+    #     return setting
 
-        # Temporary name fix for when we're given a setting name with the prefix
-        if args[0].startswith(self.__prefix):
-            name = args[0]
-            debug.debug(debugSettings, 'Setting name has lldb prefix: %s' % name)
-            import traceback
-            traceback.print_stack()
-        else:
-            # Final code should be:
-            name = self.__prefix + args[0]
-
-        if name in self.__values:
-            return self.__values[name]
-
-        setting = None
-        # Is this test needed or do we always have an active window and view
-        if sublime.active_window() and sublime.active_window().active_view():
-            setting = sublime.active_window().active_view().settings().get(name)
-        setting = setting or self.__settings.get(name)
-
-        self.__values[name] = setting
-        if name not in self.__settings_keys:
-            self.__settings_keys.append(name)
-            listener = self.create_listener(name)
-            self.__settings.add_on_change(name, listener.on_change)
-
-        debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
-        return setting
-
-    # TODO: Record the settings that we get in a dict for subsequent gets
-    def get_default(self, name, default):
+    def get_default(self, name, default, force=False):
         # Temporary name fix for when we're given a setting name with the prefix
         # In the future, this test will be gone and no setting will have
         # the 'lldb.' prefix
@@ -115,11 +119,11 @@ will be called whenever the key is changed."""
             # Final code should be:
             name = self.__prefix + name
         else:
-            debug.debug(debugSettings, 'Setting name has lldb prefix: %s' % name)
+            debug.debug(debugAny, 'Setting name has lldb prefix: %s' % name)
             import traceback
             traceback.print_stack()
 
-        if name in self.__values:
+        if not force and name in self.__values:
             return self.__values[name]
 
         setting = default
@@ -130,6 +134,7 @@ will be called whenever the key is changed."""
         if setting is default:
             setting = self.__settings.get(name, default)
 
+        # Cache the setting value and setup a listener
         self.__values[name] = setting
         if name not in self.__settings_keys:
             self.__settings_keys.append(name)
@@ -139,19 +144,17 @@ will be called whenever the key is changed."""
         debug.debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
         return setting
 
-    # TODO: Cache settings on get{,_default}() and use that to see if the
-    # setting really was changed
     def on_change(self, key):
-        debug.debug(debugSettings | debugVerbose, 'on_change was called for key: ' + key)
-
         if key in self.__settings_keys and key in self.__observers:
             # if key in self.__settings_keys => key in self.__values
             old_value = self.__values[key]
-            new_value = self.get_default(key, old_value)
-
-            debug.debug(debugSettings, 'Triggering observers for: ' + key)
             obs = self.__observers[key]
+
+            key = key[len(self.__prefix):]
+            new_value = self.get_default(key, old_value, force=True)
+
             if old_value != new_value:
+                debug.debug(debugSettings, 'Triggering on_change observers for: ' + key)
                 for o in obs:
                     o(key, old_value, new_value)
 
