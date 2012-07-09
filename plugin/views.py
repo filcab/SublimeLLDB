@@ -7,7 +7,7 @@ import lldbutil
 
 from multiprocessing import Lock
 
-from debug import debug, debugViews
+from debug import debug, debugViews, debugSettings
 from utilities import SettingsManager
 from root_objects import lldb_register_view_name, lldb_disassembly_view_name,   \
                          driver_instance, add_lldb_view
@@ -111,6 +111,17 @@ class LLDBCodeView(LLDBView):
     __bp_lock = Lock()
 
     # Settings for the whole class
+    settings_keys = ['markers.current_line.region_name',
+                     'markers.current_line.scope',
+                     'markers.current_line.scope.crashed',
+                     'markers.current_line.icon',
+                     'markers.breakpoint.enabled.region_name',
+                     'markers.breakpoint.enabled.scope',
+                     'markers.breakpoint.enabled.type',
+                     'markers.breakpoint.disabled.region_name',
+                     'markers.breakpoint.disabled.scope',
+                     'markers.breakpoint.disabled.type']
+
     __sm = SettingsManager.getSM()
     eMarkerPCName = __sm.get_default('markers.current_line.region_name', 'lldb.location')
     eMarkerPCScope = __sm.get_default('markers.current_line.scope', 'bookmark')
@@ -145,10 +156,63 @@ class LLDBCodeView(LLDBView):
                                         # markers as well as the pc marker when the on_load
                                         # method calls update on this object
 
+        # FIXME: Just make every LLDBCodeView observe the settings.
+        #        Another way to do it would be for the class to observe and
+        #        then call the appropriate method on all the instances.
+        for k in self.settings_keys:
+            self.__sm.add_observer(k, self.setting_updated)
+
+    def __del__(self):
+        # FIXME: This method won't get called since our observers dict holds a
+        # reference to this object.
+        self.__sm.del_observer(self.settings_updated)
+
     def __repr__(self):
         return '<%s: file_name: %s, needs_update: %s, pc_line: %s, enabled_bps: %s, disable_bps: %s>' % \
             (self.__class__.__name__, self.file_name(), str(self._needs_update),
              str(self.__pc_line), str(self.__enabled_bps), str(self.__disabled_bps))
+
+    def setting_updated(self, key, old, new):
+        debug(debugSettings | debugViews, 'Updating setting %s from %s to %s. instance: %s' % (key, old, new, self))
+        if key.startswith('markers.current_line'):
+            # Update all the PC settings.
+            self.__mark_pc(None)
+            self.__class__.eMarkerPCName = self.__sm.get_default('markers.current_line.region_name', 'lldb.location')
+            self.__class__.eMarkerPCScope = self.__sm.get_default('markers.current_line.scope', 'bookmark')
+            self.__class__.eMarkerPCScopeCrashed = self.__sm.get_default('markers.current_line.scope.crashed', 'invalid')
+            self.__class__.eMarkerPCIcon = self.__sm.get_default('markers.current_line.icon', 'bookmark')
+            self.__mark_pc(self.__pc_line - 1, False)
+
+        elif key.startswith('markers.breakpoint.enabled'):
+            # Update all the enabled bp settings.
+            self.__mark_regions([], self.eRegionBreakpointEnabled)
+            self.__class__.eMarkerBreakpointEnabledName = self.__sm.get_default('markers.breakpoint.enabled.region_name',
+                                                                           'lldb.breakpoint.enabled')
+            self.__class__.eMarkerBreakpointEnabledScope = self.__sm.get_default('markers.breakpoint.enabled.scope', 'string')
+            self.__class__.eMarkerBreakpointEnabledIcon = self.__sm.get_default('markers.breakpoint.enabled.type', 'circle')
+            # TODO: Check if the settings' on_change method is always called in
+            # the main thread. If not, we'll have to guard the regions
+            # definition
+            v = self.base_view()
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+            self.__mark_regions(regions, self.eRegionBreakpointEnabled)
+
+        elif key.startswith('markers.breakpoint.disabled'):
+            # Update all the disabled bp settings.
+            self.__mark_regions([], self.eRegionBreakpointDisabled)
+            self.__class__.eMarkerBreakpointDisabledName = self.__sm.get_default('markers.breakpoint.disabled.region_name',
+                                                                                 'lldb.breakpoint.disabled')
+            self.__class__.eMarkerBreakpointDisabledScope = self.__sm.get_default('markers.breakpoint.disabled.scope', 'bookmark')
+            self.__class__.eMarkerBreakpointDisabledIcon = self.__sm.get_default('markers.breakpoint.disabled.type', 'circle')
+            # TODO: Check if the settings' on_change method is always called in
+            # the main thread. If not, we'll have to guard the regions
+            # definition
+            v = self.base_view()
+            regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+            self.__mark_regions(regions, self.eRegionBreakpointDisabled)
+
+        else:
+            raise Exception('Weird key to be updated for LLDBCodeView: %s' % key)
 
     @property
     def needs_update(self):
