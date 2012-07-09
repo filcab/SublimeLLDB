@@ -6,9 +6,9 @@ from debug import debug, debugSettings, debugAny
 
 
 class SettingsManager(object):
-# This class is not thread-safe, but has everything we need for our
-# settings' management, and we can guarantee that we won't have any race
-# condition when creating the instance.
+    # This class is not thread-safe, but has everything we need for our
+    # settings' management, and we can guarantee that we won't have any race
+    # condition when creating the instance.
     __sm = None
     __prefix = 'lldb.'
 
@@ -50,7 +50,8 @@ class SettingsManager(object):
 
     def add_observer(self, key, observer):
         """Observer is a function of two arguments: key and new value. It
-will be called whenever the key is changed."""
+            will be called whenever the key is changed."""
+        key = self.__prefix + key
         if key in self.__observers:
             self.__observers[key].append(observer)
         else:

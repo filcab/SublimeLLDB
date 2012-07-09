@@ -48,22 +48,21 @@ class LLDBView(object):
         self.__view.show(point_or_region_or_region_set, show_surrounds)
 
     def full_update(self):
-        """This method calls pre_update and then makes the main thread
-call update().
-    It should only be used when there is only one view to update."""
+        """This method calls pre_update and then makes the main thread call update().
+            It should only be used when there is only one view to update."""
         self.pre_update()
         sublime.set_timeout(self.update, 0)
 
     # Method that can be overridden, if need be
     def pre_update(self):
-        """This method will do what's needed to prepare for the view
-update. It won't necessarily be called from the main thread."""
+        """This method will do what's needed to prepare for the view update.
+            It won't necessarily be called from the main thread."""
         pass
 
     # Method that has to be overridden by each subclass
     def update(self):
         """This method will update the view. Ideally, only UI code will be
-run here. It will be called from the main (UI) thread."""
+            run here. It will be called from the main (UI) thread."""
         assert False, "%s.update() wasn't overridden." % self.__class__.__name__
 
     def stop(self):
@@ -163,7 +162,7 @@ class LLDBCodeView(LLDBView):
     # immediately update the breakpoint markers
     def mark_bp(self, line, is_enabled=True):
         """Mark a new breakpoint as enabled/disabled and immediately mark
-its region."""
+            its region."""
         self.__add_bps([line], is_enabled)
         v = self.base_view()
 
@@ -204,7 +203,7 @@ its region."""
 
     def unmark_bp(self, line, is_enabled=True):
         """Remove merkings for a breakpoint and update the UI
-afterwards."""
+            afterwards."""
         self.__remove_bps([line], is_enabled)
         v = self.base_view()
 
@@ -352,7 +351,7 @@ afterwards."""
 
     def __add_bps(self, lines, are_enabled=True):
         """Adds breakpoints (enabled or disabled) to the view.
-__update_bps() must be called afterwards to refresh the UI."""
+            __update_bps() must be called afterwards to refresh the UI."""
         if len(lines) > 0:
             self.needs_update = True
 
@@ -375,7 +374,7 @@ __update_bps() must be called afterwards to refresh the UI."""
 
     def __remove_bps(self, lines, are_enabled=True):
         """Removes breakpoints (enabled or disabled) from the view.
-__update_bps() must be called afterwards to refresh the UI."""
+            __update_bps() must be called afterwards to refresh the UI."""
         if len(lines) > 0:
             self.needs_update = True
 
