@@ -138,16 +138,6 @@ def got_input_function():
     return __got_input_function
 
 
-# def show_lldb_panel(w=None):
-#     if not w:
-#         w = window_ref()
-#     # last args: on_done, on_change, on_cancel.
-#     # On change we could try to complete the input using a quick_panel.
-#     if w:
-#         w.show_input_panel('lldb', '',
-#                             __got_input_function, None, None),
-
-
 def lldb_input_fh():
     return __input_fh
 

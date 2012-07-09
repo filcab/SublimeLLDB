@@ -463,13 +463,6 @@ class LLDBRegisterView(LLDBReadOnlyView):
         self.set_name(lldb_register_view_name(thread))
         self.set_scratch()
 
-    # def __nonzero__(self):
-    #     return self.valid
-
-    # @property
-    # def valid(self):
-    #     return self.__thread.IsValid()
-
     @property
     def thread(self):
         return self.__thread

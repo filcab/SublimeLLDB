@@ -78,38 +78,6 @@ class SettingsManager(object):
                     # observers on a key.
                     del self.__observers[k]
 
-    # def get(self, *args, **dargs):  # name, default=None, error=True, force=False):
-    #     if len(args) > 1:
-    #         return self.get_default(*args, **dargs)
-    #
-    #     # Temporary name fix for when we're given a setting name with the prefix
-    #     if args[0].startswith(self.__prefix):
-    #         name = args[0]
-    #         debug(debugSettings, 'Setting name has lldb prefix: %s' % name)
-    #         import traceback
-    #         traceback.print_stack()
-    #     else:
-    #         # Final code should be:
-    #         name = self.__prefix + args[0]
-    #
-    #     if not ('force' in dargs and dargs[force]) and name in self.__values:
-    #         return self.__values[name]
-    #
-    #     setting = None
-    #     # Is this test needed or do we always have an active window and view
-    #     if sublime.active_window() and sublime.active_window().active_view():
-    #         setting = sublime.active_window().active_view().settings().get(name)
-    #     setting = setting or self.__settings.get(name)
-    #
-    #     self.__values[name] = setting
-    #     if name not in self.__settings_keys:
-    #         self.__settings_keys.append(name)
-    #         listener = self.create_listener(name)
-    #         self.__settings.add_on_change(name, listener.on_change)
-    #
-    #     debug(debugSettings, 'setting %s: %s' % (name, repr(setting)))
-    #     return setting
-
     def get_default(self, name, default, force=False):
         # Temporary name fix for when we're given a setting name with the prefix
         # In the future, this test will be gone and no setting will have
