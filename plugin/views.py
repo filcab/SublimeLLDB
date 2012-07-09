@@ -504,6 +504,11 @@ class LLDBRegisterView(LLDBReadOnlyView):
 class LLDBThreadDisassemblyView(LLDBReadOnlyView):
     __pc_line = 0
 
+    settings_keys = ['markers.current_line.region_name',
+                     'markers.current_line.scope',
+                     'markers.current_line.scope.crashed',
+                     'markers.current_line.icon']
+
     __sm = SettingsManager.getSM()
     eMarkerPCName = __sm.get_default('markers.current_line.region_name', 'lldb.location')
     eMarkerPCScope = __sm.get_default('markers.current_line.scope', 'bookmark')
@@ -517,6 +522,12 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         self.set_name(lldb_disassembly_view_name(thread.GetThreadID()))
         self.set_scratch()
 
+        # FIXME: Just make every LLDBCodeView observe the settings.
+        #        Another way to do it would be for the class to observe and
+        #        then call the appropriate method on all the instances.
+        for k in self.settings_keys:
+            self.__sm.add_observer(k, self.setting_updated)
+
     def __repr__(self):
         return '<%s: name: %s, thread %s, pc_line: %d, content size: %d>' % \
             (self.__class__.__name__, self.name(), self.thread, self.pc_line, len(self.content()))
@@ -528,6 +539,20 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
     @property
     def pc_line(self):
         return self.__pc_line
+
+    def setting_updated(self, key, old, new):
+        debug(debugSettings | debugViews, 'Updating setting %s from %s to %s. instance: %s' % (key, old, new, self))
+        if key.startswith('markers.current_line'):
+            # Update all the PC settings.
+            self.__mark_pc(None)
+            self.__class__.eMarkerPCName = self.__sm.get_default('markers.current_line.region_name', 'lldb.location')
+            self.__class__.eMarkerPCScope = self.__sm.get_default('markers.current_line.scope', 'bookmark')
+            self.__class__.eMarkerPCScopeCrashed = self.__sm.get_default('markers.current_line.scope.crashed', 'invalid')
+            self.__class__.eMarkerPCIcon = self.__sm.get_default('markers.current_line.icon', 'bookmark')
+            self.__mark_pc(self.__pc_line - 1, False)
+
+        else:
+            raise Exception('Weird key to be updated for LLDBThreadDisassemblyView %s' % key)
 
     def epilogue(self):
         if self.pc_line != 0:
