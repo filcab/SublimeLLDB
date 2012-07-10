@@ -25,6 +25,8 @@ class LLDBView(object):
         debug(debugViews, "Created an LLDBView with (class, view, name, file_name) == %s" %
               str((self.__class__.__name__, self.__view, self.__name, self.__file_name)))
 
+    ##########################################
+    # Base view property caching and method forwarding.
     def base_view(self):
         return self.__view
 
@@ -47,46 +49,51 @@ class LLDBView(object):
     def show(self, point_or_region_or_region_set, show_surrounds=True):
         self.__view.show(point_or_region_or_region_set, show_surrounds)
 
+    ##########################################
+    # Update methods.
     def full_update(self):
-        """This method calls pre_update and then makes the main thread call update().
-            It should only be used when there is only one view to update."""
+        """Performs a full update, calling pre_update() on the current thread
+            and subsequently calling update() on the main thread."""
         self.pre_update()
         sublime.set_timeout(self.update, 0)
 
-    # Method that can be overridden, if need be
     def pre_update(self):
-        """This method will do what's needed to prepare for the view update.
-            It won't necessarily be called from the main thread."""
+        """Prepares the view for an update, performing any work that doesn't
+            have to be done on the main view."""
         pass
 
-    # Method that has to be overridden by each subclass
     def update(self):
-        """This method will update the view. Ideally, only UI code will be
-            run here. It will be called from the main (UI) thread."""
+        """Updates the view. This method will be called on the UI thread and
+            its overrides should only contain UI code, if possible. Most of the
+            work should be done on the pre_update() method."""
         assert False, "%s.update() wasn't overridden." % self.__class__.__name__
 
     def stop(self):
+        """Stops the update mechanism from updating the view."""
+        # FIXME: Implemente this method.
         pass
 
 
 class LLDBReadOnlyView(LLDBView):
-    # Put here the stuff only for read-only views
+    """Class to abstract read-only views that show the user information about
+        the process being debugged. Examples: LLDBThreadDisassemblyView and
+        LLDBRegisterView"""
     def __init__(self, view):
         super(LLDBReadOnlyView, self).__init__(view)
         self.__content = ''
 
+    ##########################################
+    # Content managing properties and methods.
     def content(self):
         return self.__content
-
-    def pre_update(self):
-        self.__content = self.updated_content()
 
     def updated_content(self):
         assert False, "%s.updated_content() wasn't overridden." % self.__class__.__name__
 
-    # Method that is run in the end of an update
-    def epilogue(self):
-        pass
+    ##########################################
+    # Update mechanism implementation.
+    def pre_update(self):
+        self.__content = self.updated_content()
 
     def update(self):
         string = self.content()
@@ -100,6 +107,11 @@ class LLDBReadOnlyView(LLDBView):
         view.end_edit(edit)
         view.set_read_only(True)
         self.epilogue()
+
+    ##########################################
+    # API to let subclasses execute code in the UI thread after the update.
+    def epilogue(self):
+        pass
 
 
 class LLDBCodeView(LLDBView):
@@ -136,11 +148,11 @@ class LLDBCodeView(LLDBView):
     eMarkerBreakpointDisabledScope = __sm.get_default('markers.breakpoint.disabled.scope', 'bookmark')
     eMarkerBreakpointDisabledIcon = __sm.get_default('markers.breakpoint.disabled.type', 'circle')
 
-    # FIXME: Split stuff that doesn't have to run on the UI thread.
     def __init__(self, view, driver):
+        # FIXME: Split stuff that doesn't have to run on the UI thread.
         super(LLDBCodeView, self).__init__(view)
 
-        self._needs_update = False
+        self.__needs_update = False
         self.__driver = driver
         self.__enabled_bps = {}
         self.__disabled_bps = {}
@@ -152,7 +164,7 @@ class LLDBCodeView(LLDBView):
         else:
             debug(debugViews, 'Skipped LLDBCodeView.__update_bps() because view.is_loading is True')
             self.pre_update()
-            self.needs_update = 'full'  # Horrible hack to update the bp
+            self.__needs_update = 'full'  # Horrible hack to update the bp
                                         # markers as well as the pc marker when the on_load
                                         # method calls update on this object
 
@@ -172,6 +184,8 @@ class LLDBCodeView(LLDBView):
             (self.__class__.__name__, self.file_name(), str(self._needs_update),
              str(self.__pc_line), str(self.__enabled_bps), str(self.__disabled_bps))
 
+    ##########################################
+    # Settings observer method.
     def setting_updated(self, key, old, new):
         debug(debugSettings | debugViews, 'Updating setting %s from %s to %s. instance: %s' % (key, old, new, self))
         if key.startswith('markers.current_line'):
@@ -214,17 +228,21 @@ class LLDBCodeView(LLDBView):
         else:
             raise Exception('Weird key to be updated for LLDBCodeView: %s' % key)
 
+    ##########################################
+    # View properties.
     @property
-    def needs_update(self):
+    def __needs_update(self):
         return self._needs_update
 
-    @needs_update.setter
-    def needs_update(self, value):
+    @__needs_update.setter
+    def __needs_update(self, value):
         self._needs_update = value
 
-    # {mark,change,unmark}_bp don't update needs_update because they
-    # immediately update the breakpoint markers
+    ##########################################
+    # Breakpoint markers' methods.
     def mark_bp(self, line, is_enabled=True):
+        # {mark,change,unmark}_bp don't update __needs_update because they
+        # immediately update the breakpoint markers
         """Mark a new breakpoint as enabled/disabled and immediately mark
             its region."""
         self.__add_bps([line], is_enabled)
@@ -278,6 +296,8 @@ class LLDBCodeView(LLDBView):
             regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
             self.__mark_regions(regions, self.eRegionBreakpointDisabled)
 
+    ##########################################
+    # Update mechanism implementation.
     def pre_update(self):
         """pre_update will perform lldb-related work and get our PC line"""
         # FIXME: We can't use base_view().is_loading() because Sublime
@@ -285,10 +305,10 @@ class LLDBCodeView(LLDBView):
         # read-only properties!!).
         # This 'full' hack is here to make us wait for the on_load() call
         # on the LLDBUIListener.
-        # This variable will make us keep needs_update == 'full' if it was
+        # This variable will make us keep __needs_update == 'full' if it was
         # like that before we ran this function.
-        old_needs_update = self.needs_update
-        self.needs_update = False
+        old_needs_update = self.__needs_update
+        self.__needs_update = False
 
         old_pc_line = self.__pc_line
         self.__pc_line = None
@@ -298,7 +318,7 @@ class LLDBCodeView(LLDBView):
         if not thread:
             debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
             if self.__pc_line != old_pc_line:
-                self.needs_update = old_needs_update or True
+                self.__needs_update = old_needs_update or True
             return False
 
         for frame in thread:
@@ -310,19 +330,19 @@ class LLDBCodeView(LLDBView):
                     self.__pc_line = line_entry.GetLine()
                     debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
                     if self.__pc_line != old_pc_line or old_needs_update == 'full':
-                        self.needs_update = old_needs_update or True
+                        self.__needs_update = old_needs_update or True
                     return True
 
         debug(debugViews, 'new pc_line: %s' % str(self.__pc_line))
         if self.__pc_line != old_pc_line or old_needs_update == 'full':
-            self.needs_update = old_needs_update or True
+            self.__needs_update = old_needs_update or True
         return False
 
     def update(self):
-        debug(debugViews, 'Updating LLDBCodeView. needs_update: %s' % str(self.needs_update))
-        if self.needs_update and not self.base_view().is_loading():
+        debug(debugViews, 'Updating LLDBCodeView. needs_update: %s' % str(self.__needs_update))
+        if self.__needs_update and not self.base_view().is_loading():
             # Hack so we update the bps when updating the view for the first time.
-            if self.needs_update == 'full':
+            if self.__needs_update == 'full':
                 self.__update_bps()
 
             if self.__pc_line is not None:
@@ -332,7 +352,7 @@ class LLDBCodeView(LLDBView):
             # For now, bp-marking functions will immediately update the
             # view. We don't need to update it when the view is dirty.
             # self.__update_bps()
-            self.needs_update = False
+            self.__needs_update = False
         else:
             debug(debugViews, 'LLDBCodeView: didn\'t need an update (or view was loading): %s' % repr(self))
 
@@ -347,25 +367,8 @@ class LLDBCodeView(LLDBView):
             self.__update_bps()
         sublime.set_timeout(to_ui, 0)
 
+    ##########################################
     # Private LLDBCodeView methods
-    def __populate_breakpoint_lists(self):
-        file_bp_locs = self.__driver.get_breakpoint_locations_for_file(self.file_name())
-
-        def line_from_bp_loc(bp_loc):
-            line_entry = bp_loc.GetAddress().GetLineEntry()
-            return line_entry.GetLine()
-
-        enabled_bp_lines = []
-        disabled_bp_lines = []
-        for bp_loc in file_bp_locs:
-            if bp_loc.IsEnabled():
-                enabled_bp_lines.append(line_from_bp_loc(bp_loc))
-            else:
-                disabled_bp_lines.append(line_from_bp_loc(bp_loc))
-
-        self.__add_bps(enabled_bp_lines, True)
-        self.__add_bps(disabled_bp_lines, False)
-
     def __mark_regions(self, regions, type):
         if type == self.eRegionPC:
             if len(regions) > 0:
@@ -406,18 +409,29 @@ class LLDBCodeView(LLDBView):
         if show and to_mark:
             self.show(to_mark[0], True)
 
-    def __update_bps(self):
-        v = self.base_view()
-        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
-        self.__mark_regions(regions, self.eRegionBreakpointEnabled)
-        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
-        self.__mark_regions(regions, self.eRegionBreakpointDisabled)
+    def __populate_breakpoint_lists(self):
+        file_bp_locs = self.__driver.get_breakpoint_locations_for_file(self.file_name())
+
+        def line_from_bp_loc(bp_loc):
+            line_entry = bp_loc.GetAddress().GetLineEntry()
+            return line_entry.GetLine()
+
+        enabled_bp_lines = []
+        disabled_bp_lines = []
+        for bp_loc in file_bp_locs:
+            if bp_loc.IsEnabled():
+                enabled_bp_lines.append(line_from_bp_loc(bp_loc))
+            else:
+                disabled_bp_lines.append(line_from_bp_loc(bp_loc))
+
+        self.__add_bps(enabled_bp_lines, True)
+        self.__add_bps(disabled_bp_lines, False)
 
     def __add_bps(self, lines, are_enabled=True):
         """Adds breakpoints (enabled or disabled) to the view.
             __update_bps() must be called afterwards to refresh the UI."""
         if len(lines) > 0:
-            self.needs_update = True
+            self.__needs_update = True
 
         if are_enabled:
             add_to = self.__enabled_bps
@@ -440,7 +454,7 @@ class LLDBCodeView(LLDBView):
         """Removes breakpoints (enabled or disabled) from the view.
             __update_bps() must be called afterwards to refresh the UI."""
         if len(lines) > 0:
-            self.needs_update = True
+            self.__needs_update = True
 
         if are_enabled:
             remove_from = self.__enabled_bps
@@ -455,6 +469,13 @@ class LLDBCodeView(LLDBView):
                 else:
                     remove_from[line] = existing - 1
 
+    def __update_bps(self):
+        v = self.base_view()
+        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__enabled_bps.keys())
+        self.__mark_regions(regions, self.eRegionBreakpointEnabled)
+        regions = map(lambda line: v.line(v.text_point(line - 1, 0)), self.__disabled_bps.keys())
+        self.__mark_regions(regions, self.eRegionBreakpointDisabled)
+
 
 class LLDBRegisterView(LLDBReadOnlyView):
     def __init__(self, view, thread):
@@ -467,6 +488,8 @@ class LLDBRegisterView(LLDBReadOnlyView):
     def thread(self):
         return self.__thread
 
+    ##########################################
+    # Update mechanism implementation.
     def updated_content(self):
         thread = self.__thread
         if not thread.IsValid():
@@ -525,6 +548,8 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         return '<%s: name: %s, thread %s, pc_line: %d, content size: %d>' % \
             (self.__class__.__name__, self.name(), self.thread, self.pc_line, len(self.content()))
 
+    ##########################################
+    # View properties.
     @property
     def thread(self):
         return self.__thread
@@ -533,6 +558,8 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
     def pc_line(self):
         return self.__pc_line
 
+    ##########################################
+    # Settings observer method.
     def setting_updated(self, key, old, new):
         debug(debugSettings | debugViews, 'Updating setting %s from %s to %s. instance: %s' % (key, old, new, self))
         if key.startswith('markers.current_line'):
@@ -547,6 +574,8 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
         else:
             raise Exception('Weird key to be updated for LLDBThreadDisassemblyView %s' % key)
 
+    ##########################################
+    # Update mechanism implementation.
     def epilogue(self):
         if self.pc_line != 0:
             debug(debugViews, 'Marking PC for LLDBDisassemblyView %s' % repr(self))
