@@ -5,6 +5,8 @@ Sublime Text 2 LLDB plugin
 
 This is a plugin that allows users to debug programs in Sublime Text 2 using lldb. This plugin enabled command-line interaction with the lldb debugger, as well as Sublime Text 2 integration.
 
+To report a bug or feature request please use GitHub's [project issues](https://github.com/filcab/SublimeLLDB/issues?sort=created&direction=desc&state=open) page.
+
 
 Features
 --------
@@ -154,8 +156,6 @@ Known bugs
 * The process being debugged has to be stopped before quitting Sublime Text 2 (otherwise, the program will crash). This is a bug with Sublime Text 2 not running the plugin's cleanup function when exiting.
 * Disassembly views don't have breakpoint markers, yet.
 * ...
-
-Feel free to ask for additional functionalities, preferably through github's issues.
 
 
 `debugserver` binary
