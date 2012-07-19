@@ -385,12 +385,16 @@ class LldbDriver(threading.Thread):
 
                 result = lldb.SBCommandReturnObject()
                 sb_interpreter.SourceInitFileInHomeDirectory(result)
-                if self.debug_mode:
+                # TODO Remove this debugging feature and have a way to report
+                # errors in init files.
+                if True:
                     result.PutError(self.debugger.GetErrorFileHandle())
                     result.PutOutput(self.debugger.GetOutputFileHandle())
 
                 sb_interpreter.SourceInitFileInCurrentWorkingDirectory(result)
-                if self.debug_mode:
+                # TODO Remove this debugging feature and have a way to report
+                # errors in init files.
+                if True:
                     result.PutError(self.debugger.GetErrorFileHandle())
                     result.PutOutput(self.debugger.GetOutputFileHandle())
 
