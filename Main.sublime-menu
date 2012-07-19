@@ -111,7 +111,7 @@
                         "command": "lldb_view_shared_libraries"
                     },
                     {
-                        "caption": "Show registers",
+                        "caption": "Show Registers",
                         "command": "lldb_register_view"
                     },
                     {
