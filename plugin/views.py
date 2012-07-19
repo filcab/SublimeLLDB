@@ -10,7 +10,7 @@ from multiprocessing import Lock
 from debug import debug, debugViews, debugSettings
 from utilities import SettingsManager
 from root_objects import lldb_register_view_name, lldb_disassembly_view_name,   \
-                         driver_instance, add_lldb_view
+                         lldb_variable_view_name, driver_instance, add_lldb_view
 
 
 class LLDBView(object):
@@ -632,5 +632,42 @@ class LLDBThreadDisassemblyView(LLDBReadOnlyView):
                 self.__pc_line = n_instrs
 
             result += format_str % (hex(addr), max_mnemonic, mnemonic, max_operands, ops, comment_str)
+
+        return result
+
+
+class LLDBVariableView(LLDBReadOnlyView):
+    def __init__(self, view, thread):
+        self.__thread = thread
+        super(LLDBVariableView, self).__init__(view)
+        self.set_name(lldb_variable_view_name(thread))
+        self.set_scratch()
+
+    @property
+    def thread(self):
+        return self.__thread
+
+    ##########################################
+    # Update mechanism implementation.
+    def updated_content(self):
+        thread = self.__thread
+        if not thread.IsValid():
+            return 'Invalid thread. Has it finished its work?'
+
+        frame = thread.GetSelectedFrame()
+        # TODO: Allow users to configure which variables to get.
+        variables = frame.GetVariables(True, True, True, True)
+        result = 'Frame variables:\n'
+        for var in variables:
+            result = result + ('%s = ' % var.GetName())
+            if var.GetNumChildren() == 1:
+                result = result + var.GetValue() + '\n'
+            elif var.GetNumChildren() == 0:
+                result = result + '<couldn\'t get value>\n'
+            else:
+                result = result + '{\n'
+                for child in var:
+                    result = result + ('  %5.5s = %s,\n' % (child.GetName(), child.GetValue()))
+                result = result + '}\n'
 
         return result

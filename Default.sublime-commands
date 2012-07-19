@@ -56,6 +56,10 @@
         "command": "lldb_register_view"
     },
     {
+        "caption": "LLDB: Show Variables",
+        "command": "lldb_variable_view"
+    },
+    {
         "caption": "LLDB: Disassemble current frame",
         "command": "lldb_disassemble_frame"
     },

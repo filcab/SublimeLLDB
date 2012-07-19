@@ -18,7 +18,7 @@ import lldb_wrappers
 from monitors import LLDBUIUpdater
 from lldb_wrappers import thread_created
 from debug import debug, debugPlugin, debugVerbose, debugAny
-from views import LLDBRegisterView, LLDBThreadDisassemblyView, LLDBCodeView
+from views import LLDBRegisterView, LLDBVariableView, LLDBThreadDisassemblyView, LLDBCodeView
 from utilities import stderr_msg, stdout_msg, generate_memory_view_for, SettingsManager
 
 # import these specific names without the prefix
@@ -32,6 +32,7 @@ from root_objects import driver_instance, set_driver_instance,          \
                          get_lldb_output_view, get_lldb_view_for,       \
                          lldb_prompt,                                   \
                          lldb_register_view_name,                       \
+                         lldb_variable_view_name,                       \
                          lldb_disassembly_view_name,                    \
                          disabled_bps, set_disabled_bps,                \
                          InputPanelDelegate,                            \
@@ -1096,6 +1097,30 @@ class LldbRegisterView(WindowCommand):
             reg_view = base_reg_view
         else:
             reg_view = LLDBRegisterView(base_reg_view, thread)
+        reg_view.full_update()
+        self.window.focus_view(reg_view.base_view())
+
+
+class LldbVariableView(WindowCommand):
+    def run(self, thread=None):
+        self.setup()
+        if ensure_lldb_is_running(self.window):
+            sublime.status_message('Debugging session started.')
+        else:
+            sublime.error_message('Couldn\'t get a debugging session.')
+            return False
+
+        if thread is None:
+            thread = driver_instance().current_thread()
+
+        if not thread:
+            return False
+
+        base_reg_view = get_lldb_output_view(self.window, lldb_variable_view_name(thread))
+        if isinstance(base_reg_view, LldbVariableView):
+            reg_view = base_reg_view
+        else:
+            reg_view = LLDBVariableView(base_reg_view, thread)
         reg_view.full_update()
         self.window.focus_view(reg_view.base_view())
 

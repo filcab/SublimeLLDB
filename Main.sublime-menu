@@ -115,6 +115,10 @@
                         "command": "lldb_register_view"
                     },
                     {
+                        "caption": "Show Variables",
+                        "command": "lldb_variable_view"
+                    },
+                    {
                         "caption": "View Memory",
                         "command": "lldb_view_memory"
                     },

@@ -7,10 +7,11 @@ from utilities import SettingsManager
 
 default_lldb_view_name = 'lldb i/o'
 __lldb_prompt = '(lldb) '
-__lldb_register_view_fmt = 'lldb thread #%d'
-__lldb_disassembly_view__unkown_addr_fmt = 'lldb 0x%x disassembly'
-__lldb_disassembly_view_fmt = 'lldb %s@0x%x disassembly'
-__lldb_thread_disassembly_view_fmt = 'lldb disassembly of TID 0x%x'
+__lldb_register_view_fmt = 'registers for thread #%d'
+__lldb_variable_view_fmt = 'variables for thread #%d'
+__lldb_disassembly_view__unkown_addr_fmt = 'disassembly at 0x%x'
+__lldb_disassembly_view_fmt = 'disassembly at %s@0x%x'
+__lldb_thread_disassembly_view_fmt = 'disassembly of TID 0x%x'
 
 __driver = None
 __ui_updater = None
@@ -41,6 +42,10 @@ def lldb_prompt():
 
 def lldb_register_view_name(thread):
     return __lldb_register_view_fmt % thread.GetThreadID()
+
+
+def lldb_variable_view_name(thread):
+    return __lldb_variable_view_fmt % thread.GetThreadID()
 
 
 def lldb_disassembly_view_name(arg):
