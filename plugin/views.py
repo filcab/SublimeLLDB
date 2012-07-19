@@ -371,32 +371,22 @@ class LLDBCodeView(LLDBView):
     # Private LLDBCodeView methods
     def __mark_regions(self, regions, type):
         if type == self.eRegionPC:
-            if len(regions) > 0:
-                debug(debugViews, '(' + self.file_name() + ') adding regions: ' + str((self.eMarkerPCName, regions,
-                      self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)))
-                self.base_view().add_regions(self.eMarkerPCName, regions,
-                                             self.eMarkerPCScope, self.eMarkerPCIcon, sublime.HIDDEN)
-            else:
-                debug(debugViews, 'erasing region: %s' % self.eMarkerPCName)
-                self.base_view().erase_regions(self.eMarkerPCName)
+            self.__mark_or_delete_regions(self.eMarkerPCName, regions, self.eMarkerPCScope,
+                                          self.eMarkerPCIcon, sublime.HIDDEN)
         elif type == self.eRegionBreakpointEnabled:
-            if len(regions) > 0:
-                debug(debugViews, '(' + self.file_name() + ') adding regions: ' + str((self.eMarkerBreakpointEnabledName, regions,
-                      self.eMarkerBreakpointEnabledScope, self.eMarkerBreakpointEnabledIcon, sublime.HIDDEN)))
-                self.base_view().add_regions(self.eMarkerBreakpointEnabledName, regions, self.eMarkerBreakpointEnabledScope,
-                              self.eMarkerBreakpointEnabledIcon, sublime.HIDDEN)
-            else:
-                debug(debugViews, 'erasing regions: %s' % self.eMarkerBreakpointEnabledName)
-                self.base_view().erase_regions(self.eMarkerBreakpointEnabledName)
+            self.__mark_or_delete_regions(self.eMarkerBreakpointEnabledName, regions, self.eMarkerBreakpointEnabledScope,
+                                          self.eMarkerBreakpointEnabledIcon, sublime.HIDDEN)
         elif type == self.eRegionBreakpointDisabled:
-            if len(regions) > 0:
-                debug(debugViews, '(' + self.file_name() + ') adding regions: ' + str((self.eMarkerBreakpointDisabledName, regions,
-                      self.eMarkerBreakpointDisabledScope, self.eMarkerBreakpointDisabledIcon, sublime.HIDDEN)))
-                self.base_view().add_regions(self.eMarkerBreakpointDisabledName, regions, self.eMarkerBreakpointDisabledScope,
-                              self.eMarkerBreakpointDisabledIcon, sublime.HIDDEN)
-            else:
-                debug(debugViews, 'erasing regions: %s' % self.eMarkerBreakpointDisabledName)
-                self.base_view().erase_regions(self.eMarkerBreakpointDisabledName)
+            self.__mark_or_delete_regions(self.eMarkerBreakpointDisabledName, regions, self.eMarkerBreakpointDisabledScope,
+                                          self.eMarkerBreakpointDisabledIcon, sublime.HIDDEN)
+
+    def __mark_or_delete_regions(self, name, regions, scope, icon, options):
+        if len(regions) > 0:
+            debug(debugViews, '(%s) adding regions: %s' % (self.file_name(), (name, regions, scope, icon, options)))
+            self.base_view().add_regions(name, regions, scope, icon, options)
+        else:
+            debug(debugViews, 'erasing regions: %s' % name)
+            self.base_view().erase_regions(name)
 
     def __mark_pc(self, line, show=False):
         debug(debugViews, 'Marking PC for LLDBCodeView: %s' % repr(self))
