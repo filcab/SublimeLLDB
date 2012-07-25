@@ -15,6 +15,9 @@ from root_objects import lldb_register_view_name, lldb_disassembly_view_name,   
 
 class LLDBView(object):
     def __init__(self, view):
+        if view.__class__.__name__.startswith("LLDB"):
+            assert False
+
         self.__view = view
         # Keep track of the View's name, so we don't have to call name()
         # on the main thread
