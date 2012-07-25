@@ -1117,7 +1117,7 @@ class LldbVariableView(WindowCommand):
             return False
 
         base_reg_view = get_lldb_output_view(self.window, lldb_variable_view_name(thread))
-        if isinstance(base_reg_view, LldbVariableView):
+        if isinstance(base_reg_view, LLDBVariableView):
             reg_view = base_reg_view
         else:
             reg_view = LLDBVariableView(base_reg_view, thread)
