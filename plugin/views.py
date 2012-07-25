@@ -662,15 +662,39 @@ class LLDBVariableView(LLDBReadOnlyView):
         variables = frame.GetVariables(True, True, True, True)
         result = 'Frame variables:\n'
         for var in variables:
-            result = result + ('%s = ' % var.GetName())
-            if var.GetNumChildren() == 1:
-                result = result + var.GetValue() + '\n'
-            elif var.GetNumChildren() == 0:
-                result = result + '<couldn\'t get value>\n'
+            result = result + ('%s = ' % self.__name_for(var))
+            if var.GetNumChildren() == 0:
+                result = result + self.__value_for(var) + '\n'
             else:
                 result = result + '{\n'
                 for child in var:
-                    result = result + ('  %5.5s = %s,\n' % (child.GetName(), child.GetValue()))
+                    typename = self.__typename_for(child)
+                    name = self.__name_for(child)
+                    value = self.__value_for(child)
+                    result = result + ('  (%s) %s = %s,\n' % (typename, name, value))
                 result = result + '}\n'
 
         return result
+
+    ##########################################
+    # Private methods
+    def __typename_for(self, value):
+        if value.IsValid():
+            return value.GetTypeName()
+        else:
+            return "<invalid type>"
+
+    def __name_for(self, value):
+        if value.IsValid():
+            return value.GetName()
+        else:
+            return "<no name>"
+
+    def __value_for(self, value):
+        if value.IsValid():
+            if not value.IsInScope():
+                return "out of scope"
+
+            return value.GetValue()
+        else:
+            return "<no value>"
