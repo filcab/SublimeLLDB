@@ -83,7 +83,8 @@ def initialize_plugin():
                              '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver']
         uname = os.uname()
         if uname[0] == 'Darwin':
-            if re.match('11\..\..', uname[2]):  # OS X Lion
+            version = uname[2].split('.')
+            if int(version[0]) >= 11:  # OS X Lion or more recent
                 found = False
                 for path in debugserver_paths:
                     if os.access(path, os.X_OK):
