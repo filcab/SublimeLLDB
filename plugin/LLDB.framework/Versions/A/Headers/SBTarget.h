@@ -15,6 +15,7 @@
 #include <LLDB/SBBroadcaster.h>
 #include <LLDB/SBFileSpec.h>
 #include <LLDB/SBFileSpecList.h>
+#include <LLDB/SBSymbolContextList.h>
 #include <LLDB/SBType.h>
 #include <LLDB/SBWatchpoint.h>
 
@@ -150,6 +151,12 @@ public:
     
     void
     SetWaitForLaunch (bool b);
+    
+    bool
+    GetIgnoreExisting ();
+    
+    void
+    SetIgnoreExisting (bool b);
     
     uint32_t
     GetResumeCount ();

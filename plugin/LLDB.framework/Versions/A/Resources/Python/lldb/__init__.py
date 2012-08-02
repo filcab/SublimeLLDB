@@ -4893,15 +4893,30 @@ class SBProcess(_object):
         return _lldb.SBProcess_GetNumThreads(self)
 
     def GetThreadAtIndex(self, *args):
-        """GetThreadAtIndex(self, size_t index) -> SBThread"""
+        """
+        Returns the INDEX'th thread from the list of current threads.  The index
+        of a thread is only valid for the current stop.  For a persistent thread
+        identifier use either the thread ID or the IndexID.  See help on SBThread
+        for more details.
+        """
         return _lldb.SBProcess_GetThreadAtIndex(self, *args)
 
     def GetThreadByID(self, *args):
-        """GetThreadByID(self, tid_t sb_thread_id) -> SBThread"""
+        """
+        Returns the thread with the given thread ID.
+        """
         return _lldb.SBProcess_GetThreadByID(self, *args)
 
+    def GetThreadByIndexID(self, *args):
+        """
+        Returns the thread with the given thread IndexID.
+        """
+        return _lldb.SBProcess_GetThreadByIndexID(self, *args)
+
     def GetSelectedThread(self):
-        """GetSelectedThread(self) -> SBThread"""
+        """
+        Returns the currently selected thread.
+        """
         return _lldb.SBProcess_GetSelectedThread(self)
 
     def SetSelectedThread(self, *args):
@@ -4911,6 +4926,10 @@ class SBProcess(_object):
     def SetSelectedThreadByID(self, *args):
         """SetSelectedThreadByID(self, uint32_t tid) -> bool"""
         return _lldb.SBProcess_SetSelectedThreadByID(self, *args)
+
+    def SetSelectedThreadByIndexID(self, *args):
+        """SetSelectedThreadByIndexID(self, uint32_t index_id) -> bool"""
+        return _lldb.SBProcess_SetSelectedThreadByIndexID(self, *args)
 
     def GetState(self):
         """GetState(self) -> StateType"""
@@ -4964,6 +4983,10 @@ class SBProcess(_object):
         Sends the process a unix signal.
         """
         return _lldb.SBProcess_Signal(self, *args)
+
+    def SendAsyncInterrupt(self):
+        """SendAsyncInterrupt(self)"""
+        return _lldb.SBProcess_SendAsyncInterrupt(self)
 
     def ReadMemory(self, *args):
         """
@@ -6097,6 +6120,14 @@ class SBAttachInfo(_object):
         """SetWaitForLaunch(self, bool b)"""
         return _lldb.SBAttachInfo_SetWaitForLaunch(self, *args)
 
+    def GetIgnoreExisting(self):
+        """GetIgnoreExisting(self) -> bool"""
+        return _lldb.SBAttachInfo_GetIgnoreExisting(self)
+
+    def SetIgnoreExisting(self, *args):
+        """SetIgnoreExisting(self, bool b)"""
+        return _lldb.SBAttachInfo_SetIgnoreExisting(self, *args)
+
     def GetResumeCount(self):
         """GetResumeCount(self) -> uint32_t"""
         return _lldb.SBAttachInfo_GetResumeCount(self)
@@ -6804,6 +6835,12 @@ class SBThread(_object):
     """
     Represents a thread of execution. SBProcess contains SBThread(s).
 
+    SBThreads can be referred to by their ID, which maps to the system specific thread
+    identifier, or by IndexID.  The ID may or may not be unique depending on whether the
+    system reuses its thread identifiers.  The IndexID is a monotonically increasing identifier
+    that will always uniquely reference a particular thread, and when that thread goes
+    away it will not be reused.
+
     SBThread supports frame iteration. For example (from test/python_api/
     lldbutil/iter/TestLLDBIterator.py),
 
@@ -7111,6 +7148,14 @@ class SBTypeMember(_object):
         """GetOffsetInBits(self) -> uint64_t"""
         return _lldb.SBTypeMember_GetOffsetInBits(self)
 
+    def IsBitfield(self):
+        """IsBitfield(self) -> bool"""
+        return _lldb.SBTypeMember_IsBitfield(self)
+
+    def GetBitfieldSizeInBits(self):
+        """GetBitfieldSizeInBits(self) -> uint32_t"""
+        return _lldb.SBTypeMember_GetBitfieldSizeInBits(self)
+
     __swig_getmethods__["name"] = GetName
     if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
 
@@ -7122,6 +7167,13 @@ class SBTypeMember(_object):
 
     __swig_getmethods__["bit_offset"] = GetOffsetInBits
     if _newclass: bit_offset = property(GetOffsetInBits, None, doc='''A read only property that returns offset in bits for this member as an integer.''')
+
+    __swig_getmethods__["is_bitfield"] = IsBitfield
+    if _newclass: is_bitfield = property(IsBitfield, None, doc='''A read only property that returns true if this member is a bitfield.''')
+
+    __swig_getmethods__["bitfield_bit_size"] = GetBitfieldSizeInBits
+    if _newclass: bitfield_bit_size = property(GetBitfieldSizeInBits, None, doc='''A read only property that returns the bitfield size in bits for this member as an integer, or zero if this member is not a bitfield.''')
+
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -7354,6 +7406,78 @@ class SBType(_object):
 
     __swig_getmethods__["is_complete"] = IsTypeComplete
     if _newclass: is_complete = property(IsTypeComplete, None, doc='''A read only property that returns a boolean value that indicates if this type is a complete type (True) or a forward declaration (False).''')
+
+    def get_bases_array(self):
+        '''An accessor function that returns a list() that contains all direct base classes in a lldb.SBType object.'''
+        bases = []
+        for idx in range(self.GetNumberOfDirectBaseClasses()):
+            bases.append(self.GetDirectBaseClassAtIndex(idx))
+        return bases
+
+    def get_vbases_array(self):
+        '''An accessor function that returns a list() that contains all fields in a lldb.SBType object.'''
+        vbases = []
+        for idx in range(self.GetNumberOfVirtualBaseClasses()):
+            vbases.append(self.GetVirtualBaseClassAtIndex(idx))
+        return vbases
+
+    def get_fields_array(self):
+        '''An accessor function that returns a list() that contains all fields in a lldb.SBType object.'''
+        fields = []
+        for idx in range(self.GetNumberOfFields()):
+            fields.append(self.GetFieldAtIndex(idx))
+        return fields
+
+    def get_members_array(self):
+        '''An accessor function that returns a list() that contains all members (base classes and fields) in a lldb.SBType object in ascending bit offset order.'''
+        members = []
+        bases = self.get_bases_array()
+        fields = self.get_fields_array()
+        vbases = self.get_vbases_array()
+        for base in bases:
+            bit_offset = base.bit_offset
+            added = False
+            for idx, member in enumerate(members):
+                if member.bit_offset > bit_offset:
+                    members.insert(idx, base)
+                    added = True
+                    break
+            if not added:
+                members.append(base)
+        for vbase in vbases:
+            bit_offset = vbase.bit_offset
+            added = False
+            for idx, member in enumerate(members):
+                if member.bit_offset > bit_offset:
+                    members.insert(idx, vbase)
+                    added = True
+                    break
+            if not added:
+                members.append(vbase)
+        for field in fields:
+            bit_offset = field.bit_offset
+            added = False
+            for idx, member in enumerate(members):
+                if member.bit_offset > bit_offset:
+                    members.insert(idx, field)
+                    added = True
+                    break
+            if not added:
+                members.append(field)
+        return members
+
+    __swig_getmethods__["bases"] = get_bases_array
+    if _newclass: bases = property(get_bases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the direct base classes for this type.''')
+
+    __swig_getmethods__["vbases"] = get_vbases_array
+    if _newclass: vbases = property(get_vbases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the virtual base classes for this type.''')
+
+    __swig_getmethods__["fields"] = get_fields_array
+    if _newclass: fields = property(get_fields_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the fields for this type.''')
+
+    __swig_getmethods__["members"] = get_members_array
+    if _newclass: members = property(get_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order.''')
+
 
     def __str__(self):
         """__str__(self) -> PyObject"""

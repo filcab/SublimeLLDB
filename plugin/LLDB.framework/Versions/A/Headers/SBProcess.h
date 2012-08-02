@@ -105,6 +105,9 @@ public:
     GetThreadByID (lldb::tid_t sb_thread_id);
 
     lldb::SBThread
+    GetThreadByIndexID (uint32_t index_id);
+
+    lldb::SBThread
     GetSelectedThread () const;
 
     bool
@@ -112,6 +115,9 @@ public:
 
     bool
     SetSelectedThreadByID (uint32_t tid);
+    
+    bool
+    SetSelectedThreadByIndexID (uint32_t index_id);
 
     //------------------------------------------------------------------
     // Stepping related functions
@@ -150,6 +156,9 @@ public:
     lldb::SBError
     Signal (int signal);
 
+    void
+    SendAsyncInterrupt();
+    
     size_t
     ReadMemory (addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
@@ -216,7 +225,7 @@ protected:
     void
     SetSP (const lldb::ProcessSP &process_sp);
 
-    lldb::ProcessSP m_opaque_sp;
+    lldb::ProcessWP m_opaque_wp;
 };
 
 }  // namespace lldb
