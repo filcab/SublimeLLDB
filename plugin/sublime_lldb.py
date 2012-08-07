@@ -453,7 +453,7 @@ class LldbDebugProgram(WindowCommand):
         arch = sm.get_default('arch', lldb.LLDB_ARCH_DEFAULT)
 
         if exe:
-            args = sm.get_default('args', [])
+            args = map(str, sm.get_default('args', []))
 
             debug(debugPlugin, 'Launching program: ' + exe + ' (' + arch + '), with args: ' + str(args))
             t = driver_instance().debugger.CreateTargetWithFileAndArch(str(exe), str(arch))
@@ -463,7 +463,7 @@ class LldbDebugProgram(WindowCommand):
             create_default_bps_for_target(t)
 
             sublime.status_message('Launching program (%s): %s %s' % (arch, exe, args))
-            if t.LaunchSimple(args, [], os.getcwd()):
+            if t.LaunchSimple(args, None, os.getcwd()):
                 sublime.status_message('Program successfully launched.')
             else:
                 sublime.error_message('Program failed to launch.')
