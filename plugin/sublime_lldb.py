@@ -55,30 +55,43 @@ _default_basic_window_layout = {  # 1 group
                  }
 
 
-def initialize_plugin():
-    global _initialized
-    if _initialized:
-        return
+class LLDBPlugin(object):
+    # LLDBPlugin is a singleton class for several functions related to the
+    # plugin.
+    @classmethod
+    def initialize_plugin(cls):
+        global _initialized
+        if _initialized:
+            return
 
-    thread_created('<' + threading.current_thread().name + '>')
-    debug(debugAny, 'Loading LLDB Sublime Text 2 plugin')
-    debug(debugAny, 'python version: %s' % (sys.version_info,))
-    debug(debugAny, 'cwd: %s' % os.getcwd())
+        thread_created('<' + threading.current_thread().name + '>')
+        debug(debugAny, 'Loading LLDB Sublime Text 2 plugin')
+        debug(debugAny, 'python version: %s' % (sys.version_info,))
+        debug(debugAny, 'cwd: %s' % os.getcwd())
 
-    sm = SettingsManager.getSM()
-    use_bundled_debugserver = sm.get_default('debugserver.use_bundled', False)
-    debugserver_path = sm.get_default('debugerver.path', None)
-    global _did_not_find_debugserver
-    found = False
-    if debugserver_path is not None:
-        # TODO: Check that it is a file
-        if os.access(debugserver_path, os.X_OK):
-            os.environ['LLDB_DEBUGSERVER_PATH'] = debugserver_path
-            found = True
-        else:
-            # FIXME: Warn the user that the debugserver isn't executable
-            _did_not_find_debugserver = True
-    elif not use_bundled_debugserver:
+        sm = SettingsManager.getSM()
+        use_bundled_debugserver = sm.get_default('debugserver.use_bundled', False)
+        debugserver_path = sm.get_default('debugerver.path', None)
+        global _did_not_find_debugserver
+        found = False
+        if debugserver_path is not None:
+            # TODO: Check that it is a file
+            if os.access(debugserver_path, os.X_OK):
+                os.environ['LLDB_DEBUGSERVER_PATH'] = debugserver_path
+                found = True
+            else:
+                # FIXME: Warn the user that the debugserver isn't executable
+                _did_not_find_debugserver = True
+        elif not use_bundled_debugserver:
+            cls.find_debugserver()
+
+        if found:
+            debug(debugPlugin, 'debugserver path: %s' % os.environ['LLDB_DEBUGSERVER_PATH'])
+        _initialized = True
+
+    @classmethod
+    def find_debugserver(cls):
+        # Global effects: Change LLDB_DEBUGSERVER_PATH env var
         debugserver_paths = ['/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/Resources/debugserver',
                              '/System/Library/PrivateFrameworks/LLDB.framework/Versions/A/Resources/debugserver']
         uname = os.uname()
@@ -92,9 +105,10 @@ def initialize_plugin():
                         found = True
                         break
                 if not found:  # XCode has to be installed, signal the plugin.
+                    global _did_not_find_debugserver
                     _did_not_find_debugserver = True
             else:  # Snow Leopard, etc...
-                # This will only work with XCode 4+ (that includes lldb) which is a paid software for OS X < 10.7
+                # This will only work with XCode 4+ (that includes lldb) which is (was?) a paid software for OS X < 10.7
                 # I suppose most people with Snow Leopard won't have it.
                 # This boolean will be used when trying to initialize lldb.
                 global _macosx_is_too_old
@@ -103,107 +117,206 @@ def initialize_plugin():
             global _os_not_supported
             _os_not_supported = True
 
-    if found:
-        debug(debugPlugin, 'debugserver path: %s' % os.environ['LLDB_DEBUGSERVER_PATH'])
-    _initialized = True
+        return found
 
+    @classmethod
+    def debug_prologue(cls, driver):
+        """
+        Prologue for the debugging session during the development of the plugin.
+        Loads a simple program in the debugger and sets a breakpoint in main()
+        """
+        sm = SettingsManager.getSM()
+        prologue = sm.get_default('prologue', [])
 
-def debug_prologue(driver):
-    """
-    Prologue for the debugging session during the development of the plugin.
-    Loads a simple program in the debugger and sets a breakpoint in main()
-    """
-    sm = SettingsManager.getSM()
-    prologue = sm.get_default('prologue', [])
+        debug(debugPlugin, 'LLDB prologue: %s' % str(prologue))
+        for c in prologue:
+            lldb_view_write(lldb_prompt() + c + '\n')
+            driver.interpret_command(c)
 
-    debug(debugPlugin, 'LLDB prologue: %s' % str(prologue))
-    for c in prologue:
-        lldb_view_write(lldb_prompt() + c + '\n')
-        driver.interpret_command(c)
+    @classmethod
+    def lldb_greeting(cls):
+        return str(datetime.date.today()) +                             \
+               '\nWelcome to the LLDB plugin for Sublime Text 2\n' +    \
+               lldb_wrappers.version() + '\n'
 
+    # TODO: Search current directory for an executable
+    @classmethod
+    def search_for_executable(cls):
+        sm = SettingsManager.getSM()
+        exe = sm.get_default('exe', None)
+        return exe
 
-def lldb_greeting():
-    return str(datetime.date.today()) +                             \
-           '\nWelcome to the LLDB plugin for Sublime Text 2\n' +    \
-           lldb_wrappers.version() + '\n'
+    @classmethod
+    def ensure_lldb_is_running(cls, w=None):
+        """Returns True if lldb is running (we don't care if we started it or not).
+    Returns False on error"""
+        # Ensure we reflect any changes to saved settings (including project settings)
+        # reload_settings()
 
-
-def good_lldb_layout(window=window_ref()):
-    # if the user already has two groups, it's a good layout
-    sm = SettingsManager.getSM()
-    lldb_window_layout = sm.get_default('layout', _default_lldb_window_layout)
-    return window.num_groups() == len(lldb_window_layout['cells'])
-
-
-def set_lldb_window_layout(window=window_ref()):
-    sm = SettingsManager.getSM()
-    lldb_window_layout = sm.get_default('layout', _default_lldb_window_layout)
-    if lldb_out_view() != None and window.num_groups() != len(lldb_window_layout['cells']):
-        window.run_command('set_layout', lldb_window_layout)
-
-
-def set_regular_window_layout(window=window_ref()):
-    sm = SettingsManager.getSM()
-    basic_layout = sm.get_default('layout.basic', _default_basic_window_layout)
-    window.run_command('set_layout', basic_layout)
-
-
-def lldb_toggle_output_view(window, show=False, hide=False):
-    """ Toggles the lldb output view visibility.
-
-            if show=True: force showing the view;
-            if hide=True: force hiding the view;
-            Otherwise: Toggle view visibility.
-    """
-    # TODO: Set the input_panel syntax to 'lldb command'
-
-    # Just show the window.
-    v = lldb_out_view()
-    if v:
-        if show:
-            if not good_lldb_layout(window=window):
-                set_lldb_window_layout(window=window)
-                window.set_view_index(v, 1, 0)
-        elif hide:
-            set_regular_window_layout(window=window)
-        elif not good_lldb_layout(window=window):
-            set_lldb_window_layout(window=window)
-            window.set_view_index(v, 1, 0)
+        if not w and window_ref():
+            w = window_ref()
         else:
-            set_regular_window_layout(window=window)
+            # We're redefining the default window.
+            set_window_ref(w)
+
+        if driver_instance() is None:
+            sm = SettingsManager.getSM()
+            clear_view_on_startup = sm.get_default('i/o.view.clear_on_startup', True)
+            if clear_view_on_startup:
+                LLDBLayoutManager.clear_view(lldb_out_view())
+
+            if not cls.start_debugging(w):
+                return False
+
+            set_ui_updater(LLDBUIUpdater())
+            g = cls.lldb_greeting()
+            if lldb_out_view().size() > 0:
+                g = '\n\n' + cls.lldb_greeting()
+            lldb_view_write(g)
+            lldb_view_write('cwd: ' + os.getcwd() + '\n')
+            w.set_view_index(lldb_out_view(), 1, 0)
+
+            cls.debug_prologue(driver_instance())
+            return True
+
+        return True
+
+    @classmethod
+    def initialize_lldb(cls, w):
+        # set_got_input_function(lldb_in_panel_on_done)
+
+        driver = LldbDriver(w, lldb_view_send, process_stopped, on_exit_callback=cls.cleanup)
+        event = lldb.SBEvent()
+        listener = lldb.SBListener('Wait for lldb initialization')
+        listener.StartListeningForEvents(driver.broadcaster,
+                LldbDriver.eBroadcastBitThreadDidStart)
+
+        driver.start()
+        listener.WaitForEvent(START_LLDB_TIMEOUT, event)
+        listener.Clear()
+
+        if not event:
+            lldb_view_write("oops... the event isn't valid")
+
+        return driver
+
+    @classmethod
+    def start_debugging(cls, w):
+        global _is_debugging
+        if _is_debugging:
+            cls.cleanup(window_ref())
+
+        cls.initialize_plugin()
+
+        # Check for error conditions before starting the debugger
+        global _did_not_find_debugserver, _macosx_is_too_old, _os_not_supported
+        if _did_not_find_debugserver:
+            sublime.error_message("Couldn't find the debugserver binary.\n" +  \
+                        'Is XCode.app or the command line tools installed?')
+            return False
+        if _macosx_is_too_old:
+            sublime.error_message('Your Mac OS X version is not supported.\n' +  \
+                        'Supported versions: Lion and more recent\n\n' +        \
+                        'If you think it should be supported, please contact the author.')
+            return False
+        if _os_not_supported:
+            sublime.error_message('Your operating system is not supported by this plugin yet.\n' +          \
+                        'If there is a stable version of lldb for your operating system and you would ' +   \
+                        'like to have the plugin support it, please contact the author.')
+            return False
+
+        _is_debugging = True
+
+        # Really start the debugger
+        cls.initialize_lldb(w)
+
+        driver_instance().debugger.SetInputFileHandle(sys.__stdin__, False)
+
+        # We may also need to change the width upon window resize
+        # debugger.SetTerminalWidth()
+        return True
+
+    @classmethod
+    def cleanup(cls, w=None):
+        global _is_debugging
+        _is_debugging = False
+
+        set_disabled_bps([])
+        ui_updater().stop()
+        driver = driver_instance()
+        if driver:
+            driver.stop()
+            set_driver_instance(None)
+        lldb_view_send('\nDebugging session ended.\n')
 
 
-def clear_view(v):
-    v.set_read_only(False)
-    edit = v.begin_edit('lldb-view-clear')
-    v.erase(edit, sublime.Region(0, v.size()))
-    v.end_edit(edit)
-    v.set_read_only(True)
-    v.show(v.size())
+class LLDBLayoutManager(object):
+    # LLDBLayoutManager is a singleton class for several functions related to the
+    # layout of LLDB's views.
+    @classmethod
+    def good_lldb_layout(cls, window=window_ref()):
+        # if the user already has two groups, it's a good layout
+        sm = SettingsManager.getSM()
+        lldb_window_layout = sm.get_default('layout', _default_lldb_window_layout)
+        return window.num_groups() == len(lldb_window_layout['cells'])
 
+    @classmethod
+    def set_lldb_window_layout(cls, window=window_ref()):
+        sm = SettingsManager.getSM()
+        lldb_window_layout = sm.get_default('layout', _default_lldb_window_layout)
+        if lldb_out_view() != None and window.num_groups() != len(lldb_window_layout['cells']):
+            window.run_command('set_layout', lldb_window_layout)
 
-def cleanup(w=None):
-    global _is_debugging
-    _is_debugging = False
+    @classmethod
+    def set_regular_window_layout(cls, window=window_ref()):
+        sm = SettingsManager.getSM()
+        basic_layout = sm.get_default('layout.basic', _default_basic_window_layout)
+        window.run_command('set_layout', basic_layout)
 
-    set_disabled_bps([])
-    ui_updater().stop()
-    driver = driver_instance()
-    if driver:
-        driver.stop()
-        set_driver_instance(None)
-    lldb_view_send('\nDebugging session ended.\n')
+    @classmethod
+    def lldb_toggle_output_view(cls, window, show=False, hide=False):
+        """ Toggles the lldb output view visibility.
+
+                if show=True: force showing the view;
+                if hide=True: force hiding the view;
+                Otherwise: Toggle view visibility.
+        """
+        # TODO: Set the input_panel syntax to 'lldb command'
+
+        # Just show the window.
+        v = lldb_out_view()
+        if v:
+            if show:
+                if not cls.good_lldb_layout(window=window):
+                    cls.set_lldb_window_layout(window=window)
+                    window.set_view_index(v, 1, 0)
+            elif hide:
+                cls.set_regular_window_layout(window=window)
+            elif not cls.good_lldb_layout(window=window):
+                cls.set_lldb_window_layout(window=window)
+                window.set_view_index(v, 1, 0)
+            else:
+                cls.set_regular_window_layout(window=window)
+
+    @classmethod
+    def clear_view(cls, v):
+        v.set_read_only(False)
+        edit = v.begin_edit('lldb-view-clear')
+        v.erase(edit, sublime.Region(0, v.size()))
+        v.end_edit(edit)
+        v.set_read_only(True)
+        v.show(v.size())
 
 
 @atexit.register
 def atexit_function():
     debug(debugPlugin, 'running atexit_function')
-    cleanup(window_ref())
+    LLDBPlugin.cleanup(window_ref())
 
 
 def unload_handler():
     debug(debugPlugin, 'unloading lldb plugin')
-    cleanup(window_ref())
+    LLDBPlugin.cleanup(window_ref())
 
 
 def process_stopped(driver, process, state=None):
@@ -258,103 +371,6 @@ def process_stopped(driver, process, state=None):
             # around the thread's PC.
             sublime.set_timeout(lambda:
                 window_ref().run_command('lldb_disassemble_frame', {'thread': process.GetSelectedThread()}), 0)
-
-
-def initialize_lldb(w):
-    # set_got_input_function(lldb_in_panel_on_done)
-
-    driver = LldbDriver(w, lldb_view_send, process_stopped, on_exit_callback=cleanup)
-    event = lldb.SBEvent()
-    listener = lldb.SBListener('Wait for lldb initialization')
-    listener.StartListeningForEvents(driver.broadcaster,
-            LldbDriver.eBroadcastBitThreadDidStart)
-
-    driver.start()
-    listener.WaitForEvent(START_LLDB_TIMEOUT, event)
-    listener.Clear()
-
-    if not event:
-        lldb_view_write("oops... the event isn't valid")
-
-    return driver
-
-
-def start_debugging(w):
-    global _is_debugging
-    if _is_debugging:
-        cleanup(window_ref())
-
-    initialize_plugin()
-
-    # Check for error conditions before starting the debugger
-    global _did_not_find_debugserver, _macosx_is_too_old, _os_not_supported
-    if _did_not_find_debugserver:
-        sublime.error_message("Couldn't find the debugserver binary.\n" +  \
-                    'Is XCode.app or the command line tools installed?')
-        return False
-    if _macosx_is_too_old:
-        sublime.error_message('Your Mac OS X version is not supported.\n' +  \
-                    'Supported versions: Lion and more recent\n\n' +        \
-                    'If you think it should be supported, please contact the author.')
-        return False
-    if _os_not_supported:
-        sublime.error_message('Your operating system is not supported by this plugin yet.\n' +          \
-                    'If there is a stable version of lldb for your operating system and you would ' +   \
-                    'like to have the plugin support it, please contact the author.')
-        return False
-
-    _is_debugging = True
-
-    # Really start the debugger
-    initialize_lldb(w)
-
-    driver_instance().debugger.SetInputFileHandle(sys.__stdin__, False)
-
-    # We may also need to change the width upon window resize
-    # debugger.SetTerminalWidth()
-    return True
-
-
-# TODO: Search current directory for an executable
-def search_for_executable():
-    sm = SettingsManager.getSM()
-    exe = sm.get_default('exe', None)
-    return exe
-
-
-def ensure_lldb_is_running(w=None):
-    """Returns True if lldb is running (we don't care if we started it or not).
-Returns False on error"""
-    # Ensure we reflect any changes to saved settings (including project settings)
-    # reload_settings()
-
-    if not w and window_ref():
-        w = window_ref()
-    else:
-        # We're redefining the default window.
-        set_window_ref(w)
-
-    if driver_instance() is None:
-        sm = SettingsManager.getSM()
-        clear_view_on_startup = sm.get_default('i/o.view.clear_on_startup', True)
-        if clear_view_on_startup:
-            clear_view(lldb_out_view())
-
-        if not start_debugging(w):
-            return False
-
-        set_ui_updater(LLDBUIUpdater())
-        g = lldb_greeting()
-        if lldb_out_view().size() > 0:
-            g = '\n\n' + lldb_greeting()
-        lldb_view_write(g)
-        lldb_view_write('cwd: ' + os.getcwd() + '\n')
-        w.set_view_index(lldb_out_view(), 1, 0)
-
-        debug_prologue(driver_instance())
-        return True
-
-    return True
 
 
 bp_re_file_line = re.compile('^(.*\S)\s*:\s*(\d+)\s*$')
@@ -420,8 +436,8 @@ class LldbCommand(WindowCommand):
     # This command is always enabled.
     def run(self):
         self.setup()
-        lldb_toggle_output_view(self.window, show=True)
-        if ensure_lldb_is_running(self.window):
+        LLDBLayoutManager.lldb_toggle_output_view(self.window, show=True)
+        if LLDBPlugin.ensure_lldb_is_running(self.window):
             sublime.status_message('Debugging session started.')
         else:
             sublime.error_message('Couldn\'t get a debugging session.')
@@ -435,20 +451,20 @@ class LldbCommand(WindowCommand):
 class LldbDebugProgram(WindowCommand):
     # Only enabled when we have a default program to run.
     def is_enabled(self):
-        exe = search_for_executable()
+        exe = LLDBPlugin.search_for_executable()
         return exe is not None
 
     def run(self):
         self.setup()
-        if ensure_lldb_is_running(self.window):
+        if LLDBPlugin.ensure_lldb_is_running(self.window):
             sublime.status_message('Debugging session started.')
         else:
             sublime.error_message('Couldn\'t get a debugging session.')
             return False
 
-        lldb_toggle_output_view(self.window, show=True)
+        LLDBLayoutManager.lldb_toggle_output_view(self.window, show=True)
 
-        exe = search_for_executable()
+        exe = LLDBPlugin.search_for_executable()
         sm = SettingsManager.getSM()
         arch = sm.get_default('arch', lldb.LLDB_ARCH_DEFAULT)
 
@@ -476,7 +492,7 @@ class LldbAttachProcess(WindowCommand):
             self.__owner = owner
 
         def on_done(self, string):
-            if ensure_lldb_is_running(self.window):
+            if LLDBPlugin.ensure_lldb_is_running(self.window):
                 sublime.status_message('Debugging session started.')
             else:
                 sublime.error_message('Couldn\'t get a debugging session.')
@@ -564,12 +580,12 @@ class LldbConnectDebugserver(WindowCommand):
             self.__owner = owner
 
         def on_done(self, string):
-            if ensure_lldb_is_running(self.window):
+            if LLDBPlugin.ensure_lldb_is_running(self.window):
                 sublime.status_message('Debugging session started.')
             else:
                 sublime.error_message('Couldn\'t get a debugging session.')
                 return False
-            lldb_toggle_output_view(self.__owner.window, show=True)
+            LLDBLayoutManager.lldb_toggle_output_view(self.__owner.window, show=True)
 
             driver = driver_instance()
             if driver:
@@ -606,7 +622,7 @@ class LldbStopDebugging(WindowCommand):
         driver = driver_instance()
         if driver:
             sublime.status_message('Stopping the debugger.')
-            cleanup(self.window)
+            LLDBPlugin.cleanup(self.window)
             sublime.status_message('Debugging session stopped.')
         else:
             sublime.error_message('Nothing to stop. Debugger not running.')
@@ -860,7 +876,7 @@ class LldbListBreakpoints(WindowCommand):
         string = ', '.join(bp_list)
         v = self.window.get_output_panel('breakpoint list')
 
-        clear_view(v)
+        LLDBLayoutManager.clear_view(v)
         v.set_read_only(False)
         edit = v.begin_edit('bp-list-view-clear')
         v.replace(edit, sublime.Region(0, v.size()), string)
@@ -983,7 +999,7 @@ class LldbViewSharedLibraries(WindowCommand):
                 v = self.window.new_file()
                 v.set_name(self._shared_libraries_view_name)
 
-            clear_view(v)
+            LLDBLayoutManager.clear_view(v)
             v.set_scratch(True)
             v.set_read_only(False)
 
@@ -1033,7 +1049,7 @@ class LldbViewMemory(WindowCommand):
                     v = self.__owner.window.new_file()
                     v.set_name(name)
 
-                clear_view(v)
+                LLDBLayoutManager.clear_view(v)
                 v.set_scratch(True)
                 v.set_read_only(False)
 
@@ -1064,24 +1080,24 @@ class LldbToggleOutputView(WindowCommand):
 
         sm = SettingsManager.getSM()
         basic_layout = sm.get_default('layout.basic', _default_basic_window_layout)
-        if good_lldb_layout(window=self.window) and basic_layout != None:
+        if LLDBLayoutManager.good_lldb_layout(window=self.window) and basic_layout != None:
             # restore backup_layout (groups and views)
-            lldb_toggle_output_view(self.window, hide=True)
+            LLDBLayoutManager.lldb_toggle_output_view(self.window, hide=True)
         else:
-            lldb_toggle_output_view(self.window, show=True)
+            LLDBLayoutManager.lldb_toggle_output_view(self.window, show=True)
 
 
 class LldbClearOutputView(WindowCommand):
     def run(self):
         self.setup()
 
-        clear_view(lldb_out_view())
+        LLDBLayoutManager.clear_view(lldb_out_view())
 
 
 class LldbRegisterView(WindowCommand):
     def run(self, thread=None):
         self.setup()
-        if ensure_lldb_is_running(self.window):
+        if LLDBPlugin.ensure_lldb_is_running(self.window):
             sublime.status_message('Debugging session started.')
         else:
             sublime.error_message('Couldn\'t get a debugging session.')
@@ -1105,7 +1121,7 @@ class LldbRegisterView(WindowCommand):
 class LldbVariableView(WindowCommand):
     def run(self, thread=None):
         self.setup()
-        if ensure_lldb_is_running(self.window):
+        if LLDBPlugin.ensure_lldb_is_running(self.window):
             sublime.status_message('Debugging session started.')
         else:
             sublime.error_message('Couldn\'t get a debugging session.')
@@ -1129,7 +1145,7 @@ class LldbVariableView(WindowCommand):
 class LldbDisassembleFrame(WindowCommand):
     def run(self, thread=None):
         self.setup()
-        if ensure_lldb_is_running(self.window):
+        if LLDBPlugin.ensure_lldb_is_running(self.window):
             sublime.status_message('Debugging session started.')
         else:
             sublime.error_message('Couldn\'t get a debugging session.')
