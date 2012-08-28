@@ -94,10 +94,6 @@ import uuid
 import re
 import os
 
-
-def LLDBSwigPythonCallPythonLogOutputCallback(*args):
-  """LLDBSwigPythonCallPythonLogOutputCallback(str str, void baton)"""
-  return _lldb.LLDBSwigPythonCallPythonLogOutputCallback(*args)
 __WORDSIZE = _lldb.__WORDSIZE
 INT8_MAX = _lldb.INT8_MAX
 INT16_MAX = _lldb.INT16_MAX
@@ -242,6 +238,7 @@ eFormatCString = _lldb.eFormatCString
 eFormatDecimal = _lldb.eFormatDecimal
 eFormatEnum = _lldb.eFormatEnum
 eFormatHex = _lldb.eFormatHex
+eFormatHexUppercase = _lldb.eFormatHexUppercase
 eFormatFloat = _lldb.eFormatFloat
 eFormatOctal = _lldb.eFormatOctal
 eFormatOSType = _lldb.eFormatOSType
@@ -266,6 +263,7 @@ eFormatCharArray = _lldb.eFormatCharArray
 eFormatAddressInfo = _lldb.eFormatAddressInfo
 eFormatHexFloat = _lldb.eFormatHexFloat
 eFormatInstruction = _lldb.eFormatInstruction
+eFormatVoid = _lldb.eFormatVoid
 kNumFormats = _lldb.kNumFormats
 eDescriptionLevelBrief = _lldb.eDescriptionLevelBrief
 eDescriptionLevelFull = _lldb.eDescriptionLevelFull
@@ -850,7 +848,6 @@ class SBAddress(_object):
 
 SBAddress_swigregister = _lldb.SBAddress_swigregister
 SBAddress_swigregister(SBAddress)
-cvar = _lldb.cvar
 
 class SBBlock(_object):
     """Represents a lexical block. SBFunction contains SBBlock(s)."""
@@ -2456,7 +2453,7 @@ class SBDebugger(_object):
         """
         Create() -> SBDebugger
         Create(bool source_init_files) -> SBDebugger
-        Create(bool source_init_files, LogOutputCallback callback) -> SBDebugger
+        Create(bool source_init_files, LogOutputCallback log_callback) -> SBDebugger
         """
         return _lldb.SBDebugger_Create(*args)
 
@@ -2663,6 +2660,10 @@ class SBDebugger(_object):
         """EnableLog(self, str channel, str types) -> bool"""
         return _lldb.SBDebugger_EnableLog(self, *args)
 
+    def SetLoggingCallback(self, *args):
+        """SetLoggingCallback(self, LogOutputCallback log_callback)"""
+        return _lldb.SBDebugger_SetLoggingCallback(self, *args)
+
     def DispatchInput(self, *args):
         """DispatchInput(self, void data)"""
         return _lldb.SBDebugger_DispatchInput(self, *args)
@@ -2808,7 +2809,7 @@ def SBDebugger_Create(*args):
   """
     Create() -> SBDebugger
     Create(bool source_init_files) -> SBDebugger
-    SBDebugger_Create(bool source_init_files, LogOutputCallback callback) -> SBDebugger
+    SBDebugger_Create(bool source_init_files, LogOutputCallback log_callback) -> SBDebugger
     """
   return _lldb.SBDebugger_Create(*args)
 

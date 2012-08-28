@@ -100,6 +100,7 @@ namespace lldb {
         eFormatDecimal,
         eFormatEnum,
         eFormatHex,
+        eFormatHexUppercase,
         eFormatFloat,
         eFormatOctal,
         eFormatOSType,          // OS character codes encoded into an integer 'PICT' 'text' etc...
@@ -124,6 +125,7 @@ namespace lldb {
         eFormatAddressInfo,         // Describe what an address points to (func + offset with file/line, symbol + offset, data, etc)
         eFormatHexFloat,            // ISO C99 hex float string
         eFormatInstruction,         // Disassemble an opcode
+        eFormatVoid,                // Do not print this
         kNumFormats
     } Format;
 
