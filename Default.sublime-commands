@@ -67,6 +67,10 @@
         "caption": "LLDB: View Memory",
         "command": "lldb_view_memory"
     },
+    {
+        "caption": "LLDB: Send EOF",
+        "command": "lldb_send_eof"
+    },
 
     // Output view related commands
     {

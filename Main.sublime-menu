@@ -126,6 +126,10 @@
                         "caption": "Clear Console",
                         "command": "lldb_clear_output_view"
                     },
+                    {
+                        "caption": "Send EOF",
+                        "command": "lldb_send_eof"
+                    },
 
                     // Output view commands
                     {

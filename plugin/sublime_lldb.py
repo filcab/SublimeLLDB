@@ -1073,6 +1073,21 @@ class LldbViewMemory(WindowCommand):
             delegate.show_on_window(self.window, 'Address to inspect')
 
 
+class LldbSendEof(WindowCommand):
+    def is_enabled(self):
+        driver = driver_instance()
+        if driver and driver.current_target():
+            return not driver.process_is_stopped()
+        return False
+
+    def run(self, debugger=None):
+        if debugger is None:
+            debugger = driver_instance().debugger
+
+        if debugger:
+            debugger.DispatchInputEndOfFile()
+
+
 # Output view related commands
 class LldbToggleOutputView(WindowCommand):
     def run(self):
