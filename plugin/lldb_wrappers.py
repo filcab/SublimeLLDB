@@ -245,12 +245,11 @@ class LldbDriver(threading.Thread):
     # Driver input methods.
     def maybe_get_input(self):
         if self.is_ready_for_command() and self.debugger.InputReaderIsTopReader(self.__input_reader):
-            LldbInputDelegate.get_input(self.__window, 'lldb (driver)')
+            LldbInputDelegate.get_input(self.__window, '(lldb)')
             return True
-        elif self.is_ready_for_command():
+        else:
             LldbInputDelegate.get_input(self.__window, '?')
             return True
-        return False
 
     def is_ready_for_command(self):
         return self.__waiting_for_command
