@@ -1085,7 +1085,8 @@ class LldbSendEof(WindowCommand):
             debugger = driver_instance().debugger
 
         if debugger:
-            debugger.DispatchInputEndOfFile()
+            # FIXME: DispatchEndOfFile should work, but we're working around it.
+            debugger.DispatchInput('\x04')
 
 
 # Output view related commands
