@@ -54,7 +54,7 @@ class CrashLog(symbolication.Symbolicator):
     """Class that does parses darwin crash logs"""
     thread_state_regex = re.compile('^Thread ([0-9]+) crashed with')
     thread_regex = re.compile('^Thread ([0-9]+)([^:]*):(.*)')
-    frame_regex = re.compile('^([0-9]+) +([^ ]+) *\t(0x[0-9a-fA-F]+) +(.*)')
+    frame_regex = re.compile('^([0-9]+) +([^ ]+) *\t?(0x[0-9a-fA-F]+) +(.*)')
     image_regex_uuid = re.compile('(0x[0-9a-fA-F]+)[- ]+(0x[0-9a-fA-F]+) +[+]?([^ ]+) +([^<]+)<([-0-9a-fA-F]+)> (.*)');
     image_regex_no_uuid = re.compile('(0x[0-9a-fA-F]+)[- ]+(0x[0-9a-fA-F]+) +[+]?([^ ]+) +([^/]+)/(.*)');
     empty_line_regex = re.compile('^$')
@@ -316,7 +316,8 @@ class CrashLog(symbolication.Symbolicator):
 
             elif parse_mode == PARSE_MODE_THREGS:
                 stripped_line = line.strip()
-                reg_values = re.split('  +', stripped_line);
+                # "r12: 0x00007fff6b5939c8  r13: 0x0000000007000006  r14: 0x0000000000002a03  r15: 0x0000000000000c00"
+                reg_values = re.findall ('([a-zA-Z0-9]+: 0[Xx][0-9a-fA-F]+) *', stripped_line);
                 for reg_value in reg_values:
                     #print 'reg_value = "%s"' % reg_value
                     (reg, value) = reg_value.split(': ')
@@ -586,6 +587,14 @@ def SymbolicateCrashLog(crash_log, options):
         print 'error: no images in crash log'
         return
 
+    if options.dump_image_list:
+        print "Binary Images:"
+        for image in crash_log.images:
+            if options.verbose:
+                print image.debug_dump()
+            else:
+                print image
+
     target = crash_log.create_target ()
     if not target:
         return
@@ -676,11 +685,6 @@ def SymbolicateCrashLog(crash_log, options):
             else:
                 print frame
         print                
-
-    if options.dump_image_list:
-        print "Binary Images:"
-        for image in crash_log.images:
-            print image
 
 def CreateSymbolicateCrashLogOptions(command_name, description, add_interactive_options):
     usage = "usage: %prog [options] <FILE> [FILE ...]"
