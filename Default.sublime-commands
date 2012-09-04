@@ -28,6 +28,10 @@
         "command": "lldb_continue"
     },
     {
+        "caption": "LLDB: Pause process",
+        "command": "lldb_pause_process"
+    },
+    {
         "caption": "LLDB: Send Signal",
         "command": "lldb_send_signal"
     },

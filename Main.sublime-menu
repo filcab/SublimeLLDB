@@ -46,6 +46,10 @@
                         "caption": "Send Signal",
                         "command": "lldb_send_signal"
                     },
+                    {
+                        "caption": "Pause process",
+                        "command": "lldb_pause_process"
+                    },
 
                     // Stepping
                     {

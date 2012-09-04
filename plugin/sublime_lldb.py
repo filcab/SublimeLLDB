@@ -1089,6 +1089,30 @@ class LldbSendEof(WindowCommand):
             debugger.DispatchInput('\x04')
 
 
+class LldbPauseProcess(WindowCommand):
+    def is_enabled(self):
+        print 'pause-process: is_enabled()'
+        driver = driver_instance()
+        if driver and driver.current_target():
+            return not driver.process_is_stopped()
+        return False
+
+    def run(self, debugger=None):
+        if debugger is None:
+            debugger = driver_instance().debugger
+
+        if debugger:
+            target = debugger.GetSelectedTarget()
+            if not target:
+                return False
+            proc = target.GetProcess()
+            if not proc:
+                return False
+
+            proc.Stop()
+            driver_instance().maybe_get_input()
+
+
 # Output view related commands
 class LldbToggleOutputView(WindowCommand):
     def run(self):
