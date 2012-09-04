@@ -1091,7 +1091,6 @@ class LldbSendEof(WindowCommand):
 
 class LldbPauseProcess(WindowCommand):
     def is_enabled(self):
-        print 'pause-process: is_enabled()'
         driver = driver_instance()
         if driver and driver.current_target():
             return not driver.process_is_stopped()
