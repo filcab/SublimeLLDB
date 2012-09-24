@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.2",
+  "packages": [
+    {
+      "name": "SublimeLLDB",
+      "description": "A plugin to debug programs in Sublime Text 2 using the LLDB debugger",
+      "author": "filcab",
+      "homepage": "https://github.com/filcab/SublimeLLDB",
+      "last_modified": "2012-09-24 14:32:42",
+      "platforms": {
+        "osx": [
+          {
+            "version": "0.99",
+            "url": "https://github.com/filcab/SublimeLLDB/zipball/master"
+          }
+        ]
+      }
+    }
+  ]
+}
+
