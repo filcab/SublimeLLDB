@@ -585,7 +585,7 @@ class LldbConnectDebugserver(WindowCommand):
             else:
                 sublime.error_message('Couldn\'t get a debugging session.')
                 return False
-            LLDBLayoutManager.lldb_toggle_output_view(self.__owner.window, show=True)
+            LLDBLayoutManager.lldb_toggle_output_view(self.window, show=True)
 
             driver = driver_instance()
             if driver:
@@ -1038,15 +1038,15 @@ class LldbViewMemory(WindowCommand):
                 # Re-use a view, if we already have one.
                 v = None
                 name = self.__owner._view_memory_view_prefix + hex(addr)
-                for _v in self.__owner.window.views():
+                for _v in self.window.views():
                     if _v.name() == name:
                         v = _v
                         break
 
                 if v is None:
                     layout_group_source_file = sm.get_default('layout.group.source_file', 0)
-                    self.__owner.window.focus_group(layout_group_source_file)
-                    v = self.__owner.window.new_file()
+                    self.window.focus_group(layout_group_source_file)
+                    v = self.window.new_file()
                     v.set_name(name)
 
                 LLDBLayoutManager.clear_view(v)

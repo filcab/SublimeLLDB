@@ -338,6 +338,8 @@ def get_settings_keys():
 
 class InputPanelDelegate(object):
     def show_on_window(self, window, title='', initial_text=''):
+        # Make sure we save the window we're passed.
+        self.window = window
         sublime.set_timeout(lambda: window.show_input_panel(title, initial_text,
             self.on_done, self.on_change, self.on_cancel), 0)
 
