@@ -6,6 +6,8 @@ I haven't used this (nor Sublime Text) in a long time, so I don't know if it wor
 
 The lldb library provided is very old. The plugin might still work if it uses the system LLDB library, but I would advise against trying it if you haven't looked at the current LLDB API and checked if it's still the same.
 
+I am open to transferring ownership to people who want to work on it. Or you can just fork it. :-)
+
 Sublime Text 2 LLDB plugin
 ==========================
 
