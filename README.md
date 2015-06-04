@@ -1,7 +1,13 @@
+Abandoned
+=========
+
+This project is officially abandoned. If anyone wants to port it, feel free to contact me with any questions.
+I haven't used this (nor Sublime Text) in a long time, so I don't know if it works in a current OS or Sublime Text.
+
+The lldb library provided is very old. The plugin might still work if it uses the system LLDB library, but I would advise against trying it if you haven't looked at the current LLDB API and checked if it's still the same.
+
 Sublime Text 2 LLDB plugin
 ==========================
-
-(last updated: 2012/07/11)
 
 This is a plugin that allows users to debug programs in Sublime Text 2 using lldb. This plugin enabled command-line interaction with the lldb debugger, as well as Sublime Text 2 integration.
 
